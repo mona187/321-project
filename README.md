@@ -1,4 +1,8 @@
-# 321-project
+# 321-project -- FeastFriends
+
+## Description
+This is a repositry for the CPEN 321 Project FeastFriends, a resturant finding matchmaking service. 
+
 
 ## Contribution Guide
 1. Select / Create a new issue 
@@ -12,7 +16,7 @@
 3. William Banquier
 4. Sandhiya Radhaharan
 
-## Description
+## Repo Info 
 
 This is a project for the course CPEN321 at the University of British Columbia. 
 
