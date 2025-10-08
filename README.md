@@ -11,3 +11,10 @@
 2. Danield Li
 3. William Banquier
 4. Sandhiya Radhaharan
+
+## Description
+
+This is a project for the course CPEN321 at the University of British Columbia. 
+
+All documentation is subject to change and is a representation of what the current state of the project may look like. It is not a definite guide of the specifics of the project and the contributers withhold the right to make changes at any point. 
+
