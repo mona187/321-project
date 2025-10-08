@@ -7,10 +7,7 @@
 
 ## Project By
 
-Mona Abusharkh
-
-Danield Li
-
-William Banquier
-
-Sandhiya Radhaharan
+1. Mona Abusharkh
+2. Danield Li
+3. William Banquier
+4. Sandhiya Radhaharan
