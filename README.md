@@ -1,4 +1,4 @@
-# 321-project -- FeastFriends
+# 321-project - FeastFriends
 
 ## Description
 This is a repositry for the CPEN 321 Project FeastFriends, a resturant finding matchmaking service. 
