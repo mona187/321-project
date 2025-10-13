@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "cpen-321"
 include(":app")
+include(":frontend")
