@@ -40,7 +40,7 @@ android {
 }
 
 dependencies {
-
+    implementation("io.socket:socket.io-client:2.1.2") //Socket.IO client
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
