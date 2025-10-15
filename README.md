@@ -12,7 +12,7 @@ This is a repositry for the CPEN 321 Project FeastFriends, a resturant finding m
 ## Project By
 
 1. Mona Abusharkh
-2. Danield Li
+2. Daniel Li
 3. William Banquier
 4. Sandhiya Radhaharan
 
