@@ -1,3 +1,5 @@
+// defining navigation flow between screens
+
 package com.example.cpen_321.ui.navigation
 
 import androidx.compose.runtime.Composable
@@ -7,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.cpen_321.ui.screens.HomeScreen
 import com.example.cpen_321.ui.screens.WaitingRoomScreen
+import com.example.cpen_321.ui.screens.GroupScreen
 
 @Composable
 fun AppNavGraph(
@@ -22,6 +25,10 @@ fun AppNavGraph(
 
         composable(NavRoutes.WAITING_ROOM) {
             WaitingRoomScreen(navController)
+        }
+
+        composable(route = NavRoutes.GROUP){
+            GroupScreen(navController)
         }
 
     }

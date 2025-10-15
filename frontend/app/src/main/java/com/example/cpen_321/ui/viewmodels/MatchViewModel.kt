@@ -10,7 +10,9 @@ import org.json.JSONObject
 import com.example.cpen_321.data.repository.MatchRepository
 import javax.inject.Inject
 import com.example.cpen_321.data.model.WaitingRoomState
+import dagger.hilt.android.lifecycle.HiltViewModel
 
+@HiltViewModel
 class MatchViewModel @Inject constructor(
     private val matchRepository: MatchRepository
 ) : ViewModel() {

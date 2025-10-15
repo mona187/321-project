@@ -9,7 +9,8 @@ class FakeMatchRepository : MatchRepository {
         val fakeUsers = listOf(
             UserProfile("u1", "Alice", "Food lover", "https://picsum.photos/100"),
             UserProfile("u2", "Bob", "Chef in progress", "https://picsum.photos/101"),
-            UserProfile("u3", "Charlie", "Coffee addict", "https://picsum.photos/102")
+            UserProfile("u3", "Charlie", "Coffee addict", "https://picsum.photos/102"),
+            UserProfile("u4", "Sandi", "Hi there", profilePicture = "https://picsum.photos/103")
         )
         return Response.success(fakeUsers)
     }

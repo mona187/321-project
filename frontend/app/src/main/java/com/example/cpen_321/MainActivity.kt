@@ -15,6 +15,9 @@ import com.example.cpen_321.ui.screens.WaitingRoomScreen
 import com.example.cpen_321.ui.theme.Cpen321Theme
 import androidx.navigation.compose.rememberNavController
 import com.example.cpen_321.ui.navigation.AppNavGraph
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,7 +26,7 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             // NavigationStateManager.setController(navController) // initialize global navigation manager
             AppNavGraph(navController) //run navigation graph
-            WaitingRoomScreen()
+            // WaitingRoomScreen()
         }
     }
 }

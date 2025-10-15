@@ -35,7 +35,6 @@ object FakeSocketManager {
                 put("members", JSONArray(fakeMembers))
             }
             onRoomUpdate?.invoke(payload)
-
             delay(10000)
             onGroupReady?.invoke(JSONObject())
         }

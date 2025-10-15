@@ -23,11 +23,14 @@ import com.example.cpen_321.fake.FakeMatchViewModel
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.cpen_321.ui.viewmodels.MatchViewModel
 
 @Composable
 fun WaitingRoomScreen(
     navController: NavController,
     viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
+     //viewModel: MatchViewModel = hiltViewModel()
 
 ) {
     val state by viewModel.state.collectAsState()
@@ -43,6 +46,9 @@ fun WaitingRoomScreen(
             UserBubbleRow(state.members)
         } else {
             Text("Group Ready!", fontWeight = FontWeight.Bold)
+            // leave socket and navigate to Group Screen
+            // viewModel.leaveRoom("user123") //REPLACE WITH ACTUAL USER ID
+           navController.navigate(NavRoutes.GROUP)
         }
     }
 }
