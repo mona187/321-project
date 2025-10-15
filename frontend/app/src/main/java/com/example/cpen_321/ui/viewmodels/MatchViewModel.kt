@@ -9,11 +9,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import com.example.cpen_321.data.repository.MatchRepository
 import javax.inject.Inject
-import com.example.cpen_321.data.repository.IMatchRepository
 import com.example.cpen_321.data.model.WaitingRoomState
 
 class MatchViewModel @Inject constructor(
-    private val matchRepository: IMatchRepository
+    private val matchRepository: MatchRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WaitingRoomState()) //writable state

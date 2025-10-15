@@ -1,7 +1,6 @@
 // di/NetworkModule.kt
 package com.example.cpen_321.di
 
-import com.example.cpen_321.data.network.ApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -9,6 +8,7 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import com.example.cpen_321.data.network.api.MatchApi
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
@@ -39,8 +39,10 @@ object NetworkModule {
             .client(client)
             .build()
 
+    // feature-specific APIs
     @Provides
     @Singleton
-    fun provideApiService(retrofit: Retrofit): ApiService =
-        retrofit.create(ApiService::class.java)
+    fun provideMatchApi(retrofit: Retrofit): MatchApi =
+        retrofit.create(MatchApi::class.java)
+
 }
