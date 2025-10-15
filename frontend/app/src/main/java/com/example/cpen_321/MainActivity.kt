@@ -11,21 +11,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.cpen_321.ui.screens.WaitingRoomScreen
 import com.example.cpen_321.ui.theme.Cpen321Theme
+import androidx.navigation.compose.rememberNavController
+import com.example.cpen_321.ui.navigation.AppNavGraph
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            Cpen321Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            val navController = rememberNavController()
+            // NavigationStateManager.setController(navController) // initialize global navigation manager
+            AppNavGraph(navController) //run navigation graph
+            // WaitingRoomScreen()
         }
     }
 }
