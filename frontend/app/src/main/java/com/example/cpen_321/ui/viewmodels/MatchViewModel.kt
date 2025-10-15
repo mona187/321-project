@@ -35,7 +35,6 @@ class MatchViewModel @Inject constructor(
             val memberIds = payload.optJSONArray("members")?.let { jsonArray ->
                 List(jsonArray.length()) { i -> jsonArray.getString(i) }
             } ?: emptyList() //extract memberIds into Kotlin list
-
             viewModelScope.launch {
                 // Fetch user details via Retrofit
                 val response = matchRepository.getUserProfilesForRoom(memberIds)
@@ -54,6 +53,11 @@ class MatchViewModel @Inject constructor(
                     groupReady = true
                 )
             }
+        }
+
+        // event listener for room expired
+        SocketManager.on(event = "room_expired") {
+
         }
 
     }

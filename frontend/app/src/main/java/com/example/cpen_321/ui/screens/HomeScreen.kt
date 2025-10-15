@@ -16,6 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import com.example.cpen_321.fake.FakeMatchViewModel
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import com.example.cpen_321.ui.components.MainBottomBar
+import androidx.compose.foundation.layout.padding
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -23,23 +26,29 @@ fun HomeScreen(
     viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
 
 ){
-    Column (
-        Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Scaffold( bottomBar = {MainBottomBar()}) {
+        innerPadding ->
+        Column(
+            Modifier.fillMaxSize().padding(innerPadding),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
 
-    ){
-      OutlinedButton(
-            onClick = {
-                val userId = "user123" // this needs to be actual userId
-                // viewModel.connectSocket(userId)
-                navController.navigate(NavRoutes.WAITING_ROOM)
-          }
-      ){
-          Text("Find Match")
-      }
+        ) {
+            OutlinedButton(
+                onClick = {
+                    val userId = "user123" // this needs to be actual userId
+                    // viewModel.connectSocket(userId)
+                    navController.navigate(NavRoutes.WAITING_ROOM)
+                }
+            ) {
+                Text("Find Match")
+            }
+        }
     }
-}
+    }
+
+
+
 
 //@Preview
 //@Composable

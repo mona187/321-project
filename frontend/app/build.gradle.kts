@@ -42,6 +42,8 @@ android {
 }
 
 dependencies {
+    implementation(platform("androidx.compose:compose-bom:2025.10.00"))
+    implementation ("androidx.compose.material:material-icons-extended")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
