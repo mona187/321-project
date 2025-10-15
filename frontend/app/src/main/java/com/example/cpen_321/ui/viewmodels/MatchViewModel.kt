@@ -2,19 +2,20 @@ package com.example.cpen_321.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cpen_321.data.model.UserProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import com.example.cpen_321.data.repository.MatchRepository
+import javax.inject.Inject
+import com.example.cpen_321.data.repository.IMatchRepository
+import com.example.cpen_321.data.model.WaitingRoomState
 
-data class WaitingRoomState(
-    val roomId: String? = null,
-    val members: List<String> = emptyList(),
-    val completionTime: Int = 600,
-    val groupReady: Boolean = false
-)
+class MatchViewModel @Inject constructor(
+    private val matchRepository: IMatchRepository
+) : ViewModel() {
 
-class MatchViewModel: ViewModel(){
     private val _state = MutableStateFlow(WaitingRoomState()) //writable state
     val state: StateFlow<WaitingRoomState> = _state //read-only version that UI can access
 
@@ -30,23 +31,20 @@ class MatchViewModel: ViewModel(){
 
         // event listener for waiting room events
         SocketManager.on("room_update") { payload ->
-            val roomId = payload.optString("roomId", _state.value.roomId ?: "")
-            val membersJson = payload.optJSONArray("members")
-
-            val members = mutableListOf<String>()
-            if (membersJson != null) {
-                for (i in 0 until membersJson.length()) {
-                    members.add(membersJson.getString(i))
-                }
-            }
+            val memberIds = payload.optJSONArray("members")?.let { jsonArray ->
+                List(jsonArray.length()) { i -> jsonArray.getString(i) }
+            } ?: emptyList() //extract memberIds into Kotlin list
 
             viewModelScope.launch {
-                _state.value = _state.value.copy(
-                    roomId = roomId,
-                    members = members
-                )
+                // Fetch user details via Retrofit
+                val response = matchRepository.getUserProfilesForRoom(memberIds)
+                if (response.isSuccessful) {
+                    val profiles = response.body() ?: emptyList()
+                    _state.value = _state.value.copy(members = profiles)
+                }
             }
         }
+
 
         // event listener for group ready
         SocketManager.on(event = "group_ready"){ payload ->
