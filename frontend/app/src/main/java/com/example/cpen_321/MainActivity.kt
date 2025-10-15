@@ -13,12 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.cpen_321.ui.screens.WaitingRoomScreen
 import com.example.cpen_321.ui.theme.Cpen321Theme
-
+import androidx.navigation.compose.rememberNavController
+import com.example.cpen_321.ui.navigation.AppNavGraph
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val navController = rememberNavController()
+            // NavigationStateManager.setController(navController) // initialize global navigation manager
+            AppNavGraph(navController) //run navigation graph
             WaitingRoomScreen()
         }
     }

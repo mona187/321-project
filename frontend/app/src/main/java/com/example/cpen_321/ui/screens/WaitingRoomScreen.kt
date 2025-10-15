@@ -21,8 +21,12 @@ import coil.compose.AsyncImage
 import com.example.cpen_321.data.model.UserProfile
 import com.example.cpen_321.fake.FakeMatchViewModel
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+
 @Composable
 fun WaitingRoomScreen(
+    navController: NavController,
     viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
 
 ) {
@@ -38,7 +42,7 @@ fun WaitingRoomScreen(
             Spacer(modifier = Modifier.height(20.dp))
             UserBubbleRow(state.members)
         } else {
-            Text("✅ Group Ready!", fontWeight = FontWeight.Bold)
+            Text("Group Ready!", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -69,5 +73,5 @@ fun UserBubbleRow(users: List<UserProfile>) {
 @Preview(showBackground = true)
 @Composable
 fun WaitingRoomPreview() {
-    WaitingRoomScreen()
+    WaitingRoomScreen(navController = rememberNavController())
 }
