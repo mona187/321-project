@@ -6,5 +6,7 @@ data class WaitingRoomState(
     val status: String = "waiting",
     val expiresAt: String? = null,
     val groupReady: Boolean = false,
-    val timeRemainingSeconds: Int = 0 // will be computed
+    val timeRemainingSeconds: Int = 0, // will be computed
+    val isLoading: Boolean = false,
+    val error: String? = null
 )

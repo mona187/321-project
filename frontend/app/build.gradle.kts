@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation("com.jakewharton.threetenabp:threetenabp:1.4.7")
     implementation(platform("androidx.compose:compose-bom:2025.10.00"))
     implementation ("androidx.compose.material:material-icons-extended")
     implementation("androidx.hilt:hilt-navigation-compose:1.3.0")

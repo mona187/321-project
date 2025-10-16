@@ -11,6 +11,9 @@ import com.example.cpen_321.data.repository.MatchRepository
 import javax.inject.Inject
 import com.example.cpen_321.data.model.WaitingRoomState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import org.threeten.bp.Instant
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 @HiltViewModel
 class MatchViewModel @Inject constructor(
@@ -19,6 +22,8 @@ class MatchViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(WaitingRoomState()) //writable state
     val state: StateFlow<WaitingRoomState> = _state //read-only version that UI can access
+
+    private var timerJob: Job? = null // Job represents a coroutine, in this case timer
 
     fun connectSocket(userId: String?){
         SocketManager.connect()
@@ -32,17 +37,35 @@ class MatchViewModel @Inject constructor(
 
         // event listener for waiting room events
         SocketManager.on("room_update") { payload ->
+            val roomId = payload.optString("roomId")
+            val expiresAt = payload.optString("expiresAt", null)
+            val status = payload.optString("status", "waiting")
+
             val memberIds = payload.optJSONArray("members")?.let { jsonArray ->
                 List(jsonArray.length()) { i -> jsonArray.getString(i) }
             } ?: emptyList() //extract memberIds into Kotlin list
             viewModelScope.launch {
-                // Fetch user details via Retrofit
+                // calculate remaining time for countdown
+                val remaining = expiresAt?.let {
+                    val seconds = (
+                            Instant.parse(it).epochSecond - Instant.now().epochSecond).toInt() //Kotlin Instant represents moment in time in UTC
+                    seconds.coerceAtLeast(0) //ensure value not negative
+                } ?: 0
+
+                // fetch User Profiles from memberIds using repository (API call)
                 val response = matchRepository.getUserProfilesForRoom(memberIds)
                 if (response.isSuccessful) {
                     val profiles = response.body() ?: emptyList()
-                    _state.value = _state.value.copy(members = profiles)
+                    _state.value = _state.value.copy(members = profiles,
+                        expiresAt = expiresAt,
+                        timeRemainingSeconds = remaining)
+                }
+                // start the countdown Job if not already running
+                if (timerJob == null) {
+                    startCountdown(remaining)
                 }
             }
+
         }
 
 
@@ -80,5 +103,18 @@ class MatchViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         SocketManager.disconnect()
+    }
+
+    // Timer coroutine using Job
+    private fun startCountdown(initialSeconds: Int) {
+        timerJob?.cancel() // cancel any existing timer
+        timerJob = viewModelScope.launch {
+            for (t in initialSeconds downTo 0) {
+                _state.value = _state.value.copy(timeRemainingSeconds = t)
+                delay(1000L)
+            }
+            // timer reached zero
+            _state.value = _state.value.copy(status = "expired")
+        }
     }
 }
