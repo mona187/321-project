@@ -43,6 +43,8 @@ fun WaitingRoomScreen(
         if (!state.groupReady) {
             Text("Waiting Room", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(20.dp))
+            Text(String.format("%d:%02d", state.timeRemainingSeconds / 60, state.timeRemainingSeconds % 60), style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(20.dp))
             UserBubbleRow(state.members)
         } else {
             Text("Group Ready!", fontWeight = FontWeight.Bold)
