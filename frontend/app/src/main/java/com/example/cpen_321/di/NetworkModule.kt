@@ -1,6 +1,8 @@
 // di/NetworkModule.kt
 package com.example.cpen_321.di
 
+import com.example.cpen_321.data.network.api.AuthApi
+import com.example.cpen_321.data.network.api.MatchApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -8,7 +10,6 @@ import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import com.example.cpen_321.data.network.api.MatchApi
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
@@ -16,12 +17,15 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://your-backend-url.com" // <-- replace
+
+    private const val BASE_URL = "http://10.0.2.2:3000/api/"
 
     @Provides
     @Singleton
     fun provideLoggingInterceptor(): HttpLoggingInterceptor =
-        HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
+        HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
 
     @Provides
     @Singleton
@@ -39,10 +43,21 @@ object NetworkModule {
             .client(client)
             .build()
 
-    // feature-specific APIs
+    // ✅ add this so AuthRepositoryImpl can inject it
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi =
+        retrofit.create(AuthApi::class.java)
+
+    // ✅ keep your Match API provider
     @Provides
     @Singleton
     fun provideMatchApi(retrofit: Retrofit): MatchApi =
         retrofit.create(MatchApi::class.java)
-
 }
+
+
+
+
+
+
