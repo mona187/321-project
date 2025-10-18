@@ -29,8 +29,8 @@ fun AppNavGraph(
         navController = navController,
         startDestination = NavRoutes.AUTH
     ) {
-        // 🔐 Authentication screen
         composable(NavRoutes.AUTH) {
+            val authViewModel: AuthViewModel = hiltViewModel()
             AuthScreen(
                 authViewModel = authViewModel,
                 onNavigateToHome = {
@@ -41,7 +41,6 @@ fun AppNavGraph(
             )
         }
 
-        // 🏠 Home screen
         composable(NavRoutes.HOME) {
             HomeScreen(navController)
         }
