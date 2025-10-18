@@ -3,20 +3,20 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
 import { connectDatabase } from './config/database';
-import { initializeFirebase } from './config/firebase';
-import { initializeSocketManager } from './utils/socketManager';
+// import { initializeFirebase } from './config/firebase';
+// import { initializeSocketManager } from './utils/socketManager';
 import { errorHandler } from './middleware/errorHandler';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import matchingRoutes from './routes/matching.routes';
-import groupRoutes from './routes/group.routes';
-import restaurantRoutes from './routes/restaurant.routes';
+// import userRoutes from './routes/user.routes';
+// import matchingRoutes from './routes/matching.routes';
+// import groupRoutes from './routes/group.routes';
+// import restaurantRoutes from './routes/restaurant.routes';
 
 // Import services for background tasks
-import { MatchingService } from './services/matchingService';
-import { CredibilityService } from './services/credibilityService';
+// import { MatchingService } from './services/matchingService';
+// import { CredibilityService } from './services/credibilityService';
 
 // Load environment variables
 dotenv.config();
@@ -39,10 +39,10 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/matching', matchingRoutes);
-app.use('/api/group', groupRoutes);
-app.use('/api/restaurant', restaurantRoutes);
+// app.use('/api/user', userRoutes);
+// app.use('/api/matching', matchingRoutes);
+// app.use('/api/group', groupRoutes);
+// app.use('/api/restaurant', restaurantRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
@@ -54,14 +54,14 @@ const startServer = async () => {
     await connectDatabase();
 
     // Initialize Firebase
-    initializeFirebase();
+    // initializeFirebase();
 
     // Initialize Socket.IO
-    const socketManager = initializeSocketManager(server);
-    console.log('Socket.IO initialized');
+    // const socketManager = initializeSocketManager(server);
+    // console.log('Socket.IO initialized');
 
     // Start background tasks
-    startBackgroundTasks();
+    // startBackgroundTasks();
 
     // Start server
     server.listen(PORT, () => {
@@ -75,21 +75,21 @@ const startServer = async () => {
 };
 
 // Background tasks
-function startBackgroundTasks() {
-  const matchingService = new MatchingService();
-  const credibilityService = new CredibilityService();
+// function startBackgroundTasks() {
+//   // const matchingService = new MatchingService();
+//   // const credibilityService = new CredibilityService();
 
-  // Check expired rooms every minute
-  setInterval(async () => {
-    try {
-      await matchingService.checkExpiredRooms();
-    } catch (error) {
-      console.error('Error checking expired rooms:', error);
-    }
-  }, 60000); // 1 minute
+//   // Check expired rooms every minute
+//   setInterval(async () => {
+//     try {
+//       // await matchingService.checkExpiredRooms();
+//     } catch (error) {
+//       console.error('Error checking expired rooms:', error);
+//     }
+//   }, 60000); // 1 minute
 
-  console.log('Background tasks started');
-}
+//   console.log('Background tasks started');
+// }
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
