@@ -1,6 +1,9 @@
 package com.example.cpen_321.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -16,6 +19,20 @@ fun AppNavGraph(
     navController: NavHostController
 ) {
     val authViewModel: AuthViewModel = hiltViewModel()
+    val uiState by authViewModel.uiState.collectAsState()
+
+    // Simple navigation based on authentication state
+    LaunchedEffect(uiState.isAuthenticated) {
+        if (uiState.isAuthenticated) {
+            navController.navigate(NavRoutes.HOME) {
+                popUpTo(NavRoutes.AUTH) { inclusive = true }
+            }
+        } else {
+            navController.navigate(NavRoutes.AUTH) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -35,7 +52,7 @@ fun AppNavGraph(
 
         // 🏠 Home screen
         composable(NavRoutes.HOME) {
-            HomeScreen(navController)
+            HomeScreen(navController, authViewModel = authViewModel)
         }
 
         // ⏳ Waiting room screen

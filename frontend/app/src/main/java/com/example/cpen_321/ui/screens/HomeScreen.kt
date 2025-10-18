@@ -19,20 +19,37 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import com.example.cpen_321.ui.components.MainBottomBar
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.cpen_321.ui.viewmodels.AuthViewModel
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     // viewModel: MatchViewModel = hiltViewModel()
-    viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
-
+    viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() },
+    authViewModel: AuthViewModel = hiltViewModel()
 ){
-    Scaffold( bottomBar = {MainBottomBar()}) {
-        innerPadding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Home") },
+                actions = {
+                    Button(
+                        onClick = { authViewModel.signOut() }
+                    ) {
+                        Text("Sign Out")
+                    }
+                }
+            )
+        },
+        bottomBar = { MainBottomBar() }
+    ) { innerPadding ->
         Column(
             Modifier.fillMaxSize().padding(innerPadding),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
-
         ) {
             OutlinedButton(
                 onClick = {
@@ -45,7 +62,7 @@ fun HomeScreen(
             }
         }
     }
-    }
+}
 
 
 
