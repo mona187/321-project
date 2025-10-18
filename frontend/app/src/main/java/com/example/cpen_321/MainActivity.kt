@@ -5,16 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.cpen_321.ui.screens.WaitingRoomScreen
-import com.example.cpen_321.ui.theme.Cpen321Theme
 import androidx.navigation.compose.rememberNavController
 import com.example.cpen_321.ui.navigation.AppNavGraph
+import com.example.cpen_321.ui.theme.ProvideFontSizes
+import com.example.cpen_321.ui.theme.ProvideSpacing
+import com.example.cpen_321.ui.theme.Cpen321Theme // renamed from UserManagementTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,26 +22,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val navController = rememberNavController()
-            // NavigationStateManager.setController(navController) // initialize global navigation manager
-            AppNavGraph(navController) //run navigation graph
-            // WaitingRoomScreen()
+            Cpen321Theme {
+                Cpen321App()
+            }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Cpen321Theme {
-        Greeting("Android")
+fun Cpen321App() {
+    ProvideSpacing {
+        ProvideFontSizes {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                val navController = rememberNavController()
+                AppNavGraph(navController = navController)
+            }
+        }
     }
 }

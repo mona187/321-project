@@ -6,12 +6,23 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import com.example.cpen_321.data.network.api.MatchApi
+import com.example.cpen_321.data.repository.AuthRepository
+import com.example.cpen_321.data.repository.AuthRepositoryImpl
 import com.example.cpen_321.data.repository.MatchRepository
 import com.example.cpen_321.data.repository.MatchRepositoryImpl
 
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+
+    @Provides
+    @Singleton
+    fun provideAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository {
+        return authRepositoryImpl
+    }
 
     // Match Repository
     @Provides
@@ -20,3 +31,8 @@ object RepositoryModule {
         MatchRepositoryImpl(matchApi)
 
 }
+
+
+
+
+
