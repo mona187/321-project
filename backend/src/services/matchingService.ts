@@ -1,359 +1,311 @@
-import { User } from '../models/User';
-import { Room } from '../models/Room';
-import { Group } from '../models/Group';
-import { AppError } from '../middleware/errorHandler';
-import { v4 as uuidv4 } from 'uuid';
+import Room, { RoomStatus } from '../models/Room';
+import User, { UserStatus } from '../models/User';
+import Group from '../models/Group';
+import socketManager from '../utils/socketManager';
+import { notifyRoomMatched, notifyRoomExpired } from './notificationService';
 
 export class MatchingService {
-  private readonly WAITING_ROOM_TIMEOUT = parseInt(process.env.WAITING_ROOM_TIMEOUT || '600000'); // 10 minutes
-  private readonly MIN_GROUP_SIZE = parseInt(process.env.MIN_GROUP_SIZE || '4');
-  private readonly MAX_GROUP_SIZE = parseInt(process.env.MAX_GROUP_SIZE || '10');
+  private readonly ROOM_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_MEMBERS = 4; // Maximum members per room
+  private readonly MIN_MEMBERS = 2; // Minimum members to form a group
 
-  async joinMatching(userId: string, location: { longitude: number; latitude: number }) {
-    // Update user location
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          location: {
-            type: 'Point',
-            coordinates: [location.longitude, location.latitude],
-          },
-          status: 'in_waiting_room',
-          lastActive: new Date(),
-        },
-      },
-      { new: true }
+  /**
+   * Join a user to the matching pool
+   * Finds an available room or creates a new one
+   */
+  async joinMatching(
+    userId: string,
+    preferences: {
+      cuisine?: string[];
+      budget?: number;
+      radiusKm?: number;
+    }
+  ): Promise<{ roomId: string; room: any }> {
+    // Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if user is already in a room or group
+    if (user.roomId || user.groupId) {
+      throw new Error('User is already in a room or group');
+    }
+
+    // Update user preferences if provided
+    if (preferences.budget !== undefined) user.budget = preferences.budget;
+    if (preferences.radiusKm !== undefined) user.radiusKm = preferences.radiusKm;
+    if (preferences.cuisine !== undefined) user.preference = preferences.cuisine;
+    await user.save();
+
+    // Find an available room or create new one
+    let room = await this.findAvailableRoom(preferences.cuisine?.[0]);
+
+    if (!room) {
+      // Create new room
+      const completionTime = new Date(Date.now() + this.ROOM_DURATION_MS);
+      
+      room = await Room.create({
+        completionTime,
+        maxMembers: this.MAX_MEMBERS,
+        members: [userId],
+        status: RoomStatus.WAITING,
+        cuisine: preferences.cuisine?.[0] || null,
+        averageBudget: user.budget,
+        averageRadius: user.radiusKm,
+      });
+
+      console.log(`✅ Created new room: ${room._id}`);
+    } else {
+      // Add user to existing room
+      room.members.push(userId);
+      
+      // Update averages
+      await this.updateRoomAverages(room);
+      
+      await room.save();
+      console.log(`✅ User ${userId} joined room: ${room._id}`);
+    }
+
+    // Update user status
+    user.status = UserStatus.IN_WAITING_ROOM;
+    user.roomId = room._id.toString();
+    await user.save();
+
+    // Emit room update to all members
+    socketManager.emitRoomUpdate(
+      room._id.toString(),
+      room.members,
+      room.completionTime,
+      room.status
     );
 
+    // Emit member joined notification
+    socketManager.emitMemberJoined(
+      room._id.toString(),
+      userId,
+      user.name,
+      room.members.length,
+      room.maxMembers
+    );
+
+    // Check if room is full and create group
+    if (room.members.length >= this.MAX_MEMBERS) {
+      await this.createGroupFromRoom(room._id.toString());
+    }
+
+    return {
+      roomId: room._id.toString(),
+      room: room.toJSON(),
+    };
+  }
+
+  /**
+   * Find an available room for matching
+   */
+  private async findAvailableRoom(cuisine?: string): Promise<any | null> {
+    const query: any = {
+      status: RoomStatus.WAITING,
+      completionTime: { $gt: new Date() },
+      $expr: { $lt: [{ $size: '$members' }, this.MAX_MEMBERS] }
+    };
+
+    // Match by cuisine if provided
+    if (cuisine) {
+      query.cuisine = cuisine;
+    }
+
+    return Room.findOne(query).sort({ createdAt: 1 }); // Oldest first
+  }
+
+  /**
+   * Update room averages (budget, radius)
+   */
+  private async updateRoomAverages(room: any): Promise<void> {
+    const users = await User.find({ _id: { $in: room.members } });
+
+    const totalBudget = users.reduce((sum, user) => sum + (user.budget || 0), 0);
+    const totalRadius = users.reduce((sum, user) => sum + (user.radiusKm || 5), 0);
+
+    room.averageBudget = totalBudget / users.length;
+    room.averageRadius = totalRadius / users.length;
+  }
+
+  /**
+   * Leave a room
+   */
+  async leaveRoom(userId: string, roomId: string): Promise<void> {
+    const room = await Room.findById(roomId);
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    const user = await User.findById(userId);
     if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-
-    // Find compatible rooms
-    const compatibleRoom = await this.findCompatibleRoom(user);
-
-    if (compatibleRoom) {
-      // Join existing room
-      await this.addUserToRoom(compatibleRoom.roomId.toString(), userId);
-      return {
-        roomId: compatibleRoom.roomId,
-        joined: true,
-        message: 'Joined existing waiting room',
-      };
-    }
-
-    // Create new room
-    const newRoom = await this.createNewRoom(userId);
-    return {
-      roomId: newRoom.roomId,
-      joined: true,
-      message: 'Created new waiting room',
-    };
-  }
-
-  async joinSpecificRoom(userId: string, roomId: string) {
-    const room = await Room.findOne({ roomId, status: 'waiting' });
-
-    if (!room) {
-      throw new AppError(404, 'Room not found or already matched');
-    }
-
-    if (room.users.length >= room.maxMembers) {
-      throw new AppError(400, 'Room is full');
-    }
-
-    if (room.users.includes(userId)) {
-      throw new AppError(400, 'User already in room');
-    }
-
-    await this.addUserToRoom(room.roomId.toString(), userId);
-
-    return {
-      roomId: room.roomId,
-      message: 'Successfully joined room',
-    };
-  }
-
-  async leaveRoom(userId: string, roomId: string) {
-    const room = await Room.findOne({ roomId });
-
-    if (!room) {
-      throw new AppError(404, 'Room not found');
-    }
-
-    if (!room.users.includes(userId)) {
-      throw new AppError(400, 'User not in this room');
+      throw new Error('User not found');
     }
 
     // Remove user from room
-    room.users = room.users.filter((id) => id !== userId);
-    await room.save();
-
+    room.members = room.members.filter(id => id !== userId);
+    
     // Update user status
-    await User.findByIdAndUpdate(userId, {
-      $set: {
-        status: 'active',
-        currentRoomId: undefined,
-      },
-    });
+    user.status = UserStatus.ONLINE;
+    user.roomId = undefined;
+    await user.save();
 
-    // Delete room if empty
-    if (room.users.length === 0) {
-      await Room.findByIdAndDelete(room._id);
-    }
-
-    return {
-      message: 'Successfully left room',
-      roomId: room.roomId,
-    };
-  }
-
-  async getRoomStatus(roomId: string) {
-    const room = await Room.findOne({ roomId });
-
-    if (!room) {
-      throw new AppError(404, 'Room not found');
-    }
-
-    const timeRemaining = Math.max(
-      0,
-      room.completionTime.getTime() - Date.now()
+    // Emit member left notification
+    socketManager.emitMemberLeft(
+      roomId,
+      userId,
+      user.name,
+      room.members.length
     );
 
+    if (room.members.length === 0) {
+      // Delete empty room
+      await Room.findByIdAndDelete(roomId);
+      console.log(`🗑️ Deleted empty room: ${roomId}`);
+    } else {
+      // Update room averages and save
+      await this.updateRoomAverages(room);
+      await room.save();
+      
+      // Emit room update
+      socketManager.emitRoomUpdate(
+        roomId,
+        room.members,
+        room.completionTime,
+        room.status
+      );
+    }
+  }
+
+  /**
+   * Create a group from a full room
+   */
+  private async createGroupFromRoom(roomId: string): Promise<void> {
+    const room = await Room.findById(roomId);
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
+    // Update room status
+    room.status = RoomStatus.MATCHED;
+    await room.save();
+
+    // Create group
+    const completionTime = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes for voting
+    
+    const group = await Group.create({
+      roomId: room._id.toString(),
+      completionTime,
+      maxMembers: room.members.length,
+      members: room.members,
+      restaurantSelected: false,
+    });
+
+    console.log(`✅ Created group: ${group._id} from room: ${roomId}`);
+
+    // Update all users
+    await User.updateMany(
+      { _id: { $in: room.members } },
+      {
+        status: UserStatus.IN_GROUP,
+        groupId: group._id.toString(),
+        roomId: undefined,
+      }
+    );
+
+    // Emit group ready to all members
+    socketManager.emitGroupReady(
+      roomId,
+      group._id.toString(),
+      room.members
+    );
+
+    // Send push notifications
+    for (const memberId of room.members) {
+      try {
+        await notifyRoomMatched(memberId, roomId, group._id.toString());
+      } catch (error) {
+        console.error(`Failed to notify user ${memberId}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Get room status
+   */
+  async getRoomStatus(roomId: string): Promise<any> {
+    const room = await Room.findById(roomId);
+    if (!room) {
+      throw new Error('Room not found');
+    }
+
     return {
-      roomId: room.roomId,
-      completionTime: room.completionTime,
-      timeRemaining,
-      numberOfMembers: room.users.length,
-      minMembers: room.minMembers,
-      maxMembers: room.maxMembers,
+      roomID: room._id.toString(),
+      completionTime: room.completionTime.getTime(),
+      members: room.members,
+      groupReady: room.status === RoomStatus.MATCHED,
       status: room.status,
     };
   }
 
-  async getRoomUsers(roomId: string) {
-    const room = await Room.findOne({ roomId }).populate('users', 'name profilePicture credibilityScore bio');
-
+  /**
+   * Get users in a room
+   */
+  async getRoomUsers(roomId: string): Promise<string[]> {
+    const room = await Room.findById(roomId);
     if (!room) {
-      throw new AppError(404, 'Room not found');
+      throw new Error('Room not found');
     }
 
-    return {
-      roomId: room.roomId,
-      users: room.users,
-    };
+    return room.members;
   }
 
-  private async findCompatibleRoom(user: any) {
-    const now = new Date();
-
-    // Find active waiting rooms
-    const rooms = await Room.find({
-      status: 'waiting',
-      completionTime: { $gt: now },
-      users: { $nin: [user._id.toString()] },
-      $expr: { $lt: [{ $size: '$users' }, '$maxMembers'] },
-    }).populate('users');
-
-    if (rooms.length === 0) {
-      return null;
-    }
-
-    // Find most compatible room based on preferences and location
-    let bestRoom = null;
-    let bestScore = -1;
-
-    for (const room of rooms) {
-      const score = await this.calculateRoomCompatibility(user, room);
-      if (score > bestScore) {
-        bestScore = score;
-        bestRoom = room;
-      }
-    }
-
-    return bestRoom;
-  }
-
-  private async calculateRoomCompatibility(user: any, room: any): Promise<number> {
-    let score = 0;
-
-    const roomUsers = await User.find({ _id: { $in: room.users } });
-
-    for (const roomUser of roomUsers) {
-      // Check cuisine preferences overlap
-      const cuisineOverlap = user.preferences.cuisineTypes.filter((cuisine: string) =>
-        roomUser.preferences.cuisineTypes.includes(cuisine)
-      ).length;
-      score += cuisineOverlap * 2;
-
-      // Check budget compatibility (within 30% range)
-      const budgetDiff = Math.abs(user.preferences.budget - roomUser.preferences.budget);
-      if (budgetDiff < user.preferences.budget * 0.3) {
-        score += 3;
-      }
-
-      // Check location proximity
-      if (user.location && roomUser.location) {
-        const distance = this.calculateDistance(
-          user.location.coordinates,
-          roomUser.location.coordinates
-        );
-        if (distance < Math.min(user.preferences.radiusKm, roomUser.preferences.radiusKm)) {
-          score += 5;
-        }
-      }
-    }
-
-    // Prioritize rooms with higher average credibility
-    const avgCredibility = roomUsers.reduce((sum, u) => sum + u.credibilityScore, 0) / roomUsers.length;
-    score += avgCredibility;
-
-    return score;
-  }
-
-  private calculateDistance(coord1: number[], coord2: number[]): number {
-    const [lon1, lat1] = coord1;
-    const [lon2, lat2] = coord2;
-
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLon = this.toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private toRad(degrees: number): number {
-    return (degrees * Math.PI) / 180;
-  }
-
-  private async createNewRoom(userId: string) {
-    const roomId = uuidv4();
-    const completionTime = new Date(Date.now() + this.WAITING_ROOM_TIMEOUT);
-
-    const room = await Room.create({
-      roomId,
-      users: [userId],
-      completionTime,
-      status: 'waiting',
-      minMembers: this.MIN_GROUP_SIZE,
-      maxMembers: this.MAX_GROUP_SIZE,
-    });
-
-    await User.findByIdAndUpdate(userId, {
-      $set: { currentRoomId: roomId },
-    });
-
-    return room;
-  }
-
-  private async addUserToRoom(roomDbId: string, userId: string) {
-    const room = await Room.findByIdAndUpdate(
-      roomDbId,
-      {
-        $addToSet: { users: userId },
-      },
-      { new: true }
-    );
-
-    if (!room) {
-      throw new AppError(404, 'Room not found');
-    }
-
-    await User.findByIdAndUpdate(userId, {
-      $set: {
-        currentRoomId: room.roomId,
-        status: 'in_waiting_room',
-      },
-    });
-
-    // Check if room is ready to form a group
-    if (room.users.length >= room.minMembers) {
-      // Optionally auto-form group when max members reached
-      if (room.users.length === room.maxMembers) {
-        await this.formGroup(room.roomId);
-      }
-    }
-
-    return room;
-  }
-
-  async formGroup(roomId: string) {
-    const room = await Room.findOne({ roomId, status: 'waiting' });
-
-    if (!room) {
-      throw new AppError(404, 'Room not found or already matched');
-    }
-
-    if (room.users.length < room.minMembers) {
-      throw new AppError(400, 'Not enough users to form a group');
-    }
-
-    const groupId = uuidv4();
-    const completionTime = new Date(Date.now() + 3600000); // 1 hour for voting
-
-    const group = await Group.create({
-      groupId,
-      roomId: room.roomId,
-      users: room.users,
-      completionTime,
-      restaurantSelected: false,
-      status: 'voting',
-    });
-
-    // Update room status
-    room.status = 'matched';
-    await room.save();
-
-    // Update all users
-    await User.updateMany(
-      { _id: { $in: room.users } },
-      {
-        $set: {
-          status: 'in_group',
-          currentGroupId: groupId,
-          currentRoomId: undefined,
-        },
-      }
-    );
-
-    return group;
-  }
-
-  async checkExpiredRooms() {
-    const now = new Date();
+  /**
+   * Check and expire old rooms (background task)
+   */
+  async checkExpiredRooms(): Promise<void> {
     const expiredRooms = await Room.find({
-      status: 'waiting',
-      completionTime: { $lte: now },
+      status: RoomStatus.WAITING,
+      completionTime: { $lt: new Date() },
     });
 
     for (const room of expiredRooms) {
-      if (room.users.length >= room.minMembers) {
-        // Form group if minimum members met
-        await this.formGroup(room.roomId);
+      // Check if room has enough members
+      if (room.members.length >= this.MIN_MEMBERS) {
+        // Create group even if not full
+        await this.createGroupFromRoom(room._id.toString());
       } else {
-        // Mark as expired and notify users
-        room.status = 'expired';
+        // Expire the room
+        room.status = RoomStatus.EXPIRED;
         await room.save();
 
+        // Update users
         await User.updateMany(
-          { _id: { $in: room.users } },
+          { _id: { $in: room.members } },
           {
-            $set: {
-              status: 'active',
-              currentRoomId: undefined,
-            },
+            status: UserStatus.ONLINE,
+            roomId: undefined,
           }
         );
+
+        // Notify members
+        socketManager.emitRoomExpired(room._id.toString(), 'Not enough members');
+
+        for (const memberId of room.members) {
+          try {
+            await notifyRoomExpired(memberId, room._id.toString());
+          } catch (error) {
+            console.error(`Failed to notify user ${memberId}:`, error);
+          }
+        }
+
+        console.log(`⏰ Expired room: ${room._id}`);
       }
     }
   }
 }
+
+export default new MatchingService();

@@ -1,181 +1,290 @@
-import { Group } from '../models/Group';
-import { User } from '../models/User';
-import { AppError } from '../middleware/errorHandler';
+import Group from '../models/Group';
+import User, { UserStatus } from '../models/User';
+import socketManager from '../utils/socketManager';
+import { notifyGroupMembers, notifyRestaurantSelected } from './notificationService';
+import { RestaurantType } from '../types';
 
 export class GroupService {
-  async getGroupStatus(groupId: string) {
-    const group = await Group.findOne({ groupId }).populate(
-      'users',
-      'name profilePicture credibilityScore'
-    );
+  /**
+   * Get group status
+   */
+  async getGroupStatus(groupId: string): Promise<any> {
+    const group = await Group.findById(groupId);
 
     if (!group) {
-      throw new AppError(404, 'Group not found');
+      throw new Error('Group not found');
     }
 
     return {
-      groupId: group.groupId,
       roomId: group.roomId,
-      completionTime: group.completionTime,
-      numMembers: group.users.length,
-      users: group.users,
+      completionTime: group.completionTime.getTime(),
+      numMembers: group.members.length,
+      users: group.members,
       restaurantSelected: group.restaurantSelected,
-      restaurant: group.restaurant,
-      status: group.status,
+      restaurant: group.restaurant || undefined,
+      status: this.getGroupStatusString(group),
     };
   }
 
-  async leaveGroup(userId: string, groupId: string) {
-    const group = await Group.findOne({ groupId });
+  /**
+   * Get group status string
+   */
+  private getGroupStatusString(group: any): string {
+    if (group.restaurantSelected) {
+      return 'completed';
+    }
+    if (new Date() > group.completionTime) {
+      return 'expired';
+    }
+    return 'voting';
+  }
+
+  /**
+   * Vote for a restaurant
+   */
+  async voteForRestaurant(
+    userId: string,
+    groupId: string,
+    restaurantId: string,
+    restaurant?: RestaurantType
+  ): Promise<{ message: string; Current_votes: Record<string, number> }> {
+    const group = await Group.findById(groupId);
 
     if (!group) {
-      throw new AppError(404, 'Group not found');
+      throw new Error('Group not found');
     }
 
-    if (!group.users.includes(userId)) {
-      throw new AppError(400, 'User not in this group');
+    // Check if user is in the group
+    if (!group.members.includes(userId)) {
+      throw new Error('User is not a member of this group');
+    }
+
+    // Check if restaurant is already selected
+    if (group.restaurantSelected) {
+      throw new Error('Restaurant has already been selected for this group');
+    }
+
+    // Add/update vote
+    group.addVote(userId, restaurantId);
+    await group.save();
+
+    // Convert Map to object for response
+    const currentVotes: Record<string, number> = {};
+    group.restaurantVotes.forEach((count, id) => {
+      currentVotes[id] = count;
+    });
+
+    // Emit vote update to all group members
+    socketManager.emitVoteUpdate(
+      groupId,
+      restaurantId,
+      currentVotes,
+      group.votes.size,
+      group.members.length
+    );
+
+    // Check if all members have voted
+    if (group.hasAllVoted()) {
+      const winningRestaurantId = group.getWinningRestaurant();
+      
+      if (winningRestaurantId) {
+        // Set the restaurant
+        if (restaurant) {
+          group.restaurant = restaurant;
+        }
+        group.restaurantSelected = true;
+        await group.save();
+
+        // Emit restaurant selected
+        socketManager.emitRestaurantSelected(
+          groupId,
+          winningRestaurantId,
+          group.restaurant?.name || 'Selected Restaurant',
+          currentVotes
+        );
+
+        // Send notifications
+        await notifyRestaurantSelected(
+          group.members,
+          group.restaurant?.name || 'Selected Restaurant',
+          groupId
+        );
+
+        console.log(`✅ Restaurant selected for group ${groupId}`);
+      }
+    }
+
+    return {
+      message: 'Voting successful',
+      Current_votes: currentVotes,
+    };
+  }
+
+  /**
+   * Leave a group
+   */
+  async leaveGroup(userId: string, groupId: string): Promise<void> {
+    const group = await Group.findById(groupId);
+
+    if (!group) {
+      throw new Error('Group not found');
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
     }
 
     // Remove user from group
-    group.users = group.users.filter((id) => id !== userId);
-    
-    // Remove user's votes
-    group.votes.delete(userId);
-    
-    await group.save();
+    group.removeMember(userId);
 
     // Update user status
-    await User.findByIdAndUpdate(userId, {
-      $set: {
-        status: 'active',
-        currentGroupId: undefined,
-      },
-    });
+    user.status = UserStatus.ONLINE;
+    user.groupId = undefined;
+    await user.save();
 
-    // If restaurant was selected and user leaves, decrease credibility
-    if (group.restaurantSelected) {
-      await User.findByIdAndUpdate(userId, {
-        $inc: { credibilityScore: -0.5 },
-      });
-    }
+    if (group.members.length === 0) {
+      // Delete empty group
+      await Group.findByIdAndDelete(groupId);
+      console.log(`🗑️ Deleted empty group: ${groupId}`);
+    } else {
+      await group.save();
 
-    // Delete group if empty
-    if (group.users.length === 0) {
-      await Group.findByIdAndDelete(group._id);
-    }
+      // Notify remaining members
+      socketManager.emitMemberLeft(
+        `group_${groupId}`,
+        userId,
+        user.name,
+        group.members.length
+      );
 
-    return {
-      message: 'Successfully left group',
-      groupId: group.groupId,
-    };
-  }
+      // Check if restaurant should be auto-selected (all remaining voted)
+      if (group.hasAllVoted() && !group.restaurantSelected) {
+        const winningRestaurantId = group.getWinningRestaurant();
+        
+        if (winningRestaurantId && group.restaurant) {
+          group.restaurantSelected = true;
+          await group.save();
 
-  async voteRestaurant(userId: string, groupId: string, restaurantId: string) {
-    const group = await Group.findOne({ groupId, status: 'voting' });
+          const currentVotes: Record<string, number> = {};
+          group.restaurantVotes.forEach((count, id) => {
+            currentVotes[id] = count;
+          });
 
-    if (!group) {
-      throw new AppError(404, 'Group not found or voting is closed');
-    }
+          socketManager.emitRestaurantSelected(
+            groupId,
+            winningRestaurantId,
+            group.restaurant.name,
+            currentVotes
+          );
 
-    if (!group.users.includes(userId)) {
-      throw new AppError(400, 'User not in this group');
-    }
-
-    // Record vote
-    group.votes.set(userId, restaurantId);
-    await group.save();
-
-    // Check if majority reached
-    const voteCount = this.countVotes(group.votes);
-    const majority = Math.ceil(group.users.length / 2);
-
-    for (const [restId, count] of Object.entries(voteCount)) {
-      if (count >= majority) {
-        // Restaurant selected by majority
-        return {
-          message: 'Vote recorded - majority reached',
-          restaurantId: restId,
-          votes: voteCount,
-          majorityReached: true,
-        };
+          await notifyRestaurantSelected(
+            group.members,
+            group.restaurant.name,
+            groupId
+          );
+        }
       }
     }
-
-    return {
-      message: 'Vote recorded',
-      votes: voteCount,
-      majorityReached: false,
-    };
   }
 
-  async selectRestaurant(groupId: string, restaurant: any) {
-    const group = await Group.findOne({ groupId });
-
-    if (!group) {
-      throw new AppError(404, 'Group not found');
+  /**
+   * Get group by user ID
+   */
+  async getGroupByUserId(userId: string): Promise<any | null> {
+    const user = await User.findById(userId);
+    
+    if (!user || !user.groupId) {
+      return null;
     }
 
-    group.restaurant = restaurant;
-    group.restaurantSelected = true;
-    group.status = 'confirmed';
-    await group.save();
-
-    return {
-      message: 'Restaurant selected successfully',
-      group,
-    };
+    return Group.findById(user.groupId);
   }
 
-  async getGroupMembers(groupId: string) {
-    const group = await Group.findOne({ groupId }).populate(
-      'users',
-      'name profilePicture bio contactNumber credibilityScore'
-    );
+  /**
+   * Close/disband a group (after restaurant visit or timeout)
+   */
+  async closeGroup(groupId: string): Promise<void> {
+    const group = await Group.findById(groupId);
 
     if (!group) {
-      throw new AppError(404, 'Group not found');
+      throw new Error('Group not found');
     }
 
-    return {
-      groupId: group.groupId,
-      members: group.users,
-    };
-  }
-
-  private countVotes(votes: Map<string, string>): Record<string, number> {
-    const count: Record<string, number> = {};
-
-    votes.forEach((restaurantId) => {
-      count[restaurantId] = (count[restaurantId] || 0) + 1;
-    });
-
-    return count;
-  }
-
-  async completeGroup(groupId: string) {
-    const group = await Group.findOne({ groupId });
-
-    if (!group) {
-      throw new AppError(404, 'Group not found');
-    }
-
-    group.status = 'completed';
-    await group.save();
-
-    // Update all users in group
+    // Update all users
     await User.updateMany(
-      { _id: { $in: group.users } },
+      { _id: { $in: group.members } },
       {
-        $set: {
-          status: 'active',
-          currentGroupId: undefined,
-        },
+        status: UserStatus.ONLINE,
+        groupId: undefined,
       }
     );
 
-    return {
-      message: 'Group completed',
-      groupId: group.groupId,
-    };
+    // Delete group
+    await Group.findByIdAndDelete(groupId);
+
+    console.log(`✅ Closed group: ${groupId}`);
+  }
+
+  /**
+   * Check for expired groups (background task)
+   */
+  async checkExpiredGroups(): Promise<void> {
+    const expiredGroups = await Group.find({
+      restaurantSelected: false,
+      completionTime: { $lt: new Date() },
+    });
+
+    for (const group of expiredGroups) {
+      // Auto-select restaurant with most votes
+      const winningRestaurantId = group.getWinningRestaurant();
+      
+      if (winningRestaurantId && group.votes.size > 0) {
+        group.restaurantSelected = true;
+        await group.save();
+
+        // Notify members
+        if (group.restaurant) {
+          const currentVotes: Record<string, number> = {};
+          group.restaurantVotes.forEach((count, id) => {
+            currentVotes[id] = count;
+          });
+
+          socketManager.emitRestaurantSelected(
+            group._id.toString(),
+            winningRestaurantId,
+            group.restaurant.name,
+            currentVotes
+          );
+          
+          await notifyGroupMembers(group.members, {
+            title: 'Voting Time Expired',
+            body: `${group.restaurant.name} was selected based on the votes received.`,
+            data: {
+              type: 'restaurant_selected',
+              groupId: group._id.toString(),
+            },
+          });
+        }
+
+        console.log(`⏰ Auto-selected restaurant for expired group: ${group._id}`);
+      } else {
+        // No votes - disband group
+        await this.closeGroup(group._id.toString());
+        
+        await notifyGroupMembers(group.members, {
+          title: 'Group Expired',
+          body: 'Your group expired without selecting a restaurant.',
+          data: {
+            type: 'group_expired',
+            groupId: group._id.toString(),
+          },
+        });
+
+        console.log(`⏰ Disbanded expired group with no votes: ${group._id}`);
+      }
+    }
   }
 }
+
+export default new GroupService();

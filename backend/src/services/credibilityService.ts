@@ -1,119 +1,223 @@
-import { User } from '../models/User';
-import { Group } from '../models/Group';
-import { CredibilityLog } from '../models/CredibilityLog';
-import { AppError } from '../middleware/errorHandler';
+import User from '../models/User';
+import CredibilityLog, { CredibilityAction } from '../models/CredibilityLog';
 
 export class CredibilityService {
-  private readonly CHECK_IN_SCORE_CHANGE = 0;
-  private readonly NO_SHOW_SCORE_CHANGE = -0.5;
-  private readonly MAX_SCORE = 5.0;
-  private readonly MIN_SCORE = 0.0;
+  // Score changes for different actions
+  private readonly SCORE_CHANGES = {
+    [CredibilityAction.NO_SHOW]: -15,
+    [CredibilityAction.LATE_CANCEL]: -10,
+    [CredibilityAction.LEFT_GROUP_EARLY]: -5,
+    [CredibilityAction.COMPLETED_MEETUP]: +5,
+    [CredibilityAction.POSITIVE_REVIEW]: +3,
+    [CredibilityAction.NEGATIVE_REVIEW]: -8,
+  };
 
-  async checkIn(userId: string, groupId: string) {
+  /**
+   * Update user's credibility score
+   */
+  async updateCredibilityScore(
+    userId: string,
+    action: CredibilityAction,
+    groupId?: string,
+    roomId?: string,
+    notes?: string
+  ): Promise<{
+    previousScore: number;
+    newScore: number;
+    scoreChange: number;
+  }> {
     const user = await User.findById(userId);
-    const group = await Group.findOne({ groupId });
 
     if (!user) {
-      throw new AppError(404, 'User not found');
+      throw new Error('User not found');
     }
 
-    if (!group) {
-      throw new AppError(404, 'Group not found');
-    }
+    const previousScore = user.credibilityScore;
+    const scoreChange = this.SCORE_CHANGES[action];
+    let newScore = previousScore + scoreChange;
 
-    if (!group.users.includes(userId)) {
-      throw new AppError(400, 'User not part of this group');
-    }
+    // Clamp score between 0 and 100
+    newScore = Math.max(0, Math.min(100, newScore));
 
-    // Check if already checked in
-    const existingLog = await CredibilityLog.findOne({ userId, groupId });
-    if (existingLog) {
-      throw new AppError(400, 'User already checked in');
-    }
+    // Update user score
+    user.credibilityScore = newScore;
+    await user.save();
 
-    // Create check-in log
+    // Log the change
     await CredibilityLog.create({
       userId,
+      action,
+      scoreChange,
       groupId,
-      checkedIn: true,
-      timestamp: new Date(),
-      scoreChange: this.CHECK_IN_SCORE_CHANGE,
+      roomId,
+      previousScore,
+      newScore,
+      notes,
     });
 
-    // Maintain score (no change for checking in, but prevents decrease)
-    return {
-      message: 'Check-in successful',
-      credibilityScore: user.credibilityScore,
-    };
-  }
-
-  async processNoShows(groupId: string) {
-    const group = await Group.findOne({ groupId });
-
-    if (!group) {
-      throw new AppError(404, 'Group not found');
-    }
-
-    // Find users who didn't check in
-    const checkedInUsers = await CredibilityLog.find({
-      groupId,
-      checkedIn: true,
-    }).distinct('userId');
-
-    const noShowUsers = group.users.filter(
-      (userId) => !checkedInUsers.includes(userId)
+    console.log(
+      `📊 Credibility updated for user ${userId}: ${previousScore} → ${newScore} (${action})`
     );
 
-    // Decrease credibility for no-shows
-    for (const userId of noShowUsers) {
-      const user = await User.findById(userId);
-      if (user) {
-        const newScore = Math.max(
-          this.MIN_SCORE,
-          user.credibilityScore + this.NO_SHOW_SCORE_CHANGE
-        );
-
-        await User.findByIdAndUpdate(userId, {
-          $set: { credibilityScore: newScore },
-        });
-
-        await CredibilityLog.create({
-          userId,
-          groupId,
-          checkedIn: false,
-          timestamp: new Date(),
-          scoreChange: this.NO_SHOW_SCORE_CHANGE,
-        });
-      }
-    }
-
     return {
-      message: 'No-show processing complete',
-      noShowCount: noShowUsers.length,
+      previousScore,
+      newScore,
+      scoreChange,
     };
   }
 
-  async getUserCredibilityHistory(userId: string) {
-    const logs = await CredibilityLog.find({ userId })
-      .sort({ timestamp: -1 })
-      .limit(20)
-      .populate('groupId', 'restaurant completionTime');
-
-    const user = await User.findById(userId, 'credibilityScore');
-
-    return {
-      currentScore: user?.credibilityScore,
-      history: logs,
-    };
+  /**
+   * Record a completed meetup (positive action)
+   */
+  async recordCompletedMeetup(
+    userId: string,
+    groupId: string
+  ): Promise<void> {
+    await this.updateCredibilityScore(
+      userId,
+      CredibilityAction.COMPLETED_MEETUP,
+      groupId,
+      undefined,
+      'User completed meetup'
+    );
   }
 
-  async calculatePriorityScore(userId: string): Promise<number> {
+  /**
+   * Record a no-show (negative action)
+   */
+  async recordNoShow(
+    userId: string,
+    groupId: string
+  ): Promise<void> {
+    await this.updateCredibilityScore(
+      userId,
+      CredibilityAction.NO_SHOW,
+      groupId,
+      undefined,
+      'User did not show up'
+    );
+  }
+
+  /**
+   * Record leaving group early (negative action)
+   */
+  async recordLeftGroupEarly(
+    userId: string,
+    groupId: string
+  ): Promise<void> {
+    await this.updateCredibilityScore(
+      userId,
+      CredibilityAction.LEFT_GROUP_EARLY,
+      groupId,
+      undefined,
+      'User left group before restaurant selected'
+    );
+  }
+
+  /**
+   * Record late cancellation (negative action)
+   */
+  async recordLateCancellation(
+    userId: string,
+    roomId: string
+  ): Promise<void> {
+    await this.updateCredibilityScore(
+      userId,
+      CredibilityAction.LATE_CANCEL,
+      undefined,
+      roomId,
+      'User canceled late'
+    );
+  }
+
+  /**
+   * Get credibility logs for a user
+   */
+  async getUserCredibilityLogs(
+    userId: string,
+    limit: number = 20
+  ): Promise<any[]> {
+    const logs = await CredibilityLog.findByUserId(userId, limit);
+    return logs;
+  }
+
+  /**
+   * Get credibility statistics for a user
+   */
+  async getUserCredibilityStats(userId: string): Promise<{
+    currentScore: number;
+    totalLogs: number;
+    positiveActions: number;
+    negativeActions: number;
+    recentTrend: string;
+  }> {
     const user = await User.findById(userId);
+
     if (!user) {
-      return 0;
+      throw new Error('User not found');
     }
 
-    // Higher credibility = higher priority
-    return user.credibilityScore * 10;
+    const logs = await CredibilityLog.findByUserId(userId, 100);
+
+    const positiveActions = logs.filter(log => log.scoreChange > 0).length;
+    const negativeActions = logs.filter(log => log.scoreChange < 0).length;
+
+    // Calculate recent trend (last 10 actions)
+    const recentLogs = logs.slice(0, 10);
+    const recentChange = recentLogs.reduce((sum, log) => sum + log.scoreChange, 0);
+    
+    let recentTrend = 'stable';
+    if (recentChange > 5) recentTrend = 'improving';
+    if (recentChange < -5) recentTrend = 'declining';
+
+    return {
+      currentScore: user.credibilityScore,
+      totalLogs: logs.length,
+      positiveActions,
+      negativeActions,
+      recentTrend,
+    };
+  }
+
+  /**
+   * Check if user meets minimum credibility requirement
+   */
+  isCredibilityAcceptable(score: number, minimumRequired: number = 50): boolean {
+    return score >= minimumRequired;
+  }
+
+  /**
+   * Restore credibility score (admin function or after appeal)
+   */
+  async restoreCredibilityScore(
+    userId: string,
+    amount: number,
+    notes: string
+  ): Promise<void> {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const previousScore = user.credibilityScore;
+    const newScore = Math.min(100, previousScore + amount);
+
+    user.credibilityScore = newScore;
+    await user.save();
+
+    // Log the restoration
+    await CredibilityLog.create({
+      userId,
+      action: CredibilityAction.POSITIVE_REVIEW, // Use as a generic positive action
+      scoreChange: amount,
+      previousScore,
+      newScore,
+      notes: `Manual restoration: ${notes}`,
+    });
+
+    console.log(`✅ Restored ${amount} points to user ${userId}: ${previousScore} → ${newScore}`);
   }
 }
+
+export default new CredibilityService();

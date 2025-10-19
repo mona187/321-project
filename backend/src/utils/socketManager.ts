@@ -1,112 +1,165 @@
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
-import jwt from 'jsonwebtoken';
+import initializeSocket, { SocketEmitter } from '../config/socket';
 
-export class SocketManager {
-  private io: SocketIOServer;
-  private userSockets: Map<string, string> = new Map(); // userId -> socketId
+/**
+ * Global Socket Manager
+ * Singleton pattern for managing socket connections across the app
+ */
 
-  constructor(server: HTTPServer) {
-    this.io = new SocketIOServer(server, {
-      cors: {
-        origin: '*',
-        methods: ['GET', 'POST'],
-      },
-    });
+class SocketManager {
+  private static instance: SocketManager;
+  private io: SocketIOServer | null = null;
+  private emitter: SocketEmitter | null = null;
 
-    this.setupMiddleware();
-    this.setupEventHandlers();
-  }
+  private constructor() {}
 
-  private setupMiddleware() {
-    this.io.use((socket, next) => {
-      const token = socket.handshake.auth.token;
-
-      if (!token) {
-        return next(new Error('Authentication error'));
-      }
-
-      try {
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-          return next(new Error('Server configuration error'));
-        }
-
-        const decoded = jwt.verify(token, secret) as { userId: string };
-        socket.data.userId = decoded.userId;
-        next();
-      } catch (error) {
-        next(new Error('Invalid token'));
-      }
-    });
-  }
-
-  private setupEventHandlers() {
-    this.io.on('connection', (socket: Socket) => {
-      const userId = socket.data.userId;
-      console.log(`User connected: ${userId}`);
-
-      this.userSockets.set(userId, socket.id);
-
-      // Join room
-      socket.on('join_room', (roomId: string) => {
-        socket.join(`room_${roomId}`);
-        console.log(`User ${userId} joined room ${roomId}`);
-      });
-
-      // Leave room
-      socket.on('leave_room', (roomId: string) => {
-        socket.leave(`room_${roomId}`);
-        console.log(`User ${userId} left room ${roomId}`);
-      });
-
-      // Join group
-      socket.on('join_group', (groupId: string) => {
-        socket.join(`group_${groupId}`);
-        console.log(`User ${userId} joined group ${groupId}`);
-      });
-
-      // Leave group
-      socket.on('leave_group', (groupId: string) => {
-        socket.leave(`group_${groupId}`);
-        console.log(`User ${userId} left group ${groupId}`);
-      });
-
-      // Disconnect
-      socket.on('disconnect', () => {
-        console.log(`User disconnected: ${userId}`);
-        this.userSockets.delete(userId);
-      });
-    });
-  }
-
-  // Emit to specific room
-  emitToRoom(roomId: string, event: string, data: any) {
-    this.io.to(`room_${roomId}`).emit(event, data);
-  }
-
-  // Emit to specific group
-  emitToGroup(groupId: string, event: string, data: any) {
-    this.io.to(`group_${groupId}`).emit(event, data);
-  }
-
-  // Emit to specific user
-  emitToUser(userId: string, event: string, data: any) {
-    const socketId = this.userSockets.get(userId);
-    if (socketId) {
-      this.io.to(socketId).emit(event, data);
+  public static getInstance(): SocketManager {
+    if (!SocketManager.instance) {
+      SocketManager.instance = new SocketManager();
     }
+    return SocketManager.instance;
   }
 
-  // Get IO instance
-  getIO() {
+  /**
+   * Initialize Socket.IO with HTTP server
+   */
+  public initialize(server: HTTPServer): void {
+    if (this.io) {
+      console.warn('⚠️  Socket.IO already initialized');
+      return;
+    }
+
+    this.io = initializeSocket(server);
+    this.emitter = new SocketEmitter(this.io);
+    console.log('✅ SocketManager initialized');
+  }
+
+  /**
+   * Get the Socket.IO instance
+   */
+  public getIO(): SocketIOServer {
+    if (!this.io) {
+      throw new Error('Socket.IO not initialized. Call initialize() first.');
+    }
     return this.io;
+  }
+
+  /**
+   * Get the SocketEmitter for emitting events
+   */
+  public getEmitter(): SocketEmitter {
+    if (!this.emitter) {
+      throw new Error('SocketEmitter not initialized. Call initialize() first.');
+    }
+    return this.emitter;
+  }
+
+  // ==================== CONVENIENCE METHODS ====================
+
+  /**
+   * Emit room update to all members in a room
+   */
+  public emitRoomUpdate(
+    roomId: string,
+    members: string[],
+    expiresAt: Date,
+    status: 'waiting' | 'matched' | 'expired'
+  ): void {
+    this.getEmitter().emitRoomUpdate(roomId, {
+      roomId,
+      members,
+      expiresAt: expiresAt.toISOString(),
+      status,
+    });
+  }
+
+  /**
+   * Notify that a group is ready
+   */
+  public emitGroupReady(roomId: string, groupId: string, members: string[]): void {
+    this.getEmitter().emitGroupReady(roomId, groupId, members);
+  }
+
+  /**
+   * Notify that a room has expired
+   */
+  public emitRoomExpired(roomId: string, reason?: string): void {
+    this.getEmitter().emitRoomExpired(roomId, reason);
+  }
+
+  /**
+   * Emit vote update to group
+   */
+  public emitVoteUpdate(
+    groupId: string,
+    restaurantId: string,
+    votes: Record<string, number>,
+    membersVoted: number,
+    totalMembers: number
+  ): void {
+    const totalVotes = Object.values(votes).reduce((sum, count) => sum + count, 0);
+    
+    this.getEmitter().emitVoteUpdate(groupId, {
+      restaurantId,
+      votes,
+      totalVotes,
+      membersVoted,
+      totalMembers,
+    });
+  }
+
+  /**
+   * Emit restaurant selected to group
+   */
+  public emitRestaurantSelected(
+    groupId: string,
+    restaurantId: string,
+    restaurantName: string,
+    votes: Record<string, number>
+  ): void {
+    this.getEmitter().emitRestaurantSelected(groupId, {
+      restaurantId,
+      restaurantName,
+      votes,
+    });
+  }
+
+  /**
+   * Emit member joined to room
+   */
+  public emitMemberJoined(
+    roomId: string,
+    userId: string,
+    userName: string,
+    currentMembers: number,
+    maxMembers: number
+  ): void {
+    this.getEmitter().emitMemberJoined(roomId, {
+      userId,
+      userName,
+      currentMembers,
+      maxMembers,
+    });
+  }
+
+  /**
+   * Emit member left to room
+   */
+  public emitMemberLeft(
+    roomId: string,
+    userId: string,
+    userName: string,
+    remainingMembers: number
+  ): void {
+    this.getEmitter().emitMemberLeft(roomId, {
+      userId,
+      userName,
+      remainingMembers,
+    });
   }
 }
 
-export let socketManager: SocketManager;
-
-export const initializeSocketManager = (server: HTTPServer) => {
-  socketManager = new SocketManager(server);
-  return socketManager;
-};
+// Export singleton instance
+export const socketManager = SocketManager.getInstance();
+export default socketManager;

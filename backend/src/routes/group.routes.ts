@@ -1,17 +1,28 @@
 import { Router } from 'express';
-import { GroupController } from '../controllers/group.controller';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { groupController } from '../controllers/group.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
-const groupController = new GroupController();
 
-// All routes require authentication
-router.use(authenticateToken);
+/**
+ * @route   GET /api/group/status
+ * @desc    Get current user's group status
+ * @access  Private
+ */
+router.get('/status', authMiddleware, groupController.getGroupStatus.bind(groupController));
 
-router.get('/status/:groupId', groupController.getGroupStatus);
-router.post('/leave/:groupId', groupController.leaveGroup);
-router.post('/vote/:groupId', groupController.voteRestaurant);
-router.get('/members/:groupId', groupController.getGroupMembers);
-router.post('/checkin/:groupId', groupController.checkIn);
+/**
+ * @route   POST /api/group/vote/:groupId
+ * @desc    Vote for a restaurant
+ * @access  Private
+ */
+router.post('/vote/:groupId', authMiddleware, groupController.voteForRestaurant.bind(groupController));
+
+/**
+ * @route   POST /api/group/leave/:groupId
+ * @desc    Leave a group
+ * @access  Private
+ */
+router.post('/leave/:groupId', authMiddleware, groupController.leaveGroup.bind(groupController));
 
 export default router;

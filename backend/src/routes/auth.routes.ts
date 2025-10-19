@@ -1,11 +1,15 @@
 import { Router } from 'express';
-import { AuthController } from '../controllers/auth.controller';
+import { googleAuth, logout, updateFCMToken, deleteAccount } from '../controllers/auth.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
-const authController = new AuthController();
 
-// Updated routes to match frontend expectations
-router.post('/signin', authController.googleAuth);
-router.post('/signup', authController.googleAuth);
+// Public routes
+router.post('/google', googleAuth);
+
+// Protected routes
+router.post('/logout', authMiddleware, logout);
+router.post('/fcm-token', authMiddleware, updateFCMToken);
+router.delete('/account', authMiddleware, deleteAccount);
 
 export default router;
