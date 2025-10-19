@@ -5,13 +5,72 @@ import socketManager from '../utils/socketManager';
 import { notifyRoomMatched, notifyRoomExpired } from './notificationService';
 
 export class MatchingService {
-  private readonly ROOM_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_MEMBERS = 4; // Maximum members per room
-  private readonly MIN_MEMBERS = 2; // Minimum members to form a group
+  private readonly ROOM_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  private readonly MAX_MEMBERS = 10; // Maximum members per room
+  private readonly MIN_MEMBERS = 4; // Minimum members to form a group
+  private readonly MINIMUM_MATCH_SCORE = 30; // Minimum score to match a room
+
+  /**
+   * Find the best matching room based on preferences
+   */
+  private async findBestMatchingRoom(userPreferences: {
+    cuisines: string[];
+    budget: number;
+    radiusKm: number;
+  }): Promise<any | null> {
+    // Get all available rooms
+    const availableRooms = await Room.find({
+      status: RoomStatus.WAITING,
+      completionTime: { $gt: new Date() },
+      $expr: { $lt: [{ $size: '$members' }, this.MAX_MEMBERS] }
+    });
+
+    if (availableRooms.length === 0) {
+      return null;
+    }
+
+    // Score each room
+    const scoredRooms = availableRooms.map(room => {
+      let score = 0;
+      
+      // Cuisine match (50 points if ANY cuisine matches)
+      if (room.cuisine && userPreferences.cuisines.includes(room.cuisine)) {
+        score += 50;
+      }
+      
+      // Budget similarity (up to 30 points)
+      // Closer budgets get higher scores
+      const budgetDiff = Math.abs((room.averageBudget || 0) - userPreferences.budget);
+      const budgetScore = Math.max(0, 30 - budgetDiff);
+      score += budgetScore;
+      
+      // Radius similarity (up to 20 points)
+      // Closer radius preferences get higher scores
+      const radiusDiff = Math.abs((room.averageRadius || 5) - userPreferences.radiusKm);
+      const radiusScore = Math.max(0, 20 - (radiusDiff * 2));
+      score += radiusScore;
+      
+      return { room, score };
+    });
+
+    // Sort by score (highest first)
+    scoredRooms.sort((a, b) => b.score - a.score);
+    
+    // Only return a room if it has a minimum score
+    const bestMatch = scoredRooms[0];
+    
+    if (bestMatch.score >= this.MINIMUM_MATCH_SCORE) {
+      console.log(`✅ Best room match found with score: ${bestMatch.score}`);
+      return bestMatch.room;
+    }
+    
+    console.log(`⚠️ No good match found (best score: ${bestMatch.score})`);
+    return null;
+  }
 
   /**
    * Join a user to the matching pool
-   * Finds an available room or creates a new one
+   * Finds best matching room or creates new one
    */
   async joinMatching(
     userId: string,
@@ -38,11 +97,18 @@ export class MatchingService {
     if (preferences.cuisine !== undefined) user.preference = preferences.cuisine;
     await user.save();
 
-    // Find an available room or create new one
-    let room = await this.findAvailableRoom(preferences.cuisine?.[0]);
+    // Prepare matching criteria
+    const matchingPreferences = {
+      cuisines: preferences.cuisine || user.preference || [],
+      budget: preferences.budget || user.budget || 50,
+      radiusKm: preferences.radiusKm || user.radiusKm || 5,
+    };
+
+    // Find best matching room
+    let room = await this.findBestMatchingRoom(matchingPreferences);
 
     if (!room) {
-      // Create new room
+      // No good match found - create new room
       const completionTime = new Date(Date.now() + this.ROOM_DURATION_MS);
       
       room = await Room.create({
@@ -50,21 +116,21 @@ export class MatchingService {
         maxMembers: this.MAX_MEMBERS,
         members: [userId],
         status: RoomStatus.WAITING,
-        cuisine: preferences.cuisine?.[0] || null,
-        averageBudget: user.budget,
-        averageRadius: user.radiusKm,
+        cuisine: matchingPreferences.cuisines[0] || null, // Primary cuisine
+        averageBudget: matchingPreferences.budget,
+        averageRadius: matchingPreferences.radiusKm,
       });
 
-      console.log(`✅ Created new room: ${room._id}`);
+      console.log(`✅ Created new room: ${room._id} (cuisine: ${room.cuisine})`);
     } else {
       // Add user to existing room
       room.members.push(userId);
       
-      // Update averages
+      // Update room averages
       await this.updateRoomAverages(room);
       
       await room.save();
-      console.log(`✅ User ${userId} joined room: ${room._id}`);
+      console.log(`✅ User ${userId} joined room: ${room._id} (members: ${room.members.length}/${this.MAX_MEMBERS})`);
     }
 
     // Update user status
@@ -98,24 +164,6 @@ export class MatchingService {
       roomId: room._id.toString(),
       room: room.toJSON(),
     };
-  }
-
-  /**
-   * Find an available room for matching
-   */
-  private async findAvailableRoom(cuisine?: string): Promise<any | null> {
-    const query: any = {
-      status: RoomStatus.WAITING,
-      completionTime: { $gt: new Date() },
-      $expr: { $lt: [{ $size: '$members' }, this.MAX_MEMBERS] }
-    };
-
-    // Match by cuisine if provided
-    if (cuisine) {
-      query.cuisine = cuisine;
-    }
-
-    return Room.findOne(query).sort({ createdAt: 1 }); // Oldest first
   }
 
   /**
