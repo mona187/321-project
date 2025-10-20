@@ -13,7 +13,9 @@ import com.example.cpen_321.ui.screens.HomeScreen
 import com.example.cpen_321.ui.screens.WaitingRoomScreen
 import com.example.cpen_321.ui.screens.GroupScreen
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
-
+import com.example.cpen_321.ui.screens.ProfileScreen
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 @Composable
 fun AppNavGraph(
     navController: NavHostController
@@ -63,6 +65,21 @@ fun AppNavGraph(
         // 👥 Group screen
         composable(NavRoutes.GROUP) {
             GroupScreen(navController)
+        }
+
+        // Profile Screen
+        composable(
+            route = "profile/{userId?}",
+            arguments = listOf(
+                navArgument("userId") {
+                    type = NavType.IntType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getInt("userId")
+            ProfileScreen(userId = userId, navController = navController)
         }
     }
 }

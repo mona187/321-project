@@ -15,7 +15,7 @@ data class User(
     val groupId: String?
 )
 data class UserProfile (
-    val userId: String,
+    val userId: Int,
     val name: String,
     val bio: String,
     val profilePicture: String? = null

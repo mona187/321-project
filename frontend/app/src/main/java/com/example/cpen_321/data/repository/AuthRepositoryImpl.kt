@@ -23,16 +23,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val authInterface: AuthApi,
-//    private val userInterface: UserInterface,
     private val tokenManager: TokenManager
 ) : AuthRepository {
 
@@ -134,41 +129,6 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-//FOR PROFILE
-
-//    override suspend fun googleSignIn(tokenId: String): Result<AuthData> {
-//        val googleLoginReq = GoogleSigninRequest(tokenId)
-//        return try {
-//            val response = authInterface.googleSignIn(googleLoginReq)
-//            if (response.isSuccessful && response.body()?.data != null) {
-//                val authData = response.body()!!.data!!
-//                tokenManager.saveToken(authData.token)
-//                RetrofitClient.setAuthToken(authData.token)
-//                Result.success(authData)
-//            } else {
-//                val errorBodyString = response.errorBody()?.string()
-//                val errorMessage = JsonUtils.parseErrorMessage(
-//                    errorBodyString,
-//                    response.body()?.message ?: "Failed to sign in with Google."
-//                )
-//                Log.e(TAG, "Google sign in failed: $errorMessage")
-//                Result.failure(Exception(errorMessage))
-//            }
-//        } catch (e: java.net.SocketTimeoutException) {
-//            Log.e(TAG, "Network timeout during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: java.net.UnknownHostException) {
-//            Log.e(TAG, "Network connection failed during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: java.io.IOException) {
-//            Log.e(TAG, "IO error during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: retrofit2.HttpException) {
-//            Log.e(TAG, "HTTP error during Google sign in: ${e.code()}", e)
-//            Result.failure(e)
-//        }
-//    }
-
     override suspend fun googleSignUp(tokenId: String): Result<AuthData> {
         val googleLoginReq = GoogleSigninRequest(tokenId)
         return try {
@@ -216,45 +176,6 @@ class AuthRepositoryImpl @Inject constructor(
         return tokenManager.getTokenSync()
     }
 
-    //
-//    override suspend fun getCurrentUser(): User? {
-//        return try {
-//            val response = userInterface.getProfile("") // Auth header is handled by interceptor
-//            if (response.isSuccessful && response.body()?.data != null) {
-//                response.body()!!.data!!.user
-//            } else {
-//                Log.e(
-//                    TAG,
-//                    "Failed to get current user: ${response.body()?.message ?: "Unknown error"}"
-//                )
-//                null
-//            }
-//        } catch (e: java.net.SocketTimeoutException) {
-//            Log.e(TAG, "Network timeout while getting current user", e)
-//            null
-//        } catch (e: java.net.UnknownHostException) {
-//            Log.e(TAG, "Network connection failed while getting current user", e)
-//            null
-//        } catch (e: java.io.IOException) {
-//            Log.e(TAG, "IO error while getting current user", e)
-//            null
-//        } catch (e: retrofit2.HttpException) {
-//            Log.e(TAG, "HTTP error while getting current user: ${e.code()}", e)
-//            null
-//        }
-//    }
-//
-//    override suspend fun isUserAuthenticated(): Boolean {
-//        val isLoggedIn = doesTokenExist()
-//        if (isLoggedIn) {
-//            val token = getStoredToken()
-//            token?.let { RetrofitClient.setAuthToken(it) }
-//            // Verify token is still valid by trying to get user profile
-//            return getCurrentUser() != null
-//        }
-//        return false
-//    }
-//}
     override suspend fun getCurrentUser(): User? {
         return cachedUser
     }
