@@ -1,6 +1,10 @@
+import dotenv from 'dotenv';
+
+// Load environment variables FIRST
+dotenv.config();
+
 import express, { Express } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import http from 'http';
 import { connectDatabase } from './config/database';
 import { initializeFirebase } from './config/firebase';
@@ -16,9 +20,6 @@ import restaurantRoutes from './routes/restaurant.routes';
 
 import matchingService from './services/matchingService';
 import groupService from './services/groupService';
-
-// Load environment variables
-dotenv.config();
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -73,7 +74,7 @@ const startServer = async () => {
     // Initialize Socket.IO
     socketManager.initialize(server);
 
-    // Start background tasks (uncomment when services are ready)
+    // Start background tasks
     startBackgroundTasks();
 
     // Start server

@@ -22,6 +22,8 @@ export class RestaurantService {
         return this.getMockRestaurants();
       }
 
+      console.log('✅ Using Google Places API with key');
+
       // Build the search query
       const keyword = cuisineTypes && cuisineTypes.length > 0 ? cuisineTypes.join(' ') : 'restaurant';
       
@@ -38,11 +40,14 @@ export class RestaurantService {
         }
       );
 
+      console.log('📡 Google API Response Status:', response.data.status);
+
       if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
         throw new AppError(`Google Places API error: ${response.data.status}`, 500);
       }
 
       let results = response.data.results || [];
+      console.log(`🍽️ Found ${results.length} restaurants from Google Places`);
 
       // Filter by price level if specified
       if (priceLevel) {
@@ -52,7 +57,7 @@ export class RestaurantService {
       return results.map((place: any) => this.formatPlaceData(place));
     } catch (error: any) {
       if (error instanceof AppError) throw error;
-      console.error('Failed to search restaurants:', error);
+      console.error('❌ Failed to search restaurants:', error.message);
       // Return mock data on error
       return this.getMockRestaurants();
     }
