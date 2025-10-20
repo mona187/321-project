@@ -33,11 +33,6 @@ object RepositoryModule {
     fun provideMatchRepository(userApi: UserApi): MatchRepository =
         MatchRepositoryImpl(userApi)
 
-    @Binds
-    @Singleton
-    abstract fun bindUserRepository(
-        impl: UserRepositoryImpl
-    ): UserRepository
 
 }
 

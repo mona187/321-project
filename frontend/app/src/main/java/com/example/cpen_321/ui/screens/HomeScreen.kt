@@ -22,14 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.example.cpen_321.fake.FakeAuthViewModel
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    // viewModel: MatchViewModel = hiltViewModel()
+    //viewModel: MatchViewModel = hiltViewModel(),
     viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() },
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: FakeAuthViewModel = FakeAuthViewModel(),
+    //authViewModel: AuthViewModel = hiltViewModel()
 ){
     Scaffold(
         topBar = {
@@ -44,7 +46,7 @@ fun HomeScreen(
                 }
             )
         },
-        bottomBar = { MainBottomBar() }
+        bottomBar = { MainBottomBar(navController) }
     ) { innerPadding ->
         Column(
             Modifier.fillMaxSize().padding(innerPadding),

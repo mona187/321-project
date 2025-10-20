@@ -2,7 +2,7 @@
 package com.example.cpen_321.di
 
 import com.example.cpen_321.data.network.api.AuthApi
-import com.example.cpen_321.data.network.api.MatchApi
+import com.example.cpen_321.data.network.api.UserApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,8 +52,8 @@ object NetworkModule {
     // ✅ keep your Match API provider
     @Provides
     @Singleton
-    fun provideMatchApi(retrofit: Retrofit): MatchApi =
-        retrofit.create(MatchApi::class.java)
+    fun provideUserApi(retrofit: Retrofit): UserApi =
+        retrofit.create(UserApi::class.java)
 }
 
 

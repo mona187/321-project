@@ -20,6 +20,7 @@ import com.example.cpen_321.ui.theme.LocalSpacing
 import com.example.cpen_321.ui.viewmodels.AuthUiState
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
 import kotlinx.coroutines.launch
+import com.example.cpen_321.fake.FakeAuthViewModel
 
 // ------------------------- Data Holders -------------------------
 
@@ -34,7 +35,8 @@ private data class AuthScreenActions(
 
 @Composable
 fun AuthScreen(
-    authViewModel: AuthViewModel,
+    // authViewModel: AuthViewModel,
+    authViewModel: FakeAuthViewModel,
     onNavigateToHome: () -> Unit = {} // 👈 ADD THIS PARAMETER
 ) {
     val context = LocalContext.current

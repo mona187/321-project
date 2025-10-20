@@ -30,7 +30,7 @@ object FakeSocketManager {
         // simulate delay to mimic backend update
         GlobalScope.launch {
             delay(1000)
-            val fakeMembers = listOf("u1", "u2", "u3")
+            val fakeMembers = listOf(1, 2, 3)
             val payload = JSONObject().apply {
                 put("members", JSONArray(fakeMembers))
                 put("expiresAt", "2025-10-16T21:05:16Z")

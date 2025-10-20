@@ -10,13 +10,13 @@ import javax.inject.Singleton
 class UserRepositoryImpl @Inject constructor(
     private val userApi: UserApi,
     private val authRepository: AuthRepositoryImpl
-) {
+): UserRepository {
 
     companion object {
         private const val TAG = "UserRepository"
     }
 
-    suspend fun getCurrentUserProfile(): UserProfile? { // For viewing current authenticated user profile
+    override suspend fun getCurrentUserProfile(): UserProfile? { // For viewing current authenticated user profile
         val currentUser = authRepository.getCurrentUser()
         if (currentUser == null) {
             Log.e(TAG, "No cached user found. User might not be authenticated.")
@@ -32,7 +32,7 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    suspend fun getUserProfile(userId: Int): UserProfile? { // For viewing other user profiles
+    override suspend fun getUserProfile(userId: Int): UserProfile? { // For viewing other user profiles
         val response = userApi.getUserProfiles(listOf(userId))
         return if (response.isSuccessful && !response.body().isNullOrEmpty()) {
             response.body()!!.first()

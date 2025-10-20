@@ -42,7 +42,7 @@ class MatchViewModel @Inject constructor(
             val status = payload.optString("status", "waiting")
 
             val memberIds = payload.optJSONArray("members")?.let { jsonArray ->
-                List(jsonArray.length()) { i -> jsonArray.getString(i) }
+                List(jsonArray.length()) { i -> jsonArray.getInt(i) }
             } ?: emptyList() //extract memberIds into Kotlin list
             viewModelScope.launch {
                 // calculate remaining time for countdown

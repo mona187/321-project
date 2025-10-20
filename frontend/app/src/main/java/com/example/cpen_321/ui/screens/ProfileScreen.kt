@@ -1,6 +1,5 @@
 package com.example.cpen_321.ui.screens
 
-import NavRoutes
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -15,25 +14,27 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.cpen_321.ui.components.MainBottomBar
-import com.example.cpen_321.ui.viewmodels.ProfileViewModel
 import com.example.cpen_321.data.model.UserProfile
-
+import com.example.cpen_321.fake.FakeProfileViewModel
+import com.example.cpen_321.ui.viewmodels.ProfileViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.example.cpen_321.R
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    viewModel: ProfileViewModel = hiltViewModel(),
+    //viewModel: ProfileViewModel = hiltViewModel(),
+    viewModel: FakeProfileViewModel = FakeProfileViewModel(),
     userId : Int?
 ){
     val userProfile by viewModel.userProfile.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Trigger loading when this composable appears
+    // Trigger loading when this composable appears NOTE: UN-COMMENT FOR REAL IMPLEMENTATION
     LaunchedEffect(userId) {
         viewModel.loadUserProfile(userId)
     }
@@ -44,7 +45,7 @@ fun ProfileScreen(
                 title = { Text("Profile") }
             )
         },
-        bottomBar = { MainBottomBar() }
+        bottomBar = { MainBottomBar(navController) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -69,48 +70,35 @@ private fun ProfileContent(user: UserProfile) {
             .fillMaxSize()
             .verticalScroll(scrollState)
     ) {
-        BoxWithConstraints {
-            Surface {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    // Header image
-                    ProfileHeader(
-                        imageUrl = user.profilePicture,
-                        containerHeight = this@BoxWithConstraints.maxHeight
-                    )
-                    // Profile details
-                    TitleSection(user)
-                    Divider()
-                    ProfileDetails(user)
-                }
-            }
-        }
+        // 🖼 Fixed banner at top
+        ProfileHeader(user.profilePicture)
+
+        // 🧾 User info below
+        TitleSection(user)
+        Divider()
+        ProfileDetails(user)
     }
 }
 
 @Composable
-private fun ProfileHeader(
-    imageUrl: String?,
-    containerHeight: Dp
-) {
+private fun ProfileHeader(imageUrl: String?) {
+    val bannerHeight = 220.dp
+
     if (imageUrl != null) {
         Image(
             modifier = Modifier
-                .heightIn(max = containerHeight / 2)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .height(bannerHeight),
             painter = rememberAsyncImagePainter(imageUrl),
             contentScale = ContentScale.Crop,
             contentDescription = "Profile Picture"
         )
     } else {
-        // fallback default avatar
         Image(
             modifier = Modifier
-                .heightIn(max = containerHeight / 2)
-                .fillMaxWidth(),
-            painter = painterResource(id = com.example.cpen_321.R.drawable.default_avatar),
+                .fillMaxWidth()
+                .height(bannerHeight),
+            painter = painterResource(id = R.drawable.default_avatar),
             contentScale = ContentScale.Crop,
             contentDescription = "Default Avatar"
         )
@@ -140,21 +128,10 @@ private fun ProfileDetails(user: UserProfile) {
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = user.bio?: "No Bio Available",
+            text = user.bio ?: "No bio available",
             style = MaterialTheme.typography.bodyLarge
         )
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 

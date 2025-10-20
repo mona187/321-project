@@ -12,18 +12,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 
 @Composable
-fun MainBottomBar() {
+fun MainBottomBar(navController: NavController) {
             BottomAppBar(
                 actions = {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween){
-                        IconButton(onClick = { /* do something */ }) {
+                        IconButton(onClick = {
+                            navController.navigate("home")
+                        }) {
                             Icon(Icons.Filled.Home, contentDescription = "Localized description")
                         }
-                        IconButton(onClick = { /* do something */ }) {
+                        IconButton(onClick = {
+                            navController.navigate("profile")
+                        }) {
                             Icon(
                                 Icons.Filled.AccountBox,
                                 contentDescription = "Localized description",

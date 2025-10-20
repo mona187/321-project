@@ -3,7 +3,6 @@ package com.example.cpen_321.fake
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cpen_321.data.model.WaitingRoomState
-import com.example.cpen_321.fake.FakeSocketManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,23 +12,23 @@ import kotlinx.coroutines.Job
 import org.threeten.bp.Instant
 
 class FakeMatchViewModel : ViewModel() {
-    private val repository = FakeMatchRepository()
+    private val repository = FakeMatchRepositoryImpl()
     private val _state = MutableStateFlow(WaitingRoomState())
     val state: StateFlow<WaitingRoomState> = _state
 
     private var timerJob: Job? = null
     init {
-        connectSocket("testUser123")
+        connectSocket(1)
     }
 
-    private fun connectSocket(userId: String?) {
+    private fun connectSocket(userId: Int?) {
         FakeSocketManager.connect()
         val joinData = JSONObject().apply { put("userId", userId) }
         FakeSocketManager.emit("join_room", joinData)
 
         FakeSocketManager.on("room_update") { payload ->
             val memberIds = payload.optJSONArray("members")?.let { json ->
-                List(json.length()) { i -> json.getString(i) }
+                List(json.length()) { i -> json.getInt(i) }
             } ?: emptyList()
             val expiresAt = payload.optString("expiresAt", null)
             viewModelScope.launch {

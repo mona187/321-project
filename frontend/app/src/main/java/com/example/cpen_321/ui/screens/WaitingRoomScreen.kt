@@ -30,7 +30,7 @@ import com.example.cpen_321.ui.viewmodels.MatchViewModel
 fun WaitingRoomScreen(
     navController: NavController,
     viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
-     //viewModel: MatchViewModel = hiltViewModel()
+    // viewModel: MatchViewModel = hiltViewModel()
 
 ) {
     val state by viewModel.state.collectAsState()
