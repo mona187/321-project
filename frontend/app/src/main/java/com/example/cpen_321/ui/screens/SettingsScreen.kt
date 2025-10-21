@@ -37,9 +37,7 @@ import androidx.compose.material.icons.filled.StarOutline
 @Composable
 fun SettingsScreen(
     navController: NavController,
-    //viewModel: SettingsViewModel = hiltViewModel(),
-    viewModel: FakeSettingsViewModel = FakeSettingsViewModel(),
-    fakeAuthViewModel: FakeAuthViewModel? = null, // REMOVE FOR REAL
+    viewModel: SettingsViewModel = hiltViewModel(),
     firstTimeSetup: Boolean = false
 ) {
     val user by viewModel.user.collectAsState()
@@ -58,9 +56,6 @@ fun SettingsScreen(
     // Navigate after saving successfully
     if (isSaved) {
         LaunchedEffect(Unit) {
-            // ✅ Tell fake auth VM that setup is done
-            fakeAuthViewModel?.completeProfileSetup() //REMOVE FOR REAL
-
             viewModel.clearSavedFlag()
             navController.navigate("home") {
                 popUpTo("settings") { inclusive = true }

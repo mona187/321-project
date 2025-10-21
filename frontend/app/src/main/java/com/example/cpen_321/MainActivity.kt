@@ -15,7 +15,6 @@ import com.example.cpen_321.ui.theme.ProvideFontSizes
 import com.example.cpen_321.ui.theme.ProvideSpacing
 import com.example.cpen_321.ui.theme.Cpen321Theme // renamed from UserManagementTheme
 import dagger.hilt.android.AndroidEntryPoint
-import com.example.cpen_321.fake.FakeAppNavGraph
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +37,7 @@ fun Cpen321App() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 val navController = rememberNavController()
-                FakeAppNavGraph(navController = navController) //REPLACE WITH REAL
+                AppNavGraph(navController = navController)
             }
         }
     }

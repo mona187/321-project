@@ -27,8 +27,7 @@ import com.example.cpen_321.R
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    //viewModel: ProfileViewModel = hiltViewModel(),
-    viewModel: FakeProfileViewModel = FakeProfileViewModel(),
+    viewModel: ProfileViewModel = hiltViewModel(),
     userId : Int?
 ){
     val userProfile by viewModel.userProfile.collectAsState()

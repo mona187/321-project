@@ -28,10 +28,8 @@ import com.example.cpen_321.ui.viewmodels.AuthViewModel
 @Composable
 fun HomeScreen(
     navController: NavController,
-    //viewModel: MatchViewModel = hiltViewModel(),
-    viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() },
-    authViewModel: FakeAuthViewModel = FakeAuthViewModel(),
-    //authViewModel: AuthViewModel = hiltViewModel()
+    viewModel: MatchViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ){
     Scaffold(
         topBar = {
