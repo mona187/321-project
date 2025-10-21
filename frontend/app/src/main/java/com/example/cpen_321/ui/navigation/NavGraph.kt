@@ -17,6 +17,8 @@ import com.example.cpen_321.ui.screens.ProfileScreen
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import com.example.cpen_321.ui.viewmodels.SettingsViewModel
+import com.example.cpen_321.ui.screens.SettingsScreen
 
 @Composable
 fun AppNavGraph(
@@ -25,15 +27,23 @@ fun AppNavGraph(
 //    val authViewModel: AuthViewModel = hiltViewModel()
 //    val uiState by authViewModel.uiState.collectAsState()
 //
-//    // Simple navigation based on authentication state
-//    LaunchedEffect(uiState.isAuthenticated) {
-//        if (uiState.isAuthenticated) {
-//            navController.navigate(NavRoutes.HOME) {
-//                popUpTo(NavRoutes.AUTH) { inclusive = true }
+//    // Simple navigation based on authentication state and if profile setup required
+//    LaunchedEffect(uiState.isAuthenticated, uiState.requiresProfileSetup) {
+//        when {
+//            uiState.requiresProfileSetup -> {
+//                navController.navigate(NavRoutes.SETTINGS) {
+//                    popUpTo(NavRoutes.AUTH) { inclusive = true }
+//                }
 //            }
-//        } else {
-//            navController.navigate(NavRoutes.AUTH) {
-//                popUpTo(0) { inclusive = true }
+//            uiState.isAuthenticated -> {
+//                navController.navigate(NavRoutes.HOME) {
+//                    popUpTo(NavRoutes.AUTH) { inclusive = true }
+//                }
+//            }
+//            else -> {
+//                navController.navigate(NavRoutes.AUTH) {
+//                    popUpTo(0) { inclusive = true }
+//                }
 //            }
 //        }
 //    }
@@ -51,6 +61,16 @@ fun AppNavGraph(
 //                        popUpTo(NavRoutes.AUTH) { inclusive = true }
 //                    }
 //                }
+//            )
+//        }
+//
+//        // Settings screen
+//        composable(NavRoutes.SETTINGS) {
+//            val settingsViewModel: SettingsViewModel = hiltViewModel()
+//            SettingsScreen(
+//                navController = navController,
+//                viewModel = settingsViewModel,
+//                firstTimeSetup = true
 //            )
 //        }
 //

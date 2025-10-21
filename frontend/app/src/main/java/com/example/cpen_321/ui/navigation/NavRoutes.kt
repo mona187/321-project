@@ -7,5 +7,6 @@ object NavRoutes {
     const val PROFILE = "profile"
     const val WAITING_ROOM = "waiting_room"
     const val GROUP = "group"
+    const val SETTINGS = "settings"
 
 }

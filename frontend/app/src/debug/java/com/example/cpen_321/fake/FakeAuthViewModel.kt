@@ -8,28 +8,19 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * A fully compatible fake AuthViewModel for offline/testing.
- * Mirrors the real AuthViewModel API used across your screens.
- */
 class FakeAuthViewModel : ViewModel() {
 
-    // Fake UI state (pretend user is logged in)
+    // Start as "authenticated but not set up"
     private val _uiState = MutableStateFlow(
         AuthUiState(
             isAuthenticated = true,
-            isSigningIn = false,
-            isSigningUp = false,
-            successMessage = "Welcome Debug User!",
-            errorMessage = null
+            requiresProfileSetup = true, // 👈 Force settings screen first
+            successMessage = "Welcome Debug User!"
         )
     )
     val uiState = _uiState.asStateFlow()
 
-    // ----------------------------------------------------------
-    //  Fake Auth methods matching real AuthViewModel
-    // ----------------------------------------------------------
-
+    // Fake sign-in flow
     fun signInWithGoogle(context: Context): Result<GoogleIdTokenCredential> {
         val fakeCredential = GoogleIdTokenCredential.createFrom(
             Bundle().apply { putString("fake_id_token", "debug_id_12345") }
@@ -40,6 +31,7 @@ class FakeAuthViewModel : ViewModel() {
     fun handleGoogleSignInResult(credential: GoogleIdTokenCredential) {
         _uiState.value = _uiState.value.copy(
             isAuthenticated = true,
+            requiresProfileSetup = true,
             successMessage = "Signed in as Debug User"
         )
     }
@@ -47,7 +39,15 @@ class FakeAuthViewModel : ViewModel() {
     fun handleGoogleSignUpResult(credential: GoogleIdTokenCredential) {
         _uiState.value = _uiState.value.copy(
             isAuthenticated = true,
+            requiresProfileSetup = true,
             successMessage = "Signed up as Debug User"
+        )
+    }
+
+    // 👇 Called from SettingsScreen after save
+    fun completeProfileSetup() {
+        _uiState.value = _uiState.value.copy(
+            requiresProfileSetup = false
         )
     }
 
@@ -59,17 +59,11 @@ class FakeAuthViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
-    // ----------------------------------------------------------
-    //  Add signOut() to support Home/Profile screen actions
-    // ----------------------------------------------------------
-
     fun signOut() {
         _uiState.value = _uiState.value.copy(
             isAuthenticated = false,
-            successMessage = "Signed out",
-            errorMessage = null,
-            isSigningIn = false,
-            isSigningUp = false
+            requiresProfileSetup = false,
+            successMessage = "Signed out"
         )
     }
 }

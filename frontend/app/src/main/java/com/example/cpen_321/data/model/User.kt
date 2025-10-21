@@ -4,7 +4,7 @@ data class User(
     val userId: Int,
     val name: String,
     val bio: String?,
-    val preference: String?,
+    val preference: List<String>?,
     val profilePicture: String?,
     val credibilityScore: Double?,
     val contactNumber: String?,

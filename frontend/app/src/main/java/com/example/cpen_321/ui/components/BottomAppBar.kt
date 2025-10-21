@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.filled.SettingsSuggest
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 
@@ -37,6 +38,12 @@ fun MainBottomBar(navController: NavController) {
                         IconButton(onClick = { /* do something */ }) {
                             Icon(
                                 Icons.Filled.Groups,
+                                contentDescription = "Localized description",
+                            )
+                        }
+                        IconButton(onClick = { navController.navigate("settings")}) {
+                            Icon(
+                                Icons.Filled.SettingsSuggest,
                                 contentDescription = "Localized description",
                             )
                         }

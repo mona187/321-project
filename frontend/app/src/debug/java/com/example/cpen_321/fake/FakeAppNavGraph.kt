@@ -1,9 +1,6 @@
 package com.example.cpen_321.fake
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -11,38 +8,46 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.cpen_321.ui.screens.AuthScreen
-import com.example.cpen_321.ui.screens.HomeScreen
-import com.example.cpen_321.ui.screens.ProfileScreen
-import com.example.cpen_321.ui.screens.WaitingRoomScreen
-import com.example.cpen_321.ui.screens.GroupScreen
+import com.example.cpen_321.ui.screens.*
 
 @Composable
 fun FakeAppNavGraph(
     navController: NavHostController = rememberNavController()
 ) {
-    // ✅ Get one lifecycle-aware instance of each fake viewmodel
+    // Fake viewmodels
     val authViewModel: FakeAuthViewModel = viewModel()
+    val settingsViewModel: FakeSettingsViewModel = viewModel()
     val uiState by authViewModel.uiState.collectAsState()
 
-    // Navigate automatically based on fake auth state
-    LaunchedEffect(uiState.isAuthenticated) {
-        if (uiState.isAuthenticated) {
-            navController.navigate(NavRoutes.HOME) {
-                popUpTo(NavRoutes.AUTH) { inclusive = true }
+    // ✅ Run navigation logic once when auth state changes
+    LaunchedEffect(uiState) {
+        when {
+            uiState.requiresProfileSetup -> {
+                // navigate to SETTINGS first
+                navController.navigate(NavRoutes.SETTINGS) {
+                    popUpTo(0) { inclusive = true }
+                }
             }
-        } else {
-            navController.navigate(NavRoutes.AUTH) {
-                popUpTo(0) { inclusive = true }
+            uiState.isAuthenticated -> {
+                // then to HOME only after setup complete
+                navController.navigate(NavRoutes.HOME) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
+            else -> {
+                navController.navigate(NavRoutes.AUTH) {
+                    popUpTo(0) { inclusive = true }
+                }
             }
         }
     }
 
+    // ✅ Define destinations
     NavHost(
         navController = navController,
         startDestination = NavRoutes.AUTH
     ) {
-        // 🔐 Authentication screen
+        // 🔐 Auth Screen
         composable(NavRoutes.AUTH) {
             AuthScreen(
                 authViewModel = authViewModel,
@@ -54,22 +59,32 @@ fun FakeAppNavGraph(
             )
         }
 
-        // 🏠 Home screen
+        // ⚙️ Settings Screen (first-time setup)
+        composable(NavRoutes.SETTINGS) {
+            SettingsScreen(
+                navController = navController,
+                viewModel = settingsViewModel,
+                fakeAuthViewModel = authViewModel,   // ✅ important
+                firstTimeSetup = true
+            )
+        }
+
+        // 🏠 Home Screen
         composable(NavRoutes.HOME) {
             HomeScreen(navController, authViewModel = authViewModel)
         }
 
-        // ⏳ Waiting room screen
+        // ⏳ Waiting Room
         composable(NavRoutes.WAITING_ROOM) {
             WaitingRoomScreen(navController)
         }
 
-        // 👥 Group screen
+        // 👥 Group Screen
         composable(NavRoutes.GROUP) {
             GroupScreen(navController)
         }
 
-        // Profile Screen
+        // 👤 Profile Screen
         composable(route = NavRoutes.PROFILE) {
             ProfileScreen(
                 navController = navController,
@@ -87,12 +102,8 @@ fun FakeAppNavGraph(
                 }
             )
         ) { backStackEntry ->
-            // Get the argument as a string
             val userIdString = backStackEntry.arguments?.getString("userId")
-
-            // Safely convert to Int if possible
             val userId = userIdString?.toIntOrNull()
-
             ProfileScreen(userId = userId, navController = navController)
         }
     }

@@ -24,8 +24,9 @@ data class AuthUiState(
     val isAuthenticated: Boolean = false,
     val user: User? = null,
     val errorMessage: String? = null,
-    val successMessage: String? = null
-)
+    val successMessage: String? = null,
+    val requiresProfileSetup: Boolean = false,
+    )
 
 // ------------------------- ViewModel -------------------------
 
@@ -53,10 +54,12 @@ class AuthViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isCheckingAuth = true)
                 val isAuthenticated = authRepository.isUserAuthenticated()
                 val user = if (isAuthenticated) authRepository.getCurrentUser() else null
+                val needsSetup = user?.bio.isNullOrBlank() || user?.contactNumber.isNullOrBlank() || user?.preference.isNullOrEmpty()
 
                 _uiState.value = _uiState.value.copy(
                     isAuthenticated = isAuthenticated,
                     user = user,
+                    requiresProfileSetup = needsSetup,
                     isCheckingAuth = false
                 )
             } catch (e: Exception) {
@@ -94,6 +97,7 @@ class AuthViewModel @Inject constructor(
         authOperation: suspend (String) -> Result<AuthData>
     ) {
         viewModelScope.launch {
+
             _uiState.value = _uiState.value.copy(
                 isSigningIn = !isSignUp,
                 isSigningUp = isSignUp
@@ -102,12 +106,22 @@ class AuthViewModel @Inject constructor(
             try {
                 authOperation(credential.idToken)
                     .onSuccess { authData ->
+                        val user = authData.user
+                        // ✅ New: Determine if profile setup is needed
+                        val needsSetup = user.bio.isNullOrBlank() ||
+                                user.contactNumber.isNullOrBlank() ||
+                                user.preference.isNullOrEmpty()
+
                         _uiState.value = _uiState.value.copy(
                             isSigningIn = false,
                             isSigningUp = false,
                             isAuthenticated = true,
-                            user = authData.user,
-                            successMessage = if (isSignUp) "Account created successfully!" else "Signed in successfully!"
+                            requiresProfileSetup = needsSetup,
+                            user = user,
+                            successMessage = if (isSignUp)
+                                "Account created successfully!"
+                            else
+                                "Signed in successfully!"
                         )
                     }
                     .onFailure { error ->
