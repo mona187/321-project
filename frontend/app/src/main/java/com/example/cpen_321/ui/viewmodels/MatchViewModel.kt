@@ -25,7 +25,7 @@ class MatchViewModel @Inject constructor(
 
     private var timerJob: Job? = null // Job represents a coroutine, in this case timer
 
-    fun connectSocket(userId: String?){
+    fun connectSocket(userId: Int?){
         SocketManager.connect()
 
         // emit join room request to backend

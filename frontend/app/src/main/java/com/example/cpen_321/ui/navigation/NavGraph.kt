@@ -8,63 +8,66 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.cpen_321.ui.screens.AuthScreen
-import com.example.cpen_321.ui.screens.HomeScreen
-import com.example.cpen_321.ui.screens.WaitingRoomScreen
-import com.example.cpen_321.ui.screens.GroupScreen
-import com.example.cpen_321.ui.viewmodels.AuthViewModel
-import com.example.cpen_321.ui.screens.ProfileScreen
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
-import androidx.navigation.compose.composable
+import com.example.cpen_321.ui.screens.*
+import com.example.cpen_321.ui.viewmodels.AuthViewModel
 import com.example.cpen_321.ui.viewmodels.SettingsViewModel
-import com.example.cpen_321.ui.screens.SettingsScreen
-
+import android.window.SplashScreen
 @Composable
-fun AppNavGraph(
-    navController: NavHostController
-) {
+fun AppNavGraph(navController: NavHostController) {
     val authViewModel: AuthViewModel = hiltViewModel()
     val uiState by authViewModel.uiState.collectAsState()
 
-    // Simple navigation based on authentication state and if profile setup required
-    LaunchedEffect(uiState.isAuthenticated, uiState.requiresProfileSetup) {
+    // ✅ Only navigate after auth check is done
+    LaunchedEffect(uiState.isCheckingAuth, uiState.isAuthenticated, uiState.requiresProfileSetup) {
+        if (uiState.isCheckingAuth) return@LaunchedEffect
+
         when {
-            uiState.requiresProfileSetup -> {
+            // New user who just signed up via Google
+            uiState.isAuthenticated && uiState.requiresProfileSetup -> {
                 navController.navigate(NavRoutes.SETTINGS) {
                     popUpTo(NavRoutes.AUTH) { inclusive = true }
                 }
             }
-            uiState.isAuthenticated -> {
+
+            // Returning authenticated user
+            uiState.isAuthenticated && !uiState.requiresProfileSetup -> {
                 navController.navigate(NavRoutes.HOME) {
                     popUpTo(NavRoutes.AUTH) { inclusive = true }
                 }
             }
+
+            // Not authenticated yet → stay on Auth screen
             else -> {
-                navController.navigate(NavRoutes.AUTH) {
-                    popUpTo(0) { inclusive = true }
-                }
+                // no nav — Auth is already the start destination
             }
         }
     }
 
+    // 🔹 Build the navigation graph
     NavHost(
         navController = navController,
         startDestination = NavRoutes.AUTH
     ) {
-        // 🔐 Authentication screen
+        // ---------------- AUTH ----------------
         composable(NavRoutes.AUTH) {
-            AuthScreen(
-                authViewModel = authViewModel,
-                onNavigateToHome = {
-                    navController.navigate(NavRoutes.HOME) {
-                        popUpTo(NavRoutes.AUTH) { inclusive = true }
+            if (uiState.isCheckingAuth) {
+                // optional small splash
+                //SplashScreen()
+            } else {
+                AuthScreen(
+                    authViewModel = authViewModel,
+                    onNavigateToHome = {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo(NavRoutes.AUTH) { inclusive = true }
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
-        // Settings screen
+        // ---------------- SETTINGS ----------------
         composable(NavRoutes.SETTINGS) {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             SettingsScreen(
@@ -74,28 +77,29 @@ fun AppNavGraph(
             )
         }
 
-        // 🏠 Home screen
+        // ---------------- HOME ----------------
         composable(NavRoutes.HOME) {
             HomeScreen(navController, authViewModel = authViewModel)
         }
 
-        // ⏳ Waiting room screen
+        // ---------------- WAITING ROOM ----------------
         composable(NavRoutes.WAITING_ROOM) {
             WaitingRoomScreen(navController)
         }
 
-        // 👥 Group screen
+        // ---------------- GROUP ----------------
         composable(NavRoutes.GROUP) {
             GroupScreen(navController)
         }
 
-        // Profile Screen
-    composable(route = NavRoutes.PROFILE) {
-        ProfileScreen(
-            navController = navController,
-            userId = null
-        )
-    }
+        // ---------------- PROFILE ----------------
+        composable(route = NavRoutes.PROFILE) {
+            ProfileScreen(
+                navController = navController,
+                userId = null
+            )
+        }
+
         composable(
             route = "profile/{userId?}",
             arguments = listOf(
@@ -106,12 +110,8 @@ fun AppNavGraph(
                 }
             )
         ) { backStackEntry ->
-            // Get the argument as a string
             val userIdString = backStackEntry.arguments?.getString("userId")
-
-            // Safely convert to Int if possible
             val userId = userIdString?.toIntOrNull()
-
             ProfileScreen(userId = userId, navController = navController)
         }
     }

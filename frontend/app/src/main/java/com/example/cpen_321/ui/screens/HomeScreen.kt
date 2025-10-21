@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.collectAsState
 import com.example.cpen_321.fake.FakeAuthViewModel
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
+import androidx.compose.runtime.getValue
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -31,6 +33,7 @@ fun HomeScreen(
     viewModel: MatchViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ){
+    val uiState by authViewModel.uiState.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -51,11 +54,18 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Get authenticated userId
+            val userId = uiState.user?.userId
+
             OutlinedButton(
                 onClick = {
-                    val userId = "user123" // this needs to be actual userId
-                    // viewModel.connectSocket(userId)
-                    navController.navigate(NavRoutes.WAITING_ROOM)
+                    if (userId != null) {
+                        viewModel.connectSocket(userId) // 🔗 actual user id
+                        navController.navigate(NavRoutes.WAITING_ROOM)
+                    } else {
+                        // Handle missing user id safely
+                        println("Error: userId is null")
+                    }
                 }
             ) {
                 Text("Find Match")
