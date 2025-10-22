@@ -1,32 +1,32 @@
 package com.example.cpen_321.data.network.interceptors
 
-import android.util.Log
+import com.example.cpen_321.data.local.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
 
-class AuthInterceptor(private val tokenProvider: () -> String?) : Interceptor {
+/**
+ * Interceptor to add JWT token to all requests
+ */
+class AuthInterceptor(
+    private val tokenManager: TokenManager
+) : Interceptor {
+
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        val token = tokenProvider()
-        if (token == null) {
+        // Get token from TokenManager
+        val token = tokenManager.getToken()
+
+        // If no token, proceed with original request
+        if (token.isNullOrEmpty()) {
             return chain.proceed(originalRequest)
         }
 
-        val newRequest = originalRequest.newBuilder()
-            .addHeader("Authorization", "Bearer $token")
+        // Add Authorization header with Bearer token
+        val authenticatedRequest = originalRequest.newBuilder()
+            .header("Authorization", "Bearer $token")
             .build()
 
-        var response = chain.proceed(newRequest)
-
-        // Retry if error
-        if (response.code != 200) {
-            val retryRequest = originalRequest.newBuilder()
-                .header("Authorization", "Bearer $token")
-                .build()
-            response = chain.proceed(retryRequest)
-        }
-
-        return response
+        return chain.proceed(authenticatedRequest)
     }
 }

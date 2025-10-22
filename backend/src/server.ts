@@ -29,7 +29,7 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  origin: '*',
   credentials: true,
 }));
 app.use(express.json());
@@ -78,9 +78,9 @@ const startServer = async () => {
     startBackgroundTasks();
 
     // Start server
-    server.listen(PORT, () => {
+    server.listen(Number(PORT), '0.0.0.0', () => {
       console.log('=================================');
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
       console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health: http://localhost:${PORT}/health`);
       console.log('=================================');

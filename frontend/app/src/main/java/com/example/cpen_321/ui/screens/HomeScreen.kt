@@ -1,45 +1,29 @@
 package com.example.cpen_321.ui.screens
 
-import NavRoutes
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.example.cpen_321.ui.viewmodels.MatchViewModel
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import com.example.cpen_321.fake.FakeMatchViewModel
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import com.example.cpen_321.ui.components.MainBottomBar
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
-
-
-//Add fonts
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.example.cpen_321.R
+import com.example.cpen_321.ui.components.MainBottomBar
+import com.example.cpen_321.ui.viewmodels.AuthViewModel
+import com.example.cpen_321.ui.viewmodels.MatchViewModel
+import com.example.cpen_321.ui.viewmodels.GroupViewModel
+import com.example.cpen_321.ui.viewmodels.UserViewModel
 
-//Add font
+// Add font
 val PlaywriteFontFamily = FontFamily(
     Font(R.font.playwrite_usmodern_variablefont_wght)
 )
@@ -47,10 +31,34 @@ val PlaywriteFontFamily = FontFamily(
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: FakeMatchViewModel = remember { FakeMatchViewModel() }
-){
+    authViewModel: AuthViewModel = hiltViewModel(),
+    matchViewModel: MatchViewModel = hiltViewModel(),
+    groupViewModel: GroupViewModel = hiltViewModel(),
+    userViewModel: UserViewModel = hiltViewModel()
+) {
+    // Collect states
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val userSettings by userViewModel.userSettings.collectAsState()
+    val currentGroup by groupViewModel.currentGroup.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Load user settings when screen opens
+    LaunchedEffect(Unit) {
+        userViewModel.loadUserSettings()
+    }
+
+    // Check if user has an active group
+    LaunchedEffect(Unit) {
+        try {
+            groupViewModel.loadGroupStatus()
+        } catch (e: Exception) {
+            // No active group, that's fine
+        }
+    }
+
     Scaffold(
-        bottomBar = { MainBottomBar(navController = navController) }
+        bottomBar = { MainBottomBar(navController = navController) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -60,7 +68,7 @@ fun HomeScreen(
             // Profile icon in top right
             IconButton(
                 onClick = {
-                    navController.navigate(NavRoutes.PROFILE_CONFIG)
+                    navController.navigate("profile_config")
                 },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -69,7 +77,9 @@ fun HomeScreen(
                 Icon(
                     Icons.Filled.AccountCircle,
                     contentDescription = "Profile",
-                    modifier = Modifier.width(48.dp).height(48.dp)
+                    modifier = Modifier
+                        .width(48.dp)
+                        .height(48.dp)
                 )
             }
 
@@ -81,9 +91,9 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Welcome text
+                // Welcome text with user's name
                 Text(
-                    text = "Welcome to FeastFriends!",
+                    text = "Welcome${currentUser?.name?.let { ", $it" } ?: ""}!",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
@@ -92,12 +102,40 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Show credibility score if available
+                currentUser?.credibilityScore?.let { score ->
+                    Text(
+                        text = "Credibility Score: ${score.toInt()}",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(48.dp))
 
+                // Start Matchmaking Button
                 Button(
                     onClick = {
-                        val userId = "user123" // this needs to be actual userId
-                        navController.navigate(NavRoutes.WAITING_ROOM)
+                        // Check if user has preferences set
+                        val cuisines = userSettings?.preference ?: emptyList()
+                        val budget = userSettings?.budget ?: 50.0
+                        val radius = userSettings?.radiusKm ?: 5.0
+
+                        if (cuisines.isEmpty()) {
+                            // Navigate to preferences screen first
+                            navController.navigate("preferences")
+                        } else {
+                            // Start matching with user preferences
+                            matchViewModel.joinMatching(
+                                cuisine = cuisines,
+                                budget = budget,
+                                radiusKm = radius
+                            )
+                            navController.navigate("waiting_room")
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -107,7 +145,7 @@ fun HomeScreen(
                     )
                 ) {
                     Text(
-                        text ="Start Matchmaking",
+                        text = "Start Matchmaking",
                         color = Color.Black,
                         fontSize = 20.sp
                     )
@@ -115,19 +153,27 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // Current Groups Button
                 Button(
                     onClick = {
-                        navController.navigate(NavRoutes.VIEW_GROUPS)
+                        // Check if user has an active group
+                        if (currentGroup != null) {
+                            // Navigate to active group
+                            navController.navigate("group/${currentGroup!!.groupId}")
+                        } else {
+                            // Navigate to view groups screen or show message
+                            navController.navigate("view_groups")
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD54F) // Yellow color
+                        containerColor = if (currentGroup != null) Color(0xFF4CAF50) else Color(0xFFFFD54F)
                     )
                 ) {
                     Text(
-                        text = "Current Groups",
+                        text = if (currentGroup != null) "View Active Group" else "Current Groups",
                         color = Color.Black,
                         fontSize = 20.sp
                     )

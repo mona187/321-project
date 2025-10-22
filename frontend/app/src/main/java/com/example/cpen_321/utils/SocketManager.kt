@@ -1,33 +1,295 @@
+package com.example.cpen_321.utils
+
+import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import org.json.JSONObject
-import org.json.JSONArray
+import java.net.URISyntaxException
 
-object SocketManager {
+/**
+ * Socket Manager for real-time communication
+ * Handles Socket.IO connections for waiting rooms and group voting
+ */
+class SocketManager private constructor() {
+
     private var socket: Socket? = null
-    private const val BASE_URL = "https://your-backend-url.com" // change to your backend
+    private var isConnected = false
 
-    fun connect() {
-        if (socket == null) {
-            socket = IO.socket(BASE_URL)
-        }
-        socket?.connect()
-    }
+    companion object {
+        private const val TAG = "SocketManager"
 
-    fun disconnect() {
-        socket?.disconnect()
-    }
+        // TODO: Replace with your backend URL
+        private const val SOCKET_URL = "http://10.0.2.2:3000"
+        // For physical device: "http://YOUR_COMPUTER_IP:3000"
+        // For production: "https://your-backend-domain.com"
 
-    // take event name and define callback function to run when event received (Ex: "room_update")
-    fun on(event: String, listener: (JSONObject) -> Unit) {
-        socket?.on(event) { args ->
-            if (args.isNotEmpty() && args[0] is JSONObject) {
-                listener(args[0] as JSONObject)
+        @Volatile
+        private var INSTANCE: SocketManager? = null
+
+        fun getInstance(): SocketManager {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: SocketManager().also { INSTANCE = it }
             }
         }
     }
 
-    fun emit(event: String, data: JSONObject) {
+    /**
+     * Connect to socket server with JWT token
+     */
+    fun connect(token: String) {
+        if (isConnected) {
+            Log.d(TAG, "Socket already connected")
+            return
+        }
+
+        try {
+            val options = IO.Options().apply {
+                auth = mapOf("token" to token)
+                reconnection = true
+                reconnectionAttempts = 5
+                reconnectionDelay = 1000
+                timeout = 10000
+            }
+
+            socket = IO.socket(SOCKET_URL, options)
+
+            // Connection event listeners
+            socket?.on(Socket.EVENT_CONNECT, onConnect)
+            socket?.on(Socket.EVENT_DISCONNECT, onDisconnect)
+            socket?.on(Socket.EVENT_CONNECT_ERROR, onConnectError)
+
+            socket?.connect()
+
+            Log.d(TAG, "Initiating socket connection...")
+        } catch (e: URISyntaxException) {
+            Log.e(TAG, "Invalid socket URL", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Socket connection error", e)
+        }
+    }
+
+    /**
+     * Disconnect from socket server
+     */
+    fun disconnect() {
+        socket?.disconnect()
+        socket?.off()
+        socket = null
+        isConnected = false
+        Log.d(TAG, "Socket disconnected")
+    }
+
+    /**
+     * Check if socket is connected
+     */
+    fun isConnected(): Boolean = isConnected
+
+    // ==================== WAITING ROOM EVENTS ====================
+
+    /**
+     * Join a room (client → server)
+     */
+    fun joinRoom(userId: String) {
+        val data = JSONObject().apply {
+            put("userId", userId)
+        }
+        emit("join_room", data)
+        Log.d(TAG, "Emitted join_room for user: $userId")
+    }
+
+    /**
+     * Leave a room (client → server)
+     */
+    fun leaveRoom(userId: String) {
+        val data = JSONObject().apply {
+            put("userId", userId)
+        }
+        emit("leave_room", data)
+        Log.d(TAG, "Emitted leave_room for user: $userId")
+    }
+
+    /**
+     * Subscribe to room updates (server → client)
+     */
+    fun onRoomUpdate(listener: (JSONObject) -> Unit) {
+        on("room_update") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received room_update: $data")
+                listener(data)
+            }
+        }
+    }
+
+    /**
+     * Subscribe to group ready event (server → client)
+     */
+    fun onGroupReady(listener: (JSONObject) -> Unit) {
+        on("group_ready") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received group_ready: $data")
+                listener(data)
+            }
+        }
+    }
+
+    /**
+     * Subscribe to room expired event (server → client)
+     */
+    fun onRoomExpired(listener: (JSONObject) -> Unit) {
+        on("room_expired") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received room_expired: $data")
+                listener(data)
+            }
+        }
+    }
+
+    // ==================== GROUP EVENTS ====================
+
+    /**
+     * Subscribe to room/group
+     */
+    fun subscribeToRoom(roomId: String) {
+        emit("subscribe_to_room", JSONObject().apply {
+            put("roomId", roomId)
+        })
+        Log.d(TAG, "Subscribed to room: $roomId")
+    }
+
+    /**
+     * Unsubscribe from room/group
+     */
+    fun unsubscribeFromRoom(roomId: String) {
+        emit("unsubscribe_from_room", JSONObject().apply {
+            put("roomId", roomId)
+        })
+        Log.d(TAG, "Unsubscribed from room: $roomId")
+    }
+
+    /**
+     * Subscribe to group
+     */
+    fun subscribeToGroup(groupId: String) {
+        emit("subscribe_to_group", JSONObject().apply {
+            put("groupId", groupId)
+        })
+        Log.d(TAG, "Subscribed to group: $groupId")
+    }
+
+    /**
+     * Unsubscribe from group
+     */
+    fun unsubscribeFromGroup(groupId: String) {
+        emit("unsubscribe_from_group", JSONObject().apply {
+            put("groupId", groupId)
+        })
+        Log.d(TAG, "Unsubscribed from group: $groupId")
+    }
+
+    /**
+     * Subscribe to vote updates (server → client)
+     */
+    fun onVoteUpdate(listener: (JSONObject) -> Unit) {
+        on("vote_update") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received vote_update: $data")
+                listener(data)
+            }
+        }
+    }
+
+    /**
+     * Subscribe to restaurant selected event (server → client)
+     */
+    fun onRestaurantSelected(listener: (JSONObject) -> Unit) {
+        on("restaurant_selected") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received restaurant_selected: $data")
+                listener(data)
+            }
+        }
+    }
+
+    /**
+     * Subscribe to member joined event (server → client)
+     */
+    fun onMemberJoined(listener: (JSONObject) -> Unit) {
+        on("member_joined") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received member_joined: $data")
+                listener(data)
+            }
+        }
+    }
+
+    /**
+     * Subscribe to member left event (server → client)
+     */
+    fun onMemberLeft(listener: (JSONObject) -> Unit) {
+        on("member_left") { args ->
+            if (args.isNotEmpty()) {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "Received member_left: $data")
+                listener(data)
+            }
+        }
+    }
+
+    // ==================== HELPER METHODS ====================
+
+    /**
+     * Emit event to server
+     */
+    private fun emit(event: String, data: JSONObject) {
         socket?.emit(event, data)
+    }
+
+    /**
+     * Listen to event from server
+     */
+    private fun on(event: String, listener: Emitter.Listener) {
+        socket?.on(event, listener)
+    }
+
+    /**
+     * Remove event listener
+     */
+    fun off(event: String) {
+        socket?.off(event)
+        Log.d(TAG, "Removed listener for event: $event")
+    }
+
+    /**
+     * Remove all event listeners
+     */
+    fun offAll() {
+        socket?.off()
+        Log.d(TAG, "Removed all event listeners")
+    }
+
+    // ==================== CONNECTION EVENT HANDLERS ====================
+
+    private val onConnect = Emitter.Listener {
+        isConnected = true
+        Log.d(TAG, "✅ Socket connected successfully")
+    }
+
+    private val onDisconnect = Emitter.Listener { args ->
+        isConnected = false
+        val reason = if (args.isNotEmpty()) args[0].toString() else "unknown"
+        Log.d(TAG, "🔌 Socket disconnected. Reason: $reason")
+    }
+
+    private val onConnectError = Emitter.Listener { args ->
+        isConnected = false
+        val error = if (args.isNotEmpty()) args[0].toString() else "unknown error"
+        Log.e(TAG, "❌ Socket connection error: $error")
     }
 }

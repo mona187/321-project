@@ -1,425 +1,372 @@
 package com.example.cpen_321.ui.screens
 
-import NavRoutes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
+import coil.compose.AsyncImage
+import com.example.cpen_321.data.model.Restaurant
+import com.example.cpen_321.ui.viewmodels.GroupViewModel
+import com.example.cpen_321.ui.viewmodels.RestaurantViewModel
 
 @Composable
 fun VoteRestaurantScreen(
-    navController: NavController
+    navController: NavController,
+    groupId: String? = null,
+    groupViewModel: GroupViewModel = hiltViewModel(),
+    restaurantViewModel: RestaurantViewModel = hiltViewModel()
 ) {
-    // Replace with actual data from your ViewModel
-    var currentRestaurantIndex by remember { mutableStateOf(0) }
-    var usersJoined by remember { mutableStateOf(3) }
-    var timeRemaining by remember { mutableStateOf(60) } // seconds
-    val maxUsers = 10
-    val maxTimeLimit = 60 // seconds
+    // Collect states
+    val currentGroup by groupViewModel.currentGroup.collectAsState()
+    val groupMembers by groupViewModel.groupMembers.collectAsState()
+    val currentVotes by groupViewModel.currentVotes.collectAsState()
+    val selectedRestaurant by groupViewModel.selectedRestaurant.collectAsState()
+    val userVote by groupViewModel.userVote.collectAsState()
 
-    // Track votes for each restaurant (null = no vote, true = thumbs up, false = thumbs down)
-    val votes = remember { mutableStateMapOf<Int, Boolean?>() }
+    val restaurants by restaurantViewModel.restaurants.collectAsState()
+    val isLoadingRestaurants by restaurantViewModel.isLoading.collectAsState()
+    val restaurantError by restaurantViewModel.errorMessage.collectAsState()
 
-    var showVoteWarningDialog by remember { mutableStateOf(false) }
-    var showTimeUpDialog by remember { mutableStateOf(false) }
+    var selectedRestaurantForVote by remember { mutableStateOf<Restaurant?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Sample restaurant options - replace with actual data
-    val restaurants = listOf(
-        "Restaurant Option 1",
-        "Restaurant Option 2",
-        "Restaurant Option 3"
-    )
-
-    // Timer countdown
+    // Load group status
     LaunchedEffect(Unit) {
-        while (timeRemaining > 0) {
-            delay(1000L)
-            timeRemaining--
-        }
-        // Time's up - show dialog
-        showTimeUpDialog = true
+        groupViewModel.loadGroupStatus()
     }
 
-    // Check if conditions are met to auto-advance
-    LaunchedEffect(usersJoined, timeRemaining) {
-        if (usersJoined >= 4 || usersJoined >= maxUsers) {
-            // Automatically move to group details screen
-//            navController.navigate(NavRoutes.GROUP)
+    // Load restaurants when group is loaded
+    LaunchedEffect(currentGroup) {
+        currentGroup?.let { group ->
+            // Get user location (you'll need to implement location permission)
+            // For now, using a default location (Vancouver)
+            val latitude = 49.2827
+            val longitude = -123.1207
+            val radius = 5000 // 5km in meters
+
+            // Get cuisines from group members if available
+            val cuisines = listOf<String>() // You can derive this from group preferences
+
+            restaurantViewModel.searchRestaurants(
+                latitude = latitude,
+                longitude = longitude,
+                radius = radius,
+                cuisineTypes = cuisines,
+                priceLevel = null
+            )
         }
     }
 
-//    // Check if conditions are met to auto-advance
-//    LaunchedEffect(usersJoined, timeRemaining) {
-//        if (usersJoined >= 4 || usersJoined >= maxUsers || timeRemaining <= 0) {
-//            // Automatically move to next screen
-//            // navController.navigate(NavRoutes.NEXT_VOTING_SCREEN)
-//        }
-//    }
+    // Navigate when restaurant is selected
+    LaunchedEffect(selectedRestaurant) {
+        selectedRestaurant?.let { restaurant ->
+            // Show success message and navigate
+            snackbarHostState.showSnackbar("${restaurant.name} has been selected!")
+            // Navigate to group screen after short delay
+            kotlinx.coroutines.delay(2000)
+            navController.navigate("group") {
+                popUpTo("vote_restaurant") { inclusive = true }
+            }
+        }
+    }
 
+    // Show error messages
+    LaunchedEffect(restaurantError) {
+        restaurantError?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            restaurantViewModel.clearError()
+        }
+    }
 
-    /*Notes for future:
-
-    Great idea! Here's the updated code that only navigates forward when **everyone has completed voting**:
-
-```kotlin
-// Check if all users have completed voting
-LaunchedEffect(votes.size, usersJoined) {
-    // Check if all users have voted on all restaurants
-    // Each user needs to vote on all restaurants
-    val totalVotesNeeded = restaurants.size * usersJoined
-    val currentTotalVotes = votes.size // This counts votes for current user only
-
-    // For proper implementation with multiple users, you'd track:
-    // val allUsersCompletedVoting = viewModel.allUsersHaveVoted()
-
-    // Placeholder: Navigate when all users report they've finished
-    // if (allUsersCompletedVoting) {
-    //     navController.navigate(NavRoutes.GROUP_DETAILS)
-    // }
-}
-```
-
-However, there's an important consideration: **The current `votes` map only tracks the current user's votes**, not all users in the group.
-
-**Better approach using ViewModel:**
-
-You'll need to track voting status across all users in your ViewModel. Here's how to structure it:
-
-```kotlin
-// In your ViewModel (or backend)
-// Track which users have completed voting
-val usersCompletedVoting = mutableStateOf(0)
-val totalUsers = 4 // or however many are in the group
-
-// In VoteRestaurantScreen
-LaunchedEffect(usersJoined) {
-    // Listen to backend/viewModel for all users' voting status
-    // viewModel.usersCompletedVoting.collect { completedCount ->
-    //     if (completedCount >= usersJoined) {
-    //         // Everyone has finished voting
-    //         navController.navigate(NavRoutes.GROUP_DETAILS)
-    //     }
-    // }
-}
-```
-
-**Updated VoteRestaurantScreen with this logic:**
-
-```kotlin
-// Replace the auto-advance LaunchedEffect with this:
-LaunchedEffect(usersJoined) {
-    // This should listen to your ViewModel/backend
-    // For now, just remove auto-advance and rely on manual submission
-    // When you integrate with backend, add:
-    // viewModel.observeVotingComplete().collect { allComplete ->
-    //     if (allComplete) {
-    //         navController.navigate(NavRoutes.GROUP_DETAILS)
-    //     }
-    // }
-}
-```
-
-**For now, you can remove the auto-advance code entirely** and only navigate when:
-1. User clicks "Submit Votes & Leave" (after completing all their votes)
-2. Timer expires
-
-This way, the backend/ViewModel will be responsible for determining when everyone has voted and triggering the transition to the group details screen.
-
-Would you like me to show you how to set this up with a ViewModel that tracks all users' voting status?
-     */
-
-    Scaffold { innerPadding ->
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(16.dp)
         ) {
-            // Top section
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
+            // Header
+            Text(
+                text = "Vote for Restaurant",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
 
-                // Title box
-                Box(
+            // Voting status
+            currentGroup?.let { group ->
+                val totalMembers = group.getAllMembers().size
+                val votedMembers = currentVotes.size
+
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
-                        .background(Color(0xFFFFF9C4))
-                        .border(2.dp, Color.Black),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Restaurant Voting Stage",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF9C4)
                     )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Restaurant option with navigation arrows
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left arrow
-                    IconButton(
-                        onClick = {
-                            if (currentRestaurantIndex > 0) {
-                                currentRestaurantIndex--
-                            }
-                        },
-                        enabled = currentRestaurantIndex > 0
+                    Column(
+                        modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = "◀",
-                            fontSize = 40.sp,
-                            color = if (currentRestaurantIndex > 0) Color.Black else Color.Gray
+                            text = "Voting Progress: $votedMembers / $totalMembers",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
                         )
-                    }
 
-                    // Restaurant option box
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(100.dp)
-                            .background(Color(0xFFFFF9C4))
-                            .border(2.dp, Color.Black),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = restaurants[currentRestaurantIndex],
-                            fontSize = 18.sp,
-                            color = Color.Black,
-                            textAlign = TextAlign.Center
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        LinearProgressIndicator(
+                            progress = { votedMembers.toFloat() / totalMembers.toFloat() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                            color = Color(0xFF4CAF50),
                         )
-                    }
 
-                    // Right arrow
-                    IconButton(
-                        onClick = {
-                            if (currentRestaurantIndex < restaurants.size - 1) {
-                                currentRestaurantIndex++
-                            }
-                        },
-                        enabled = currentRestaurantIndex < restaurants.size - 1
-                    ) {
-                        Text(
-                            text = "▶",
-                            fontSize = 40.sp,
-                            color = if (currentRestaurantIndex < restaurants.size - 1) Color.Black else Color.Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Get current vote for this restaurant
-                val currentVote = votes[currentRestaurantIndex]
-
-                // Voting buttons (thumbs up and down)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    // Thumbs down button
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(
-                                if (currentVote == false) Color(0xFFFFB300) else Color.Transparent,
-                                shape = MaterialTheme.shapes.medium
-                            )
-                            .border(
-                                width = if (currentVote == false) 3.dp else 0.dp,
-                                color = Color.Black,
-                                shape = MaterialTheme.shapes.medium
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = {
-                                // Toggle vote - if already voted down, remove vote, otherwise vote down
-                                votes[currentRestaurantIndex] = if (currentVote == false) null else false
-                                // viewModel.voteRestaurant(restaurants[currentRestaurantIndex], vote = false)
-                            },
-                            modifier = Modifier.size(80.dp)
-                        ) {
+                        if (userVote != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "👎",
-                                fontSize = 60.sp
-                            )
-                        }
-                    }
-
-                    // Thumbs up button
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .background(
-                                if (currentVote == true) Color(0xFFFFB300) else Color.Transparent,
-                                shape = MaterialTheme.shapes.medium
-                            )
-                            .border(
-                                width = if (currentVote == true) 3.dp else 0.dp,
-                                color = Color.Black,
-                                shape = MaterialTheme.shapes.medium
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = {
-                                // Toggle vote - if already voted up, remove vote, otherwise vote up
-                                votes[currentRestaurantIndex] = if (currentVote == true) null else true
-                                // viewModel.voteRestaurant(restaurants[currentRestaurantIndex], vote = true)
-                            },
-                            modifier = Modifier.size(80.dp)
-                        ) {
-                            Text(
-                                text = "👍",
-                                fontSize = 60.sp
+                                text = "✓ You have voted",
+                                fontSize = 14.sp,
+                                color = Color(0xFF4CAF50),
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
                 }
             }
 
-            // Bottom section
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Status text
-                Text(
-                    text = "Users joined: $usersJoined/$maxUsers",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Time remaining: ${timeRemaining}s",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (timeRemaining <= 10) Color.Red else Color.Black
-                )
+            // Restaurant list
+            if (isLoadingRestaurants) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (restaurants.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "No restaurants found nearby",
+                            fontSize = 16.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                // Retry loading restaurants
+                                val latitude = 49.2827
+                                val longitude = -123.1207
+                                restaurantViewModel.searchRestaurants(
+                                    latitude = latitude,
+                                    longitude = longitude,
+                                    radius = 5000
+                                )
+                            }
+                        ) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(restaurants) { restaurant ->
+                        RestaurantCard(
+                            restaurant = restaurant,
+                            isSelected = selectedRestaurantForVote?.restaurantId == restaurant.restaurantId,
+                            hasVoted = userVote != null,
+                            voteCount = currentVotes[restaurant.restaurantId] ?: 0,
+                            onClick = {
+                                if (userVote == null) {
+                                    selectedRestaurantForVote = restaurant
+                                }
+                            }
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Submit Votes & Leave button
+                // Vote button
                 Button(
                     onClick = {
-                        // Check if all restaurants have been voted on
-                        val allVoted = restaurants.indices.all { votes.containsKey(it) }
-
-                        if (allVoted) {
-                            // Submit votes and navigate to group details
-                            // viewModel.submitAllVotes(votes)
-                            navController.navigate(NavRoutes.GROUP)
-                        } else {
-                            // Show warning dialog
-                            showVoteWarningDialog = true
+                        selectedRestaurantForVote?.let { restaurant ->
+                            // Only vote if we have a valid restaurant ID
+                            val restId = restaurant.restaurantId
+                            if (restId != null) {
+                                groupViewModel.voteForRestaurant(
+                                    restId,
+                                    restaurant
+                                )
+                                selectedRestaurantForVote = null
+                            }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(60.dp),
+                        .height(56.dp),
+                    enabled = selectedRestaurantForVote != null && userVote == null && selectedRestaurantForVote?.restaurantId != null,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD54F)
+                        containerColor = Color(0xFFFFD54F),
+                        disabledContainerColor = Color.Gray
                     )
                 ) {
                     Text(
-                        text = "Submit Votes & Leave",
-                        color = Color.Black,
+                        text = if (userVote != null) "Already Voted" else "Submit Vote",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
                     )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
+}
 
-    // Warning dialog for incomplete voting
-    if (showVoteWarningDialog) {
-        AlertDialog(
-            onDismissRequest = { showVoteWarningDialog = false },
-            title = {
-                Text(
-                    "Incomplete Voting",
-                    fontWeight = FontWeight.Bold
+@Composable
+fun RestaurantCard(
+    restaurant: Restaurant,
+    isSelected: Boolean,
+    hasVoted: Boolean,
+    voteCount: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !hasVoted) { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) Color(0xFFE3F2FD) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isSelected) 8.dp else 2.dp
+        ),
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF2196F3))
+        } else null
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Restaurant image
+            restaurant.getMainPhotoUrl()?.let { photoUrl ->
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = restaurant.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.LightGray)
                 )
-            },
-            text = {
-                Text("Please vote on all restaurants before leaving. You have ${restaurants.size - votes.size} restaurant(s) left to vote on.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showVoteWarningDialog = false }) {
-                    Text("OK", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = Color(0xFFFFF9C4)
-        )
-    }
+                Spacer(modifier = Modifier.width(12.dp))
+            }
 
-    // Time's up dialog
-    if (showTimeUpDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                // Can't dismiss - must take action
-            },
-            title = {
+            // Restaurant info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
-                    "Time's Up!",
+                    text = restaurant.name,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            },
-            text = {
-                Text("Voting time has expired. Unvoted restaurants will be marked as thumbs down.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        // Apply default votes (thumbs down) to unvoted restaurants
-                        restaurants.forEachIndexed { index, _ ->
-                            if (!votes.containsKey(index)) {
-                                votes[index] = false
-                            }
-                        }
 
-                        // Submit all votes
-                        // viewModel.submitAllVotes(votes)
+                Spacer(modifier = Modifier.height(4.dp))
 
-                        // Close dialog and navigate to group details
-                        showTimeUpDialog = false
-                        navController.navigate(NavRoutes.GROUP)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    restaurant.rating?.let { rating ->
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Rating",
+                            tint = Color(0xFFFFC107),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = restaurant.getRatingString(),
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                ) {
-                    Text("Submit Votes", color = Color.Black, fontWeight = FontWeight.Bold)
+
+                    restaurant.priceLevel?.let {
+                        Text(
+                            text = restaurant.getPriceLevelString(),
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
-            },
-            containerColor = Color(0xFFFFF9C4)
-        )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = restaurant.location,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (voteCount > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$voteCount vote${if (voteCount != 1) "s" else ""}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Selection indicator
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
     }
 }

@@ -65,3 +65,45 @@ Note: file structure is incomplete, add files if needed
         - SocketManager
     - MainActivity.kt
     - MyApplication
+
+
+
+
+
+
+## Summary of ViewModels:
+    - AuthViewModel
+        - Google sign-in
+        - Token verification
+        - Logout
+        - Socket connection management
+        - FCM token updates
+        - Account deletion
+
+    - MatchViewModel
+        - Join matching pool
+        - Real-time room updates via Socket.IO
+        - Room member management
+        - Timer for room expiration
+        - Group ready notifications
+
+    - UserViewModel
+        - Load/update user settings
+        - Load/update user profile
+        - Cuisine preference management
+        - Budget and radius settings
+        - Local preference caching
+
+    - GroupViewModel
+        - Load group status
+        - Vote for restaurants
+        - Real-time vote updates via Socket.IO
+        - Group member tracking
+        - Restaurant selection notifications
+        - Leave group
+
+    - RestaurantViewModel
+        - Search restaurants by location
+        - Get restaurant details
+        - Get group recommendations
+        - Restaurant selection

@@ -1,19 +1,51 @@
 package com.example.cpen_321.data.repository
 
-import android.content.Context
-import com.example.cpen_321.data.model.User
-import com.example.cpen_321.data.network.dto.AuthData
+import com.example.cpen_321.data.network.dto.ApiResult
+import com.example.cpen_321.data.network.dto.AuthResponse
+import com.example.cpen_321.data.network.dto.AuthUser
 
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-
-
+/**
+ * Repository interface for authentication operations
+ */
 interface AuthRepository {
-    suspend fun signInWithGoogle(context: Context): Result<GoogleIdTokenCredential>
-    suspend fun googleSignIn(tokenId: String): Result<AuthData>
-    suspend fun googleSignUp(tokenId: String): Result<AuthData>
-    suspend fun clearToken(): Result<Unit>
-    suspend fun doesTokenExist(): Boolean
-    suspend fun getStoredToken(): String?
-    suspend fun getCurrentUser(): User?
-    suspend fun isUserAuthenticated(): Boolean
+
+    /**
+     * Authenticate with Google ID token
+     */
+    suspend fun googleAuth(idToken: String): ApiResult<AuthResponse>
+
+    /**
+     * Logout user
+     */
+    suspend fun logout(): ApiResult<String>
+
+    /**
+     * Verify JWT token
+     */
+    suspend fun verifyToken(): ApiResult<AuthUser>
+
+    /**
+     * Update FCM token for push notifications
+     */
+    suspend fun updateFcmToken(fcmToken: String): ApiResult<String>
+
+    /**
+     * Delete user account
+     */
+    suspend fun deleteAccount(): ApiResult<String>
+
+    /**
+     * Check if user is logged in
+     */
+    fun isLoggedIn(): Boolean
+
+    /**
+     * Get current user ID
+     */
+    fun getCurrentUserId(): String?
+
+    /**
+     * Clear all auth data (local logout)
+     */
+    fun clearAuthData()
 }

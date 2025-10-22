@@ -117,7 +117,7 @@ const UserSchema = new Schema<IUser, IUserModel, IUserMethods>(
     },
     status: {
       type: Number,
-      enum: Object.values(UserStatus),
+      enum: [0, 1, 2, 3], // UserStatus enum values
       default: UserStatus.OFFLINE
     },
     roomId: {

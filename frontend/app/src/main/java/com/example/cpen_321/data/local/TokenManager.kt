@@ -1,61 +1,106 @@
-package com.cpen321.data.local
+package com.example.cpen_321.data.local
 
 import android.content.Context
-import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
+class TokenManager(context: Context) {
 
-@Singleton
-class TokenManager @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+    private val sharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
+        context,
+        PREFS_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
     companion object {
-        private const val TAG = "TokenManager"
-    }
+        private const val PREFS_NAME = "auth_prefs"
+        private const val KEY_TOKEN = "jwt_token"
+        private const val KEY_USER_ID = "user_id"
+        private const val KEY_EMAIL = "email"
+        private const val KEY_GOOGLE_ID = "google_id"
 
-    private val tokenKey = stringPreferencesKey("auth_token")
+        @Volatile
+        private var INSTANCE: TokenManager? = null
 
-    suspend fun saveToken(token: String) {
-        try {
-            context.dataStore.edit { preferences ->
-                preferences[tokenKey] = token
+        fun getInstance(context: Context): TokenManager {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: TokenManager(context.applicationContext).also { INSTANCE = it }
             }
-        } catch (e: java.io.IOException) {
-            Log.e(TAG, "IO error while saving token", e)
-            throw e
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Permission denied to save token", e)
-            throw e
         }
     }
 
-    fun getToken(): Flow<String?> = context.dataStore.data.map { it[tokenKey] }
+    /**
+     * Save JWT token
+     */
+    fun saveToken(token: String) {
+        sharedPreferences.edit().putString(KEY_TOKEN, token).apply()
+    }
 
-    suspend fun getTokenSync(): String? =
-        try {
-            context.dataStore.data.first()[tokenKey]
-        } catch (e: Exception) {
-            Log.e(TAG, "Error while getting token synchronously", e)
-            null
-        }
+    /**
+     * Get JWT token
+     */
+    fun getToken(): String? {
+        return sharedPreferences.getString(KEY_TOKEN, null)
+    }
 
-    suspend fun clearToken() {
-        try {
-            context.dataStore.edit { it.remove(tokenKey) }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error while clearing token", e)
-            throw e
+    /**
+     * Save user information
+     */
+    fun saveUserInfo(userId: String, email: String, googleId: String) {
+        sharedPreferences.edit().apply {
+            putString(KEY_USER_ID, userId)
+            putString(KEY_EMAIL, email)
+            putString(KEY_GOOGLE_ID, googleId)
+            apply()
         }
+    }
+
+    /**
+     * Get user ID
+     */
+    fun getUserId(): String? {
+        return sharedPreferences.getString(KEY_USER_ID, null)
+    }
+
+    /**
+     * Get email
+     */
+    fun getEmail(): String? {
+        return sharedPreferences.getString(KEY_EMAIL, null)
+    }
+
+    /**
+     * Get Google ID
+     */
+    fun getGoogleId(): String? {
+        return sharedPreferences.getString(KEY_GOOGLE_ID, null)
+    }
+
+    /**
+     * Check if user is logged in
+     */
+    fun isLoggedIn(): Boolean {
+        return getToken() != null
+    }
+
+    /**
+     * Clear all stored data (logout)
+     */
+    fun clearAll() {
+        sharedPreferences.edit().clear().apply()
+    }
+
+    /**
+     * Clear only token (for token refresh scenarios)
+     */
+    fun clearToken() {
+        sharedPreferences.edit().remove(KEY_TOKEN).apply()
     }
 }

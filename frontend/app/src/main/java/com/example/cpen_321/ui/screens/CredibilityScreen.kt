@@ -1,4 +1,4 @@
-package com.example.cpen_321.ui.screens
+package com.example.cpen_321.ui.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -6,34 +6,42 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.cpen_321.ui.viewmodels.UserViewModel
 
 @Composable
 fun CredibilityScreen(
-    navController: NavController
+    onNavigateBack: () -> Unit,
+    viewModel: UserViewModel = hiltViewModel()
 ) {
-    // Replace this with actual credibility score from your data source
-    var credibilityScore by remember { mutableStateOf(75) }
+    val userSettings by viewModel.userSettings.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
+    // Load user settings when screen opens
+    LaunchedEffect(Unit) {
+        viewModel.loadUserSettings()
+    }
 
     Scaffold { innerPadding ->
         Column(
@@ -67,45 +75,80 @@ fun CredibilityScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Progress bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .border(2.dp, Color.Black)
-                ) {
-                    // Filled portion (green)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(credibilityScore / 100f)
-                            .height(80.dp)
-                            .background(Color(0xFF81C784))
-                            .border(1.dp, Color.Black),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "$credibilityScore%",
-                            fontSize = 20.sp,
-                            color = Color.Black,
-                            textAlign = TextAlign.Center
-                        )
+                // Loading or Progress bar
+                when {
+                    isLoading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
+                    errorMessage != null -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .border(2.dp, Color.Red)
+                                .background(Color(0xFFFFEBEE)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = errorMessage ?: "Error loading score",
+                                fontSize = 16.sp,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    else -> {
+                        // Get credibility score from userSettings (convert to percentage)
+                        val credibilityScore = userSettings?.credibilityScore?.toInt() ?: 0
 
-                    // Empty portion (white)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .background(Color.White)
-                    )
+                        // Progress bar
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .border(2.dp, Color.Black)
+                        ) {
+                            // Filled portion (green)
+                            if (credibilityScore > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(credibilityScore / 100f)
+                                        .height(80.dp)
+                                        .background(Color(0xFF81C784))
+                                        .border(1.dp, Color.Black),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "$credibilityScore%",
+                                        fontSize = 20.sp,
+                                        color = Color.Black,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+
+                            // Empty portion (white)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp)
+                                    .background(Color.White)
+                            )
+                        }
+                    }
                 }
             }
 
             // Go Back button at bottom
             Button(
-                onClick = {
-                    navController.navigate(NavRoutes.PROFILE_CONFIG)
-                },
+                onClick = onNavigateBack,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp)

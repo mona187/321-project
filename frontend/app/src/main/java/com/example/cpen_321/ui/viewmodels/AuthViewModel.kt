@@ -1,13 +1,11 @@
 package com.example.cpen_321.ui.viewmodels
 
-import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.cpen_321.data.model.User
-import com.example.cpen_321.data.network.dto.AuthData
+import com.example.cpen_321.data.network.dto.ApiResult
+import com.example.cpen_321.data.network.dto.AuthUser
 import com.example.cpen_321.data.repository.AuthRepository
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.example.cpen_321.utils.SocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,140 +13,189 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ------------------------- UI State -------------------------
-
-data class AuthUiState(
-    val isSigningIn: Boolean = false,
-    val isSigningUp: Boolean = false,
-    val isCheckingAuth: Boolean = true,
-    val isAuthenticated: Boolean = false,
-    val user: User? = null,
-    val errorMessage: String? = null,
-    val successMessage: String? = null
-)
-
-// ------------------------- ViewModel -------------------------
-
+/**
+ * ViewModel for authentication
+ */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val socketManager: SocketManager
 ) : ViewModel() {
 
-    companion object {
-        private const val TAG = "AuthViewModel"
-    }
+    // Authentication state
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Initial)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(AuthUiState())
-    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
+    // Current user
+    private val _currentUser = MutableStateFlow<AuthUser?>(null)
+    val currentUser: StateFlow<AuthUser?> = _currentUser.asStateFlow()
+
+    // Loading state
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // Error message
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
-        checkAuthenticationStatus()
+        // Check if user is already logged in
+        checkAuthStatus()
     }
 
-    // ------------------------- AUTH CHECK -------------------------
+    /**
+     * Check if user is authenticated
+     */
+    private fun checkAuthStatus() {
+        if (authRepository.isLoggedIn()) {
+            _authState.value = AuthState.Authenticated
+            verifyToken()
+        } else {
+            _authState.value = AuthState.Unauthenticated
+        }
+    }
 
-    private fun checkAuthenticationStatus() {
+    /**
+     * Authenticate with Google ID token
+     */
+    fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
-            try {
-                _uiState.value = _uiState.value.copy(isCheckingAuth = true)
-                val isAuthenticated = authRepository.isUserAuthenticated()
-                val user = if (isAuthenticated) authRepository.getCurrentUser() else null
+            _isLoading.value = true
+            _errorMessage.value = null
 
-                _uiState.value = _uiState.value.copy(
-                    isAuthenticated = isAuthenticated,
-                    user = user,
-                    isCheckingAuth = false
-                )
-            } catch (e: Exception) {
-                Log.e(TAG, "Authentication check failed", e)
-                _uiState.value = _uiState.value.copy(
-                    isCheckingAuth = false,
-                    isAuthenticated = false,
-                    errorMessage = "Error checking authentication: ${e.message}"
-                )
+            when (val result = authRepository.googleAuth(idToken)) {
+                is ApiResult.Success -> {
+                    _currentUser.value = result.data.user
+                    _authState.value = AuthState.Authenticated
+
+                    // Connect to socket with token
+                    socketManager.connect(result.data.token)
+
+                    _errorMessage.value = null
+                }
+                is ApiResult.Error -> {
+                    _authState.value = AuthState.Error(result.message)
+                    _errorMessage.value = result.message
+                }
+                is ApiResult.Loading -> {
+                    // Already handled by _isLoading
+                }
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Verify current token
+     */
+    private fun verifyToken() {
+        viewModelScope.launch {
+            when (val result = authRepository.verifyToken()) {
+                is ApiResult.Success -> {
+                    _currentUser.value = result.data
+                    _authState.value = AuthState.Authenticated
+
+                    // Connect to socket if not connected
+                    if (!socketManager.isConnected()) {
+                        authRepository.getCurrentUserId()?.let { userId ->
+                            // Get token and connect
+                            // Note: Token is managed internally by RetrofitClient
+                            socketManager.connect(authRepository.getCurrentUserId() ?: "")
+                        }
+                    }
+                }
+                is ApiResult.Error -> {
+                    // Token is invalid, logout
+                    logout()
+                }
+                is ApiResult.Loading -> {
+                    // Ignore
+                }
             }
         }
     }
 
-    // ------------------------- GOOGLE SIGN-IN -------------------------
-
-    suspend fun signInWithGoogle(context: Context): Result<GoogleIdTokenCredential> {
-        return authRepository.signInWithGoogle(context)
-    }
-
-    fun handleGoogleSignInResult(credential: GoogleIdTokenCredential) {
-        handleGoogleAuthResult(credential, isSignUp = false) { idToken ->
-            authRepository.googleSignIn(idToken)
-        }
-    }
-
-    fun handleGoogleSignUpResult(credential: GoogleIdTokenCredential) {
-        handleGoogleAuthResult(credential, isSignUp = true) { idToken ->
-            authRepository.googleSignUp(idToken)
-        }
-    }
-
-    private fun handleGoogleAuthResult(
-        credential: GoogleIdTokenCredential,
-        isSignUp: Boolean,
-        authOperation: suspend (String) -> Result<AuthData>
-    ) {
+    /**
+     * Logout user
+     */
+    fun logout() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isSigningIn = !isSignUp,
-                isSigningUp = isSignUp
-            )
+            _isLoading.value = true
 
-            try {
-                authOperation(credential.idToken)
-                    .onSuccess { authData ->
-                        _uiState.value = _uiState.value.copy(
-                            isSigningIn = false,
-                            isSigningUp = false,
-                            isAuthenticated = true,
-                            user = authData.user,
-                            successMessage = if (isSignUp) "Account created successfully!" else "Signed in successfully!"
-                        )
-                    }
-                    .onFailure { error ->
-                        Log.e(TAG, "Google ${if (isSignUp) "sign-up" else "sign-in"} failed", error)
-                        _uiState.value = _uiState.value.copy(
-                            isSigningIn = false,
-                            isSigningUp = false,
-                            errorMessage = error.message
-                        )
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error during Google auth result handling", e)
-                _uiState.value = _uiState.value.copy(
-                    isSigningIn = false,
-                    isSigningUp = false,
-                    errorMessage = "Unexpected error: ${e.message}"
-                )
+            // Disconnect socket
+            socketManager.disconnect()
+
+            // Logout from backend
+            authRepository.logout()
+
+            // Update state
+            _currentUser.value = null
+            _authState.value = AuthState.Unauthenticated
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Update FCM token for push notifications
+     */
+    fun updateFcmToken(fcmToken: String) {
+        viewModelScope.launch {
+            authRepository.updateFcmToken(fcmToken)
+        }
+    }
+
+    /**
+     * Delete user account
+     */
+    fun deleteAccount(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            when (val result = authRepository.deleteAccount()) {
+                is ApiResult.Success -> {
+                    // Disconnect socket
+                    socketManager.disconnect()
+
+                    // Clear state
+                    _currentUser.value = null
+                    _authState.value = AuthState.Unauthenticated
+
+                    onSuccess()
+                }
+                is ApiResult.Error -> {
+                    _errorMessage.value = result.message
+                }
+                is ApiResult.Loading -> {
+                    // Ignore
+                }
             }
+
+            _isLoading.value = false
         }
     }
 
-    // ------------------------- SIGN OUT -------------------------
-
-    fun signOut() {
-        viewModelScope.launch {
-            authRepository.clearToken()
-            _uiState.value = AuthUiState(isAuthenticated = false)
-        }
-    }
-
-    // ------------------------- UI MESSAGE HELPERS -------------------------
-
+    /**
+     * Clear error message
+     */
     fun clearError() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
+        _errorMessage.value = null
     }
 
-    fun setSuccessMessage(message: String) {
-        _uiState.value = _uiState.value.copy(successMessage = message)
+    /**
+     * Get current user ID
+     */
+    fun getCurrentUserId(): String? {
+        return authRepository.getCurrentUserId()
     }
+}
 
-    fun clearSuccessMessage() {
-        _uiState.value = _uiState.value.copy(successMessage = null)
-    }
+/**
+ * Authentication state sealed class
+ */
+sealed class AuthState {
+    object Initial : AuthState()
+    object Authenticated : AuthState()
+    object Unauthenticated : AuthState()
+    data class Error(val message: String) : AuthState()
 }

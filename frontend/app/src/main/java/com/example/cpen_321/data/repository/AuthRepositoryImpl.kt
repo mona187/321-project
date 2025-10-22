@@ -1,276 +1,171 @@
 package com.example.cpen_321.data.repository
 
-import android.content.Context
-import android.util.Log
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.GetCredentialResponse
-import androidx.credentials.exceptions.GetCredentialException
-import com.cpen321.data.local.TokenManager
-import com.example.cpen_321.BuildConfig
-import com.example.cpen_321.data.network.api.RetrofitClient
+import com.example.cpen_321.data.local.PreferencesManager
+import com.example.cpen_321.data.local.TokenManager
+import com.example.cpen_321.data.network.RetrofitClient
+import com.example.cpen_321.data.network.dto.ApiResult
+import com.example.cpen_321.data.network.dto.AuthResponse
+import com.example.cpen_321.data.network.dto.AuthUser
+import com.example.cpen_321.data.network.dto.FcmTokenRequest
+import com.example.cpen_321.data.network.dto.GoogleAuthRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-import com.example.cpen_321.data.network.dto.AuthData
-import com.example.cpen_321.data.network.dto.GoogleSigninRequest
-import com.example.cpen_321.data.model.User
-import com.example.cpen_321.data.network.api.AuthApi
-import com.example.cpen_321.utils.JsonUtils
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import javax.inject.Singleton
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
-
-@Singleton
-class AuthRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val authInterface: AuthApi,
-//    private val userInterface: UserInterface,
-    private val tokenManager: TokenManager
+/**
+ * Implementation of AuthRepository
+ */
+class AuthRepositoryImpl(
+    private val tokenManager: TokenManager,
+    private val preferencesManager: PreferencesManager
 ) : AuthRepository {
 
-    companion object {
-        private const val TAG = "AuthRepositoryImpl"
-    }
+    private val authAPI = RetrofitClient.authAPI
 
-    private val credentialManager = CredentialManager.create(context)
-    private val signInWithGoogleOption: GetSignInWithGoogleOption =
-        GetSignInWithGoogleOption.Builder(
-            serverClientId = BuildConfig.GOOGLE_CLIENT_ID
-        ).build()
+    override suspend fun googleAuth(idToken: String): ApiResult<AuthResponse> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.googleAuth(GoogleAuthRequest(idToken))
 
-    override suspend fun signInWithGoogle(context: Context): Result<GoogleIdTokenCredential> {
-        val request = GetCredentialRequest.Builder()
-            .addCredentialOption(signInWithGoogleOption)
-            .build()
+                if (response.isSuccessful) {
+                    val authResponse = response.body()
+                    if (authResponse != null) {
+                        // Save token and user info
+                        tokenManager.saveToken(authResponse.token)
+                        tokenManager.saveUserInfo(
+                            userId = authResponse.user.userId,
+                            email = authResponse.user.email,
+                            googleId = "" // Backend doesn't return googleId in response
+                        )
 
-        return try {
-            val response = credentialManager.getCredential(context, request)
-            handleSignInWithGoogleOption(response)
-        } catch (e: GetCredentialException) {
-            Log.e(TAG, "Failed to get credential from CredentialManager", e)
-            Result.failure(e)
-        }
-    }
-
-    private fun handleSignInWithGoogleOption(
-        result: GetCredentialResponse
-    ): Result<GoogleIdTokenCredential> {
-        val credential = result.credential
-        return when (credential) {
-            is CustomCredential -> {
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    try {
-                        val googleIdTokenCredential =
-                            GoogleIdTokenCredential.createFrom(credential.data)
-                        Result.success(googleIdTokenCredential)
-                    } catch (e: GoogleIdTokenParsingException) {
-                        Log.e(TAG, "Failed to parse Google ID token credential", e)
-                        Result.failure(e)
+                        ApiResult.Success(authResponse)
+                    } else {
+                        ApiResult.Error("Empty response from server")
                     }
                 } else {
-                    Log.e(TAG, "Unexpected type of credential: ${credential.type}")
-                    Result.failure(Exception("Unexpected type of credential"))
+                    val errorBody = response.errorBody()?.string()
+                    ApiResult.Error(
+                        message = errorBody ?: "Authentication failed",
+                        code = response.code()
+                    )
                 }
-            }
-
-            else -> {
-                Log.e(TAG, "Unexpected type of credential: ${credential::class.simpleName}")
-                Result.failure(Exception("Unexpected type of credential"))
-            }
-        }
-    }
-
-    //witohor pefile
-    private var cachedUser: User? = null // 👈 add this near the top of AuthRepositoryImpl
-
-    override suspend fun googleSignIn(tokenId: String): Result<AuthData> {
-        val googleLoginReq = GoogleSigninRequest(tokenId)
-        return try {
-            val response = authInterface.googleSignIn(googleLoginReq)
-
-            if (response.isSuccessful && response.body()?.data != null) {
-                val authData = response.body()!!.data!!
-
-                // ✅ Save token
-                tokenManager.saveToken(authData.token)
-                RetrofitClient.setAuthToken(authData.token)
-
-                // ✅ Cache the user for later use
-                cachedUser = authData.user
-
-                Log.d(TAG, "Google sign in successful. Cached user: ${cachedUser?.name}")
-
-                Result.success(authData)
-            } else {
-                val errorBodyString = response.errorBody()?.string()
-                val errorMessage = JsonUtils.parseErrorMessage(
-                    errorBodyString,
-                    response.body()?.message ?: "Failed to sign in with Google."
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
                 )
-                Log.e(TAG, "Google sign in failed: $errorMessage")
-                Result.failure(Exception(errorMessage))
             }
-
-        } catch (e: java.net.SocketTimeoutException) {
-            Log.e(TAG, "Network timeout during Google sign in", e)
-            Result.failure(e)
-        } catch (e: java.net.UnknownHostException) {
-            Log.e(TAG, "Network connection failed during Google sign in", e)
-            Result.failure(e)
-        } catch (e: java.io.IOException) {
-            Log.e(TAG, "IO error during Google sign in", e)
-            Result.failure(e)
-        } catch (e: retrofit2.HttpException) {
-            Log.e(TAG, "HTTP error during Google sign in: ${e.code()}", e)
-            Result.failure(e)
         }
     }
 
-//FOR PROFILE
+    override suspend fun logout(): ApiResult<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.logout()
 
-//    override suspend fun googleSignIn(tokenId: String): Result<AuthData> {
-//        val googleLoginReq = GoogleSigninRequest(tokenId)
-//        return try {
-//            val response = authInterface.googleSignIn(googleLoginReq)
-//            if (response.isSuccessful && response.body()?.data != null) {
-//                val authData = response.body()!!.data!!
-//                tokenManager.saveToken(authData.token)
-//                RetrofitClient.setAuthToken(authData.token)
-//                Result.success(authData)
-//            } else {
-//                val errorBodyString = response.errorBody()?.string()
-//                val errorMessage = JsonUtils.parseErrorMessage(
-//                    errorBodyString,
-//                    response.body()?.message ?: "Failed to sign in with Google."
-//                )
-//                Log.e(TAG, "Google sign in failed: $errorMessage")
-//                Result.failure(Exception(errorMessage))
-//            }
-//        } catch (e: java.net.SocketTimeoutException) {
-//            Log.e(TAG, "Network timeout during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: java.net.UnknownHostException) {
-//            Log.e(TAG, "Network connection failed during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: java.io.IOException) {
-//            Log.e(TAG, "IO error during Google sign in", e)
-//            Result.failure(e)
-//        } catch (e: retrofit2.HttpException) {
-//            Log.e(TAG, "HTTP error during Google sign in: ${e.code()}", e)
-//            Result.failure(e)
-//        }
-//    }
+                if (response.isSuccessful) {
+                    // Clear local data
+                    clearAuthData()
+                    ApiResult.Success("Logged out successfully")
+                } else {
+                    // Even if server call fails, clear local data
+                    clearAuthData()
+                    ApiResult.Success("Logged out locally")
+                }
+            } catch (e: Exception) {
+                // Even if network fails, clear local data
+                clearAuthData()
+                ApiResult.Success("Logged out locally")
+            }
+        }
+    }
 
-    override suspend fun googleSignUp(tokenId: String): Result<AuthData> {
-        val googleLoginReq = GoogleSigninRequest(tokenId)
-        return try {
-            val response = authInterface.googleSignUp(googleLoginReq)
-            if (response.isSuccessful && response.body()?.data != null) {
-                val authData = response.body()!!.data!!
-                tokenManager.saveToken(authData.token)
-                RetrofitClient.setAuthToken(authData.token)
-                Result.success(authData)
-            } else {
-                val errorBodyString = response.errorBody()?.string()
-                val errorMessage = JsonUtils.parseErrorMessage(
-                    errorBodyString,
-                    response.body()?.message ?: "Failed to sign up with Google."
+    override suspend fun verifyToken(): ApiResult<AuthUser> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.verifyToken()
+
+                if (response.isSuccessful) {
+                    val verifyResponse = response.body()
+                    if (verifyResponse != null) {
+                        ApiResult.Success(verifyResponse.user)
+                    } else {
+                        ApiResult.Error("Empty response from server")
+                    }
+                } else {
+                    ApiResult.Error(
+                        message = "Token verification failed",
+                        code = response.code()
+                    )
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
                 )
-                Log.e(TAG, "Google sign up failed: $errorMessage")
-                Result.failure(Exception(errorMessage))
             }
-        } catch (e: java.net.SocketTimeoutException) {
-            Log.e(TAG, "Network timeout during Google sign up", e)
-            Result.failure(e)
-        } catch (e: java.net.UnknownHostException) {
-            Log.e(TAG, "Network connection failed during Google sign up", e)
-            Result.failure(e)
-        } catch (e: java.io.IOException) {
-            Log.e(TAG, "IO error during Google sign up", e)
-            Result.failure(e)
-        } catch (e: retrofit2.HttpException) {
-            Log.e(TAG, "HTTP error during Google sign up: ${e.code()}", e)
-            Result.failure(e)
         }
     }
 
-    override suspend fun clearToken(): Result<Unit> {
-        tokenManager.clearToken()
-        RetrofitClient.setAuthToken(null)
-        return Result.success(Unit)
-    }
+    override suspend fun updateFcmToken(fcmToken: String): ApiResult<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Save locally first
+                preferencesManager.saveFcmToken(fcmToken)
 
-    override suspend fun doesTokenExist(): Boolean {
-        return tokenManager.getToken().first() != null
-    }
+                val response = authAPI.updateFcmToken(FcmTokenRequest(fcmToken))
 
-    override suspend fun getStoredToken(): String? {
-        return tokenManager.getTokenSync()
-    }
-
-    //
-//    override suspend fun getCurrentUser(): User? {
-//        return try {
-//            val response = userInterface.getProfile("") // Auth header is handled by interceptor
-//            if (response.isSuccessful && response.body()?.data != null) {
-//                response.body()!!.data!!.user
-//            } else {
-//                Log.e(
-//                    TAG,
-//                    "Failed to get current user: ${response.body()?.message ?: "Unknown error"}"
-//                )
-//                null
-//            }
-//        } catch (e: java.net.SocketTimeoutException) {
-//            Log.e(TAG, "Network timeout while getting current user", e)
-//            null
-//        } catch (e: java.net.UnknownHostException) {
-//            Log.e(TAG, "Network connection failed while getting current user", e)
-//            null
-//        } catch (e: java.io.IOException) {
-//            Log.e(TAG, "IO error while getting current user", e)
-//            null
-//        } catch (e: retrofit2.HttpException) {
-//            Log.e(TAG, "HTTP error while getting current user: ${e.code()}", e)
-//            null
-//        }
-//    }
-//
-//    override suspend fun isUserAuthenticated(): Boolean {
-//        val isLoggedIn = doesTokenExist()
-//        if (isLoggedIn) {
-//            val token = getStoredToken()
-//            token?.let { RetrofitClient.setAuthToken(it) }
-//            // Verify token is still valid by trying to get user profile
-//            return getCurrentUser() != null
-//        }
-//        return false
-//    }
-//}
-    override suspend fun getCurrentUser(): User? {
-        return cachedUser
-    }
-
-
-    override suspend fun isUserAuthenticated(): Boolean {
-        val tokenExists = doesTokenExist()
-        if (tokenExists) {
-            val token = getStoredToken()
-            token?.let { RetrofitClient.setAuthToken(it) }
+                if (response.isSuccessful) {
+                    ApiResult.Success("FCM token updated successfully")
+                } else {
+                    ApiResult.Error(
+                        message = "Failed to update FCM token",
+                        code = response.code()
+                    )
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
+                )
+            }
         }
-        return tokenExists && cachedUser != null
+    }
+
+    override suspend fun deleteAccount(): ApiResult<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.deleteAccount()
+
+                if (response.isSuccessful) {
+                    // Clear local data
+                    clearAuthData()
+                    ApiResult.Success("Account deleted successfully")
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    ApiResult.Error(
+                        message = errorBody ?: "Failed to delete account",
+                        code = response.code()
+                    )
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
+                )
+            }
+        }
+    }
+
+    override fun isLoggedIn(): Boolean {
+        return tokenManager.isLoggedIn()
+    }
+
+    override fun getCurrentUserId(): String? {
+        return tokenManager.getUserId()
+    }
+
+    override fun clearAuthData() {
+        tokenManager.clearAll()
+        preferencesManager.clearAll()
     }
 }
-
-
-
-
-

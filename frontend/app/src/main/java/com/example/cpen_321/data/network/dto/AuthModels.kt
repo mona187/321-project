@@ -1,12 +1,69 @@
 package com.example.cpen_321.data.network.dto
-import com.example.cpen_321.data.model.User
 
-//what us end to backend
-data class GoogleSigninRequest(
+import com.google.gson.annotations.SerializedName
+
+/**
+ * Google authentication request
+ * POST /api/auth/google
+ */
+data class GoogleAuthRequest(
+    @SerializedName("idToken")
     val idToken: String
 )
-//what we recieve from backend after signin, backends resposne payload
-data class AuthData(
+
+/**
+ * Authentication response
+ */
+data class AuthResponse(
+    @SerializedName("token")
     val token: String,
-    val user: User,
+
+    @SerializedName("user")
+    val user: AuthUser
+)
+
+/**
+ * User data in auth response
+ */
+data class AuthUser(
+    @SerializedName("userId")
+    val userId: String,
+
+    @SerializedName("name")
+    val name: String,
+
+    @SerializedName("email")
+    val email: String,
+
+    @SerializedName("profilePicture")
+    val profilePicture: String? = null,
+
+    @SerializedName("credibilityScore")
+    val credibilityScore: Double
+)
+
+/**
+ * FCM token update request
+ * POST /api/auth/fcm-token
+ */
+data class FcmTokenRequest(
+    @SerializedName("fcmToken")
+    val fcmToken: String
+)
+
+/**
+ * Token verification response
+ * GET /api/auth/verify
+ */
+data class TokenVerifyResponse(
+    @SerializedName("user")
+    val user: AuthUser
+)
+
+/**
+ * Simple message response
+ */
+data class MessageResponse(
+    @SerializedName("message")
+    val message: String
 )
