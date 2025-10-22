@@ -1,3 +1,5 @@
+import java.util.Spliterators
+
 object NavRoutes {
     const val AUTH = "auth"
     const val HOME = "home"
@@ -9,6 +11,8 @@ object NavRoutes {
     const val PREFERENCES = "preferences"
     const val CREDIBILITY_SCORE = "credibility_score"
     const val VIEW_GROUPS = "view_groups"
+
+    const val SPLASH_SCREEN = "splash"
 
     // Navigation helpers with parameters
     fun groupWithId(groupId: String) = "group/$groupId"

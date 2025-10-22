@@ -13,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.cpen_321.ui.navigation.AppNavGraph
 import com.example.cpen_321.ui.theme.ProvideFontSizes
 import com.example.cpen_321.ui.theme.ProvideSpacing
-import com.example.cpen_321.ui.theme.Cpen321Theme // renamed from UserManagementTheme
+import com.example.cpen_321.ui.theme.Cpen321Theme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -23,9 +23,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             Cpen321Theme {
-                Cpen321App()
+                Cpen321App()  // This stays the same
             }
         }
+    }
+
+    // ADD THIS METHOD - it prevents navigation state from being saved
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Don't save navigation state - always start fresh at splash
+        outState.clear()
     }
 }
 

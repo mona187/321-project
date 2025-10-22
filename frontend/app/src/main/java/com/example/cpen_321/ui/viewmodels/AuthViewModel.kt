@@ -38,21 +38,60 @@ class AuthViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    init {
-        // Check if user is already logged in
-        checkAuthStatus()
+    // REMOVE THIS - Don't auto-check on init since SplashScreen will handle it
+    // init {
+    //     checkAuthStatus()
+    // }
+
+    /**
+     * Check if user is logged in (has token)
+     * PUBLIC - Used by SplashScreen
+     */
+    fun isLoggedIn(): Boolean {
+        return authRepository.isLoggedIn()
     }
 
     /**
-     * Check if user is authenticated
+     * Verify current token with backend
+     * PUBLIC - Used by SplashScreen
      */
-    private fun checkAuthStatus() {
-        if (authRepository.isLoggedIn()) {
-            _authState.value = AuthState.Authenticated
-            verifyToken()
-        } else {
-            _authState.value = AuthState.Unauthenticated
+    suspend fun verifyToken(): ApiResult<AuthUser> {
+        val result = authRepository.verifyToken()
+
+        when (result) {
+            is ApiResult.Success -> {
+                _currentUser.value = result.data
+                _authState.value = AuthState.Authenticated
+
+                // Connect to socket if not connected
+                if (!socketManager.isConnected()) {
+                    authRepository.getCurrentUserId()?.let {
+                        socketManager.connect(it)
+                    }
+                }
+            }
+            is ApiResult.Error -> {
+                // Token is invalid
+                _authState.value = AuthState.Unauthenticated
+                _currentUser.value = null
+            }
+            is ApiResult.Loading -> {
+                // Ignore
+            }
         }
+
+        return result
+    }
+
+    /**
+     * Clear authentication data
+     * PUBLIC - Used by SplashScreen
+     */
+    fun clearAuthData() {
+        authRepository.clearAuthData()
+        _currentUser.value = null
+        _authState.value = AuthState.Unauthenticated
+        socketManager.disconnect()
     }
 
     /**
@@ -83,36 +122,6 @@ class AuthViewModel @Inject constructor(
             }
 
             _isLoading.value = false
-        }
-    }
-
-    /**
-     * Verify current token
-     */
-    private fun verifyToken() {
-        viewModelScope.launch {
-            when (val result = authRepository.verifyToken()) {
-                is ApiResult.Success -> {
-                    _currentUser.value = result.data
-                    _authState.value = AuthState.Authenticated
-
-                    // Connect to socket if not connected
-                    if (!socketManager.isConnected()) {
-                        authRepository.getCurrentUserId()?.let { userId ->
-                            // Get token and connect
-                            // Note: Token is managed internally by RetrofitClient
-                            socketManager.connect(authRepository.getCurrentUserId() ?: "")
-                        }
-                    }
-                }
-                is ApiResult.Error -> {
-                    // Token is invalid, logout
-                    logout()
-                }
-                is ApiResult.Loading -> {
-                    // Ignore
-                }
-            }
         }
     }
 

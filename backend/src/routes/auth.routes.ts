@@ -12,4 +12,6 @@ router.post('/logout', authMiddleware, authController.logout.bind(authController
 router.post('/fcm-token', authMiddleware, authController.updateFCMToken.bind(authController));
 router.delete('/account', authMiddleware, authController.deleteAccount.bind(authController));
 
+router.get('/verify', authMiddleware, authController.verifyToken.bind(authController));
+
 export default router;

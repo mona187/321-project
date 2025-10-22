@@ -42,6 +42,13 @@ fun HomeScreen(
     val currentGroup by groupViewModel.currentGroup.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // ADD THIS - Verify token and load user data when HomeScreen opens
+    LaunchedEffect(Unit) {
+        if (currentUser == null) {
+            authViewModel.verifyToken()
+        }
+    }
+
     // Load user settings when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadUserSettings()
@@ -56,6 +63,7 @@ fun HomeScreen(
         }
     }
 
+    // Rest of your code stays the same...
     Scaffold(
         bottomBar = { MainBottomBar(navController = navController) },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }

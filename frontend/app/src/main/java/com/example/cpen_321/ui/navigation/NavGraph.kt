@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.cpen_321.ui.screens.*
 import com.example.cpen_321.ui.screens.profile.CredibilityScreen
+import com.example.cpen_321.ui.screens.profile.PreferencesScreen
+import com.example.cpen_321.ui.screens.profile.ProfileScreen
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
 
 @Composable
@@ -20,8 +22,12 @@ fun AppNavGraph(
 
     NavHost(
         navController = navController,
-        startDestination = NavRoutes.AUTH
+        startDestination = NavRoutes.SPLASH_SCREEN
     ) {
+        composable("splash") {
+            SplashScreen(navController = navController)
+        }
+
         // Auth Screen
         composable(NavRoutes.AUTH) {
             AuthScreen(
@@ -102,17 +108,21 @@ fun AppNavGraph(
             )
         }
 
-        // Profile Screen
+        // Profile Screen - UPDATED
         composable(NavRoutes.PROFILE) {
             ProfileScreen(
-                navController = navController
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
 
-        // Preferences Screen
+        // Preferences Screen - UPDATED
         composable(NavRoutes.PREFERENCES) {
             PreferencesScreen(
-                navController = navController
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
             )
         }
 

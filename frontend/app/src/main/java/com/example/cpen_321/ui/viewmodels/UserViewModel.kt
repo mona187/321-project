@@ -231,9 +231,18 @@ class UserViewModel @Inject constructor(
 
     /**
      * Save preferences (cuisines, budget, radius)
+     * FIXED: Now includes existing user data to avoid validation errors
      */
     fun savePreferences() {
+        val currentSettings = _userSettings.value
+
         updateSettings(
+            // Include existing data to avoid backend validation errors
+            name = currentSettings?.name,
+            bio = currentSettings?.bio,
+            profilePicture = currentSettings?.profilePicture,
+            contactNumber = currentSettings?.contactNumber,
+            // New preference data
             preference = _selectedCuisines.value.toList(),
             budget = _budget.value,
             radiusKm = _radius.value

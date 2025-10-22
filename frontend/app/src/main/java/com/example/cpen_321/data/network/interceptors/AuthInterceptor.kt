@@ -18,15 +18,24 @@ class AuthInterceptor(
         val token = tokenManager.getToken()
 
         // If no token, proceed with original request
-        if (token.isNullOrEmpty()) {
-            return chain.proceed(originalRequest)
+        val request = if (token.isNullOrEmpty()) {
+            originalRequest
+        } else {
+            // Add Authorization header with Bearer token
+            originalRequest.newBuilder()
+                .header("Authorization", "Bearer $token")
+                .build()
         }
 
-        // Add Authorization header with Bearer token
-        val authenticatedRequest = originalRequest.newBuilder()
-            .header("Authorization", "Bearer $token")
-            .build()
+        // Execute the request
+        val response = chain.proceed(request)
 
-        return chain.proceed(authenticatedRequest)
+        // If we get 401 Unauthorized, clear the token
+        // This handles expired or invalid tokens
+        if (response.code == 401 && !token.isNullOrEmpty()) {
+            tokenManager.clearAll()
+        }
+
+        return response
     }
 }

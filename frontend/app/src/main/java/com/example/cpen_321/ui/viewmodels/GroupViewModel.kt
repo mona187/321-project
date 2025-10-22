@@ -93,6 +93,7 @@ class GroupViewModel @Inject constructor(
 
     /**
      * Load group status
+     * UPDATED: Properly handles 404 "Not in a group" as a normal state
      */
     fun loadGroupStatus() {
         viewModelScope.launch {
@@ -122,7 +123,17 @@ class GroupViewModel @Inject constructor(
                     _timeRemaining.value = group.completionTime - System.currentTimeMillis()
                 }
                 is ApiResult.Error -> {
-                    _errorMessage.value = result.message
+                    // IMPORTANT: Check if this is a 404 "not in group" error
+                    // If so, treat it as a normal state, not an error
+                    if (result.code == 404 && result.message.contains("not in a group", ignoreCase = true)) {
+                        // User is not in a group - this is a normal state, not an error
+                        _currentGroup.value = null
+                        clearGroupState()
+                        // Don't set error message for this case
+                    } else {
+                        // This is an actual error
+                        _errorMessage.value = result.message
+                    }
                 }
                 is ApiResult.Loading -> {
                     // Already handled
@@ -178,6 +189,8 @@ class GroupViewModel @Inject constructor(
                     // Clear state
                     clearGroupState()
 
+                    _successMessage.value = "Left group successfully"
+
                     onSuccess()
                 }
                 is ApiResult.Error -> {
@@ -219,7 +232,8 @@ class GroupViewModel @Inject constructor(
                     _groupMembers.value = members
                 }
                 is ApiResult.Error -> {
-                    // Don't show error for member loading
+                    // Don't show error for member loading failure
+                    // Still allow the UI to display the group
                 }
                 is ApiResult.Loading -> {
                     // Ignore
@@ -271,6 +285,13 @@ class GroupViewModel @Inject constructor(
             )
 
             _selectedRestaurant.value = restaurant
+
+            // Update current group's restaurantSelected flag
+            _currentGroup.value = _currentGroup.value?.copy(
+                restaurantSelected = true,
+                restaurant = restaurant
+            )
+
             _successMessage.value = "Restaurant selected: $restaurantName"
         }
     }
@@ -284,6 +305,11 @@ class GroupViewModel @Inject constructor(
 
             // Remove member from list
             _groupMembers.value = _groupMembers.value.filter { it.userId != userId }
+
+            // Update member count in current group
+            _currentGroup.value = _currentGroup.value?.copy(
+                numMembers = _groupMembers.value.size
+            )
         }
     }
 
