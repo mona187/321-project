@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import User, { UserStatus } from '../models/User';
-import { AuthRequest, GoogleAuthRequest, AuthResponse } from '../types';
+import { AuthRequest, GoogleAuthRequest } from '../types';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -86,16 +86,26 @@ export class AuthController {
         { expiresIn: '7d' }
       );
 
-      // Prepare response
-      const response: AuthResponse = {
-        token,
-        user: {
-          userId: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          profilePicture: user.profilePicture,
-          credibilityScore: user.credibilityScore,
-        },
+      // Prepare response in frontend-compatible format
+      const response = {
+        message: 'Authentication successful',
+        data: {
+          token,
+          user: {
+            userId: parseInt(user._id.toString().slice(-6), 16), // Convert to int-like format (smaller number)
+            name: user.name,
+            bio: user.bio || '',
+            preference: user.preference || [],
+            profilePicture: user.profilePicture || '',
+            credibilityScore: user.credibilityScore,
+            contactNumber: user.contactNumber || '',
+            budget: user.budget,
+            radiusKm: user.radiusKm,
+            status: user.status,
+            roomId: user.roomId || '',
+            groupId: user.groupId || ''
+          }
+        }
       };
 
       res.status(200).json(response);
@@ -126,7 +136,8 @@ export class AuthController {
       }
 
       res.status(200).json({
-        message: 'Logged out successfully'
+        message: 'Logged out successfully',
+        data: null
       });
     } catch (error) {
       next(error);
@@ -158,14 +169,23 @@ export class AuthController {
       }
 
       res.status(200).json({
-        user: {
-          userId: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          profilePicture: user.profilePicture,
-          credibilityScore: user.credibilityScore,
-          status: user.status,
-        },
+        message: 'Token verified successfully',
+        data: {
+          user: {
+            userId: parseInt(user._id.toString().slice(-6), 16),
+            name: user.name,
+            bio: user.bio || '',
+            preference: user.preference || [],
+            profilePicture: user.profilePicture || '',
+            credibilityScore: user.credibilityScore,
+            contactNumber: user.contactNumber || '',
+            budget: user.budget,
+            radiusKm: user.radiusKm,
+            status: user.status,
+            roomId: user.roomId || '',
+            groupId: user.groupId || ''
+          }
+        }
       });
     } catch (error) {
       next(error);
@@ -210,7 +230,8 @@ export class AuthController {
       await user.save();
 
       res.status(200).json({
-        message: 'FCM token updated successfully'
+        message: 'FCM token updated successfully',
+        data: null
       });
     } catch (error) {
       next(error);
@@ -252,7 +273,8 @@ export class AuthController {
       await User.findByIdAndDelete(req.user.userId);
 
       res.status(200).json({
-        message: 'Account deleted successfully'
+        message: 'Account deleted successfully',
+        data: null
       });
     } catch (error) {
       next(error);

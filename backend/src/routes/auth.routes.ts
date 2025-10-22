@@ -5,7 +5,8 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 
 // Public routes
-router.post('/google', authController.googleAuth.bind(authController));
+router.post('/signin', authController.googleAuth);
+router.post('/signup', authController.googleAuth);
 
 // Protected routes
 router.post('/logout', authMiddleware, authController.logout.bind(authController));

@@ -5,18 +5,18 @@ import { authMiddleware } from '../middleware/auth.middleware';
 const router = Router();
 
 /**
- * @route   GET /api/user/profile/:ids
- * @desc    Get user profiles by IDs (comma-separated)
+ * @route   GET /api/user/profile
+ * @desc    Get user profiles by IDs (query parameter)
  * @access  Public
  */
-router.get('/profile/:ids', userController.getUserProfiles.bind(userController));
+router.get('/profile', userController.getUserProfiles.bind(userController));
 
 /**
  * @route   GET /api/user/settings
  * @desc    Get current user's settings
- * @access  Private
+ * @access  Public
  */
-router.get('/settings', authMiddleware, userController.getUserSettings.bind(userController));
+router.get('/settings', userController.getUserSettings.bind(userController));
 
 /**
  * @route   POST /api/user/profile
@@ -27,10 +27,17 @@ router.post('/profile', authMiddleware, userController.createUserProfile.bind(us
 
 /**
  * @route   POST /api/user/settings
+ * @desc    Create user settings (public for initial setup)
+ * @access  Public
+ */
+router.post('/settings', userController.createUserSettings.bind(userController));
+
+/**
+ * @route   PUT /api/user/settings
  * @desc    Update user settings
  * @access  Private
  */
-router.post('/settings', authMiddleware, userController.updateUserSettings.bind(userController));
+router.put('/settings', authMiddleware, userController.updateUserSettings.bind(userController));
 
 /**
  * @route   PUT /api/user/profile

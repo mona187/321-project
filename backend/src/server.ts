@@ -65,8 +65,12 @@ const startServer = async () => {
 
     // Initialize Firebase (optional)
     try {
-      initializeFirebase();
-      console.log('✅ Firebase initialized successfully');
+      const firebaseApp = initializeFirebase();
+      if (firebaseApp) {
+        console.log('✅ Firebase initialized successfully');
+      } else {
+        console.log('⚠️  Firebase initialization skipped - no configuration provided');
+      }
     } catch (error) {
       console.warn('⚠️  Firebase initialization skipped:', error);
     }

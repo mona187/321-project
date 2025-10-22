@@ -50,7 +50,7 @@ export interface SocketRestaurantSelectedData {
  * API Request/Response Types
  */
 export interface UserProfileResponse {
-  userId: string;
+  userId: number;
   name: string;
   bio?: string;
   profilePicture?: string;
@@ -58,7 +58,7 @@ export interface UserProfileResponse {
 }
 
 export interface UserSettingsResponse {
-  userId: string;
+  userId: number;
   name: string;
   bio?: string;
   preference: string[];

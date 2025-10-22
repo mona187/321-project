@@ -6,21 +6,26 @@ const userService = new UserService();
 
 export class UserController {
   /**
-   * GET /user/profile/:ids
+   * GET /user/profile?ids=1,2,3
    * Get user profiles by IDs
    */
   async getUserProfiles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { ids } = req.params;
+      const { ids } = req.query;
+      
+      if (!ids || typeof ids !== 'string') {
+        res.status(400).json({
+          message: 'IDs parameter is required',
+          data: null
+        });
+        return;
+      }
+
       const userIds = ids.split(',').map(id => id.trim());
 
       const profiles = await userService.getUserProfiles(userIds);
 
-      res.status(200).json({
-        Status: 200,
-        Message: {},
-        Body: profiles
-      });
+      res.status(200).json(profiles);
     } catch (error) {
       next(error);
     }
@@ -36,9 +41,8 @@ export class UserController {
 
       if (!userId) {
         res.status(401).json({
-          Status: 401,
-          Message: { error: 'Unauthorized' },
-          Body: null
+          message: 'Unauthorized',
+          data: null
         });
         return;
       }
@@ -46,9 +50,8 @@ export class UserController {
       const settings = await userService.getUserSettings(userId);
 
       res.status(200).json({
-        Status: 200,
-        Message: {},
-        Body: settings
+        message: 'User settings retrieved successfully',
+        data: settings
       });
     } catch (error) {
       next(error);
@@ -101,9 +104,8 @@ export class UserController {
 
       if (!userId) {
         res.status(401).json({
-          Status: 401,
-          Message: { error: 'Unauthorized' },
-          Body: null
+          message: 'Unauthorized',
+          data: null
         });
         return;
       }
@@ -121,9 +123,54 @@ export class UserController {
       });
 
       res.status(200).json({
-        Status: 200,
-        Message: { text: 'Settings updated successfully' },
-        Body: settings
+        message: 'User settings updated successfully',
+        data: settings
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /user/settings
+   * Create user settings (public for initial setup)
+   */
+  async createUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
+
+      // If user is authenticated, use their ID
+      if (req.user?.userId) {
+        const settings = await userService.createUserSettings(req.user.userId, {
+          name,
+          bio,
+          preference,
+          profilePicture,
+          contactNumber,
+          budget,
+          radiusKm,
+        });
+        res.status(200).json({
+          message: 'User settings created successfully',
+          data: settings
+        });
+        return;
+      }
+
+      // If not authenticated, create a new user with the provided settings
+      const settings = await userService.createUserSettings(null as any, {
+        name,
+        bio,
+        preference,
+        profilePicture,
+        contactNumber,
+        budget,
+        radiusKm,
+      });
+
+      res.status(200).json({
+        message: 'User settings created successfully',
+        data: settings
       });
     } catch (error) {
       next(error);

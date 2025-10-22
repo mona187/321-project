@@ -1,18 +1,10 @@
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import User, { UserStatus } from '../models/User';
-import { AppError } from '../middleware/errorHandler';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
-  private googleClient: OAuth2Client;
-
-  constructor() {
-    this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  }
-
-  /**
-   * Verify Google ID token
-   */
   async verifyGoogleToken(idToken: string): Promise<{
     googleId: string;
     email: string;
@@ -20,15 +12,14 @@ export class AuthService {
     picture?: string;
   }> {
     try {
-      const ticket = await this.googleClient.verifyIdToken({
+      const ticket = await client.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
 
       const payload = ticket.getPayload();
-
       if (!payload || !payload.sub || !payload.email) {
-        throw new AppError('Invalid Google token', 401);
+        throw new Error('Invalid Google token');
       }
 
       return {
@@ -38,142 +29,88 @@ export class AuthService {
         picture: payload.picture,
       };
     } catch (error) {
-      throw new AppError('Failed to verify Google token', 401);
+      throw new Error('Failed to verify Google token');
     }
   }
 
-  /**
-   * Find or create user from Google data
-   */
-  async findOrCreateUser(googleData: {
-    googleId: string;
-    email: string;
-    name: string;
-    picture?: string;
-  }): Promise<any> {
-    let user = await User.findOne({ googleId: googleData.googleId });
+  async authenticateUser(idToken: string, isSignup: boolean = false): Promise<{
+    token: string;
+    user: any;
+    isNewUser: boolean;
+    message?: string;
+  }> {
+    const googleUser = await this.verifyGoogleToken(idToken);
+
+    let user = await User.findOne({ googleId: googleUser.googleId });
 
     if (!user) {
-      // Create new user
-      user = await User.create({
-        googleId: googleData.googleId,
-        email: googleData.email,
-        name: googleData.name,
-        profilePicture: googleData.picture || '',
-        status: UserStatus.ONLINE,
-        preference: [],
-        credibilityScore: 100,
-        budget: 0,
-        radiusKm: 5,
-      });
-
-      console.log(`✅ New user created: ${user._id}`);
-    } else {
-      // Update existing user
-      user.status = UserStatus.ONLINE;
-      if (googleData.picture) {
-        user.profilePicture = googleData.picture;
+      if (isSignup) {
+        // Only create new user if it's a signup request
+        user = await User.create({
+          googleId: googleUser.googleId,
+          email: googleUser.email,
+          name: googleUser.name,
+          profilePicture: googleUser.picture || '',
+          preference: [],
+          credibilityScore: 100,
+          budget: 0,
+          radiusKm: 5,
+          status: UserStatus.ONLINE,
+        });
+        
+        const token = this.generateToken(user._id.toString());
+        return {
+          token,
+          user: this.sanitizeUser(user),
+          isNewUser: true,
+        };
+      } else {
+        // For signin, user must exist
+        throw new Error('No account found! Please sign up first.');
       }
-      await user.save();
-      console.log(`✅ User logged in: ${user._id}`);
-    }
-
-    return user;
-  }
-
-  /**
-   * Generate JWT token
-   */
-  generateToken(user: any): string {
-    const jwtSecret = process.env.JWT_SECRET;
-    
-    if (!jwtSecret) {
-      throw new AppError('JWT configuration error', 500);
-    }
-
-    const token = jwt.sign(
-      {
-        userId: user._id.toString(),
-        email: user.email,
-        googleId: user.googleId,
-      },
-      jwtSecret,
-      { expiresIn: '7d' }
-    );
-
-    return token;
-  }
-
-  /**
-   * Verify JWT token
-   */
-  verifyToken(token: string): {
-    userId: string;
-    email: string;
-    googleId: string;
-  } {
-    const jwtSecret = process.env.JWT_SECRET;
-    
-    if (!jwtSecret) {
-      throw new AppError('JWT configuration error', 500);
-    }
-
-    try {
-      const decoded = jwt.verify(token, jwtSecret) as {
-        userId: string;
-        email: string;
-        googleId: string;
-      };
-
-      return decoded;
-    } catch (error) {
-      throw new AppError('Invalid or expired token', 401);
+    } else {
+      // User exists
+      if (isSignup) {
+        // If user exists and they're trying to signup, throw error
+        throw new Error('You already have an account! Please sign in instead.');
+      } else {
+        // For signin, update their info if needed and return token
+        user.status = UserStatus.ONLINE;
+        await user.save();
+        
+        const token = this.generateToken(user._id.toString());
+        return {
+          token,
+          user: this.sanitizeUser(user),
+          isNewUser: false,
+        };
+      }
     }
   }
 
-  /**
-   * Logout user
-   */
-  async logoutUser(userId: string): Promise<void> {
-    const user = await User.findById(userId);
-
-    if (user) {
-      user.status = UserStatus.OFFLINE;
-      await user.save();
+  generateToken(userId: string): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET not configured');
     }
+
+    return jwt.sign({ userId }, secret, { expiresIn: '7d' });
   }
 
-  /**
-   * Update FCM token
-   */
-  async updateFCMToken(userId: string, fcmToken: string): Promise<void> {
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    user.fcmToken = fcmToken;
-    await user.save();
-  }
-
-  /**
-   * Delete user account
-   */
-  async deleteAccount(userId: string): Promise<void> {
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    // Check if user is in a room or group
-    if (user.roomId || user.groupId) {
-      throw new AppError('Cannot delete account while in a room or group', 400);
-    }
-
-    await User.findByIdAndDelete(userId);
+  sanitizeUser(user: any) {
+    return {
+      userId: parseInt(user._id.toString().slice(-6), 16), // Convert to int-like format (smaller number)
+      name: user.name,
+      bio: user.bio || '',
+      preference: user.preference || [],
+      profilePicture: user.profilePicture || '',
+      credibilityScore: user.credibilityScore,
+      contactNumber: user.contactNumber || '',
+      budget: user.budget || 0,
+      radiusKm: user.radiusKm || 5,
+      status: user.status,
+      roomId: user.roomId || '',
+      groupId: user.groupId || '',
+    };
   }
 }
-
-export default new AuthService();

@@ -2,7 +2,7 @@ import admin from 'firebase-admin';
 
 let firebaseApp: admin.app.App | null = null;
 
-export const initializeFirebase = (): admin.app.App => {
+export const initializeFirebase = (): admin.app.App | null => {
   try {
     // Prevent multiple initializations
     if (firebaseApp) {
@@ -14,9 +14,8 @@ export const initializeFirebase = (): admin.app.App => {
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
     if (!serviceAccountPath && !serviceAccountKey) {
-      throw new Error(
-        'Firebase configuration missing. Set either FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_SERVICE_ACCOUNT_KEY'
-      );
+      console.warn('⚠️  Firebase configuration missing. Set either FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_SERVICE_ACCOUNT_KEY');
+      return null;
     }
 
     let credential: admin.credential.Credential;
