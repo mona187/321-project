@@ -1,12 +1,18 @@
 import { OAuth2Client } from 'google-auth-library';
-import jwt, { SignOptions } from 'jsonwebtoken';
-import { User } from '../models/User';
+import jwt from 'jsonwebtoken';
+import User, { UserStatus } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
-import { IUser } from '../types';
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthService {
+  private googleClient: OAuth2Client;
+
+  constructor() {
+    this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  }
+
+  /**
+   * Verify Google ID token
+   */
   async verifyGoogleToken(idToken: string): Promise<{
     googleId: string;
     email: string;
@@ -14,118 +20,160 @@ export class AuthService {
     picture?: string;
   }> {
     try {
-      const ticket = await client.verifyIdToken({
+      const ticket = await this.googleClient.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
 
       const payload = ticket.getPayload();
-      if (!payload) {
-        throw new AppError(401, 'Invalid Google token');
+
+      if (!payload || !payload.sub || !payload.email) {
+        throw new AppError('Invalid Google token', 401);
       }
 
       return {
         googleId: payload.sub,
-        email: payload.email!,
-        name: payload.name!,
+        email: payload.email,
+        name: payload.name || 'User',
         picture: payload.picture,
       };
     } catch (error) {
-      throw new AppError(401, 'Failed to verify Google token');
+      throw new AppError('Failed to verify Google token', 401);
     }
   }
 
-  async authenticateUser(idToken: string, isSignup: boolean = false): Promise<{
-    token: string;
-    user: any;
-    isNewUser: boolean;
-    message?: string;
-  }> {
-    const googleUser = await this.verifyGoogleToken(idToken);
-
-    let user: IUser | null = await User.findOne({ googleId: googleUser.googleId });
-    let isNewUser = false;
+  /**
+   * Find or create user from Google data
+   */
+  async findOrCreateUser(googleData: {
+    googleId: string;
+    email: string;
+    name: string;
+    picture?: string;
+  }): Promise<any> {
+    let user = await User.findOne({ googleId: googleData.googleId });
 
     if (!user) {
-      if (isSignup) {
-        // Only create new user if it's a signup request
-        user = await User.create({
-          googleId: googleUser.googleId,
-          email: googleUser.email,
-          name: googleUser.name,
-          profilePicture: googleUser.picture,
-          preferences: {
-            cuisineTypes: [],
-            budget: 50,
-            radiusKm: 10,
-          },
-          credibilityScore: 5.0,
-          location: {
-            type: 'Point',
-            coordinates: [0, 0] // Default coordinates - user can update later
-          },
-        }) as IUser;
-        isNewUser = true;
-        
-        // For signup, don't return token - just confirm account creation
-        return {
-          token: '', // No token for signup
-          user: null, // No user data for signup
-          isNewUser: true,
-          message: 'Account created successfully! Please sign in to continue.'
-        };
-      } else {
-        // For signin, user must exist
-        throw new AppError(404, 'No account found! Please sign up first.');
-      }
+      // Create new user
+      user = await User.create({
+        googleId: googleData.googleId,
+        email: googleData.email,
+        name: googleData.name,
+        profilePicture: googleData.picture || '',
+        status: UserStatus.ONLINE,
+        preference: [],
+        credibilityScore: 100,
+        budget: 0,
+        radiusKm: 5,
+      });
+
+      console.log(`✅ New user created: ${user._id}`);
     } else {
-      // User exists
-      if (isSignup) {
-        // If user exists and they're trying to signup, throw error
-        throw new AppError(409, 'You already have an account! Please sign in instead.');
-      } else {
-        // For signin, update their info if needed and return token
-        await User.findByIdAndUpdate(user._id, {
-          name: googleUser.name,
-          profilePicture: googleUser.picture,
-        });
-        // Refresh user data
-        user = await User.findById(user._id) as IUser;
-        
-        const token = this.generateToken(user._id.toString());
-        return {
-          token,
-          user: this.sanitizeUser(user),
-          isNewUser: false,
-        };
+      // Update existing user
+      user.status = UserStatus.ONLINE;
+      if (googleData.picture) {
+        user.profilePicture = googleData.picture;
       }
+      await user.save();
+      console.log(`✅ User logged in: ${user._id}`);
+    }
+
+    return user;
+  }
+
+  /**
+   * Generate JWT token
+   */
+  generateToken(user: any): string {
+    const jwtSecret = process.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      throw new AppError('JWT configuration error', 500);
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        googleId: user.googleId,
+      },
+      jwtSecret,
+      { expiresIn: '7d' }
+    );
+
+    return token;
+  }
+
+  /**
+   * Verify JWT token
+   */
+  verifyToken(token: string): {
+    userId: string;
+    email: string;
+    googleId: string;
+  } {
+    const jwtSecret = process.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      throw new AppError('JWT configuration error', 500);
+    }
+
+    try {
+      const decoded = jwt.verify(token, jwtSecret) as {
+        userId: string;
+        email: string;
+        googleId: string;
+      };
+
+      return decoded;
+    } catch (error) {
+      throw new AppError('Invalid or expired token', 401);
     }
   }
 
-  generateToken(userId: string): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not configured');
-    }
+  /**
+   * Logout user
+   */
+  async logoutUser(userId: string): Promise<void> {
+    const user = await User.findById(userId);
 
-    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'];
-    return jwt.sign({ userId }, secret, { expiresIn });
+    if (user) {
+      user.status = UserStatus.OFFLINE;
+      await user.save();
+    }
   }
 
-  sanitizeUser(user: IUser) {
-    return {
-      userId: parseInt(user._id.toString().slice(-6), 16), // Use only last 6 chars to fit in Java int
-      name: user.name,
-      bio: user.bio || '',
-      preference: user.preferences.cuisineTypes.join(','), // Convert array to string
-      profilePicture: user.profilePicture,
-      credibilityScore: user.credibilityScore,
-      contactNumber: user.contactNumber,
-      budget: user.preferences.budget,
-      radiusKm: user.preferences.radiusKm,
-      status: user.status === 'active' ? 1 : user.status === 'in_waiting_room' ? 2 : user.status === 'in_group' ? 3 : 0, // Convert to int
-      roomId: user.currentRoomId,
-      groupId: user.currentGroupId,
-    };
+  /**
+   * Update FCM token
+   */
+  async updateFCMToken(userId: string, fcmToken: string): Promise<void> {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    user.fcmToken = fcmToken;
+    await user.save();
+  }
+
+  /**
+   * Delete user account
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Check if user is in a room or group
+    if (user.roomId || user.groupId) {
+      throw new AppError('Cannot delete account while in a room or group', 400);
+    }
+
+    await User.findByIdAndDelete(userId);
   }
 }
+
+export default new AuthService();

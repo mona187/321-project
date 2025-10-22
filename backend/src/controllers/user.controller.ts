@@ -1,38 +1,80 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
+import { AuthRequest } from '../types';
 import { UserService } from '../services/userService';
 
 const userService = new UserService();
 
 export class UserController {
-  async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * GET /user/profile/:ids
+   * Get user profiles by IDs
+   */
+  async getUserProfiles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId!;
-      const profile = await userService.getUserProfile(userId);
+      const { ids } = req.params;
+      const userIds = ids.split(',').map(id => id.trim());
 
-      res.status(200).json(profile);
+      const profiles = await userService.getUserProfiles(userIds);
+
+      res.status(200).json({
+        Status: 200,
+        Message: {},
+        Body: profiles
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  async getSettings(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * GET /user/settings
+   * Get user settings
+   */
+  async getUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId!;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
+
       const settings = await userService.getUserSettings(userId);
 
-      res.status(200).json(settings);
+      res.status(200).json({
+        Status: 200,
+        Message: {},
+        Body: settings
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  async updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * POST /user/profile
+   * Create/update user profile
+   */
+  async createUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId!;
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
+
       const { name, bio, profilePicture, contactNumber } = req.body;
 
-      const updatedUser = await userService.updateUserProfile(userId, {
+      const profile = await userService.createUserProfile(userId, {
         name,
         bio,
         profilePicture,
@@ -40,85 +82,123 @@ export class UserController {
       });
 
       res.status(200).json({
-        message: 'Profile updated successfully',
-        user: updatedUser,
+        Status: 200,
+        Message: { text: 'Profile updated successfully' },
+        Body: profile
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async updateSettings(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * POST /user/settings
+   * Update user settings
+   */
+  async updateUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId!;
-      const data = req.body;
+      const userId = req.user?.userId;
 
-      const updatedUser = await userService.updateUserSettings(userId, data);
-
-      res.status(200).json({
-        message: 'Settings updated successfully',
-        user: updatedUser,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async deleteUser(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const userId = req.userId!;
-      await userService.deleteUser(userId);
-
-      res.status(200).json({
-        message: 'User deleted successfully',
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async updateLocation(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      const userId = req.userId!;
-      const { longitude, latitude } = req.body;
-
-      if (longitude === undefined || latitude === undefined) {
-        res.status(400).json({ error: 'Longitude and latitude required' });
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
         return;
       }
 
-      const updatedUser = await userService.updateUserLocation(
-        userId,
-        longitude,
-        latitude
-      );
+      const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
+
+      const settings = await userService.updateUserSettings(userId, {
+        name,
+        bio,
+        preference,
+        profilePicture,
+        contactNumber,
+        budget,
+        radiusKm,
+      });
 
       res.status(200).json({
-        message: 'Location updated successfully',
-        location: updatedUser.location,
+        Status: 200,
+        Message: { text: 'Settings updated successfully' },
+        Body: settings
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async updateFCMToken(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * PUT /user/profile
+   * Update user profile
+   */
+  async updateUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.userId!;
-      const { fcmToken } = req.body;
+      const userId = req.user?.userId;
 
-      if (!fcmToken) {
-        res.status(400).json({ error: 'FCM token is required' });
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
         return;
       }
 
-      await userService.updateFCMToken(userId, fcmToken);
+      const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
+
+      const profile = await userService.updateUserProfile(userId, {
+        name,
+        bio,
+        preference,
+        profilePicture,
+        contactNumber,
+        budget,
+        radiusKm,
+      });
 
       res.status(200).json({
-        message: 'FCM token updated successfully',
+        Status: 200,
+        Message: { text: 'Profile updated successfully' },
+        Body: profile
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /user/:userId
+   * Delete user account
+   */
+  async deleteUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const requesterId = req.user?.userId;
+
+      // Only allow users to delete their own account
+      if (userId !== requesterId) {
+        res.status(403).json({
+          Status: 403,
+          Message: { error: 'Forbidden' },
+          Body: null
+        });
+        return;
+      }
+
+      const result = await userService.deleteUser(userId);
+
+      res.status(200).json({
+        Status: 200,
+        Message: { text: 'User deleted successfully' },
+        Body: result
       });
     } catch (error) {
       next(error);
     }
   }
 }
+
+export const userController = new UserController();

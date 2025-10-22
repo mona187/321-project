@@ -1,241 +1,211 @@
 import axios from 'axios';
 import { AppError } from '../middleware/errorHandler';
-import { User } from '../models/User';
-
-interface PlaceDetails {
-  placeId: string;
-  name: string;
-  address: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  cuisineType: string[];
-  priceLevel?: number;
-  rating?: number;
-  photoUrl?: string;
-  phoneNumber?: string;
-  website?: string;
-  openingHours?: string[];
-}
+import { RestaurantType } from '../types';
 
 export class RestaurantService {
-  private readonly GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
-  private readonly PLACES_API_URL = 'https://maps.googleapis.com/maps/api/place';
+  private readonly GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || '';
 
-  async getRestaurantsForGroup(groupUserIds: string[]) {
-    // Get all users in the group
-    const users = await User.find({ _id: { $in: groupUserIds } });
+  /**
+   * Search for restaurants near a location
+   */
+  async searchRestaurants(
+    latitude: number,
+    longitude: number,
+    radius: number = 5000, // in meters
+    cuisineTypes?: string[],
+    priceLevel?: number
+  ): Promise<RestaurantType[]> {
+    try {
+      // If no API key, return mock data
+      if (!this.GOOGLE_PLACES_API_KEY) {
+        console.warn('⚠️  No Google Places API key - returning mock data');
+        return this.getMockRestaurants();
+      }
 
-    if (users.length === 0) {
-      throw new AppError(404, 'No users found');
+      console.log('✅ Using Google Places API with key');
+
+      // Build the search query
+      const keyword = cuisineTypes && cuisineTypes.length > 0 ? cuisineTypes.join(' ') : 'restaurant';
+      
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json',
+        {
+          params: {
+            location: `${latitude},${longitude}`,
+            radius: radius,
+            type: 'restaurant',
+            keyword: keyword,
+            key: this.GOOGLE_PLACES_API_KEY,
+          },
+        }
+      );
+
+      console.log('📡 Google API Response Status:', response.data.status);
+
+      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+        throw new AppError(`Google Places API error: ${response.data.status}`, 500);
+      }
+
+      let results = response.data.results || [];
+      console.log(`🍽️ Found ${results.length} restaurants from Google Places`);
+
+      // Filter by price level if specified
+      if (priceLevel) {
+        results = results.filter((place: any) => place.price_level === priceLevel);
+      }
+
+      return results.map((place: any) => this.formatPlaceData(place));
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
+      console.error('❌ Failed to search restaurants:', error.message);
+      // Return mock data on error
+      return this.getMockRestaurants();
     }
+  }
 
-    // Calculate center point of all users
-    const centerPoint = this.calculateCenterPoint(users);
+  /**
+   * Get restaurant details by place ID
+   */
+  async getRestaurantDetails(placeId: string): Promise<RestaurantType> {
+    try {
+      if (!this.GOOGLE_PLACES_API_KEY) {
+        return this.getMockRestaurant(placeId);
+      }
 
-    // Find common preferences
-    const commonPreferences = this.findCommonPreferences(users);
+      // Fetch from Google Places API
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/place/details/json',
+        {
+          params: {
+            place_id: placeId,
+            fields: 'name,formatted_address,geometry,photos,price_level,rating,formatted_phone_number,website,opening_hours,types',
+            key: this.GOOGLE_PLACES_API_KEY,
+          },
+        }
+      );
+
+      if (response.data.status !== 'OK') {
+        throw new AppError(`Restaurant not found: ${response.data.status}`, 404);
+      }
+
+      const place = response.data.result;
+      return this.formatPlaceData(place);
+    } catch (error: any) {
+      if (error instanceof AppError) throw error;
+      console.error('Failed to get restaurant details:', error);
+      return this.getMockRestaurant(placeId);
+    }
+  }
+
+  /**
+   * Format place data from Google Places API
+   */
+  private formatPlaceData(place: any): RestaurantType {
+    return {
+      name: place.name || '',
+      location: place.formatted_address || place.vicinity || '',
+      restaurantId: place.place_id,
+      address: place.formatted_address || place.vicinity || '',
+      priceLevel: place.price_level,
+      rating: place.rating,
+      photos: place.photos?.map((photo: any) => this.getPhotoUrl(photo.photo_reference)) || [],
+      phoneNumber: place.formatted_phone_number,
+      website: place.website,
+      url: place.url,
+    };
+  }
+
+  /**
+   * Get photo URL from photo reference
+   */
+  private getPhotoUrl(photoReference: string, maxWidth: number = 400): string {
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photo_reference=${photoReference}&key=${this.GOOGLE_PLACES_API_KEY}`;
+  }
+
+  /**
+   * Get recommended restaurants for a group
+   */
+  async getRecommendationsForGroup(
+    _groupId: string,
+    userPreferences: Array<{
+      cuisineTypes: string[];
+      budget: number;
+      location: { coordinates: [number, number] };
+      radiusKm: number;
+    }>
+  ): Promise<RestaurantType[]> {
+    // Calculate average location
+    const avgLat = userPreferences.reduce((sum, p) => sum + p.location.coordinates[1], 0) / userPreferences.length;
+    const avgLng = userPreferences.reduce((sum, p) => sum + p.location.coordinates[0], 0) / userPreferences.length;
+
+    // Get all cuisine preferences
+    const allCuisines = [...new Set(userPreferences.flatMap(p => p.cuisineTypes))];
+
+    // Calculate average budget (convert to price level 1-4)
+    const avgBudget = userPreferences.reduce((sum, p) => sum + p.budget, 0) / userPreferences.length;
+    const priceLevel = Math.ceil(avgBudget / 25); // Rough conversion
+
+    // Get average radius
+    const avgRadius = userPreferences.reduce((sum, p) => sum + p.radiusKm, 0) / userPreferences.length;
 
     // Search for restaurants
     const restaurants = await this.searchRestaurants(
-      centerPoint,
-      commonPreferences
+      avgLat,
+      avgLng,
+      avgRadius * 1000, // Convert km to meters
+      allCuisines,
+      Math.min(4, priceLevel)
     );
 
     return restaurants;
   }
 
-  async searchRestaurants(
-    location: { lat: number; lng: number },
-    preferences: {
-      cuisineTypes: string[];
-      maxBudget: number;
-      radius: number;
-    }
-  ): Promise<PlaceDetails[]> {
-    try {
-      const url = `${this.PLACES_API_URL}/nearbysearch/json`;
-
-      // Determine time of day for meal type
-      const hour = new Date().getHours();
-      let mealType = 'restaurant';
-      if (hour >= 6 && hour < 11) {
-        mealType = 'breakfast';
-      } else if (hour >= 11 && hour < 15) {
-        mealType = 'lunch';
-      } else if (hour >= 15 && hour < 18) {
-        mealType = 'cafe';
-      } else {
-        mealType = 'dinner';
-      }
-
-      const params = {
-        location: `${location.lat},${location.lng}`,
-        radius: preferences.radius * 1000, // Convert km to meters
-        type: 'restaurant',
-        keyword: preferences.cuisineTypes.join('|') || mealType,
-        maxprice: Math.min(4, Math.ceil(preferences.maxBudget / 25)), // Convert to 0-4 scale
-        key: this.GOOGLE_PLACES_API_KEY,
-      };
-
-      const response = await axios.get(url, { params });
-
-      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-        throw new AppError(500, `Places API error: ${response.data.status}`);
-      }
-
-      const restaurants: PlaceDetails[] = [];
-
-      for (const place of response.data.results.slice(0, 10)) {
-        const details = await this.getPlaceDetails(place.place_id);
-        if (details) {
-          restaurants.push(details);
-        }
-      }
-
-      return restaurants;
-    } catch (error) {
-      console.error('Error searching restaurants:', error);
-      throw new AppError(500, 'Failed to search restaurants');
-    }
+  /**
+   * Mock data for testing without API key
+   */
+  private getMockRestaurants(): RestaurantType[] {
+    return [
+      {
+        name: 'Sushi Paradise',
+        location: '123 Main St, Vancouver, BC',
+        restaurantId: 'mock_001',
+        priceLevel: 2,
+        rating: 4.5,
+        phoneNumber: '+1-604-555-0001',
+        url: 'https://example.com/sushi-paradise',
+      },
+      {
+        name: 'Italian Bistro',
+        location: '456 Oak Ave, Vancouver, BC',
+        restaurantId: 'mock_002',
+        priceLevel: 3,
+        rating: 4.7,
+        phoneNumber: '+1-604-555-0002',
+        url: 'https://example.com/italian-bistro',
+      },
+      {
+        name: 'Burger Joint',
+        location: '789 Elm St, Vancouver, BC',
+        restaurantId: 'mock_003',
+        priceLevel: 1,
+        rating: 4.2,
+        phoneNumber: '+1-604-555-0003',
+        url: 'https://example.com/burger-joint',
+      },
+    ];
   }
 
-  async getPlaceDetails(placeId: string): Promise<PlaceDetails | null> {
-    try {
-      const url = `${this.PLACES_API_URL}/details/json`;
-
-      const params = {
-        place_id: placeId,
-        fields: 'name,formatted_address,geometry,types,price_level,rating,photos,formatted_phone_number,website,opening_hours',
-        key: this.GOOGLE_PLACES_API_KEY,
-      };
-
-      const response = await axios.get(url, { params });
-
-      if (response.data.status !== 'OK') {
-        return null;
-      }
-
-      const place = response.data.result;
-
-      // Get photo URL if available
-      let photoUrl: string | undefined;
-      if (place.photos && place.photos.length > 0) {
-        photoUrl = `${this.PLACES_API_URL}/photo?maxwidth=400&photoreference=${place.photos[0].photo_reference}&key=${this.GOOGLE_PLACES_API_KEY}`;
-      }
-
-      return {
-        placeId,
-        name: place.name,
-        address: place.formatted_address,
-        location: {
-          lat: place.geometry.location.lat,
-          lng: place.geometry.location.lng,
-        },
-        cuisineType: place.types.filter((type: string) =>
-          ['restaurant', 'food', 'cafe', 'bar'].includes(type)
-        ),
-        priceLevel: place.price_level,
-        rating: place.rating,
-        photoUrl,
-        phoneNumber: place.formatted_phone_number,
-        website: place.website,
-        openingHours: place.opening_hours?.weekday_text,
-      };
-    } catch (error) {
-      console.error('Error getting place details:', error);
-      return null;
-    }
-  }
-
-  async calculateTravelTime(
-    origin: { lat: number; lng: number },
-    destination: { lat: number; lng: number }
-  ): Promise<{ distance: string; duration: string }> {
-    try {
-      const url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
-
-      const params = {
-        origins: `${origin.lat},${origin.lng}`,
-        destinations: `${destination.lat},${destination.lng}`,
-        mode: 'driving',
-        key: this.GOOGLE_PLACES_API_KEY,
-      };
-
-      const response = await axios.get(url, { params });
-
-      if (response.data.status !== 'OK') {
-        throw new AppError(500, `Distance Matrix API error: ${response.data.status}`);
-      }
-
-      const element = response.data.rows[0].elements[0];
-
-      if (element.status !== 'OK') {
-        throw new AppError(500, 'Could not calculate travel time');
-      }
-
-      return {
-        distance: element.distance.text,
-        duration: element.duration.text,
-      };
-    } catch (error) {
-      console.error('Error calculating travel time:', error);
-      throw new AppError(500, 'Failed to calculate travel time');
-    }
-  }
-
-  private calculateCenterPoint(users: any[]): { lat: number; lng: number } {
-    const validUsers = users.filter((user) => user.location);
-
-    if (validUsers.length === 0) {
-      // Default location if no users have location
-      return { lat: 49.2827, lng: -123.1207 }; // Vancouver
-    }
-
-    const sumLat = validUsers.reduce(
-      (sum, user) => sum + user.location.coordinates[1],
-      0
-    );
-    const sumLng = validUsers.reduce(
-      (sum, user) => sum + user.location.coordinates[0],
-      0
-    );
-
+  private getMockRestaurant(id: string): RestaurantType {
     return {
-      lat: sumLat / validUsers.length,
-      lng: sumLng / validUsers.length,
-    };
-  }
-
-  private findCommonPreferences(users: any[]) {
-    // Find cuisine types that appear in multiple users' preferences
-    const cuisineMap = new Map<string, number>();
-    users.forEach((user) => {
-      user.preferences.cuisineTypes.forEach((cuisine: string) => {
-        cuisineMap.set(cuisine, (cuisineMap.get(cuisine) || 0) + 1);
-      });
-    });
-
-    const commonCuisines = Array.from(cuisineMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([cuisine]) => cuisine);
-
-    // Calculate average budget
-    const avgBudget =
-      users.reduce((sum, user) => sum + user.preferences.budget, 0) /
-      users.length;
-
-    // Use minimum radius to ensure all users are within range
-    const minRadius = Math.min(
-      ...users.map((user) => user.preferences.radiusKm)
-    );
-
-    return {
-      cuisineTypes: commonCuisines,
-      maxBudget: avgBudget,
-      radius: minRadius,
+      name: 'Sample Restaurant',
+      location: '123 Sample St, Vancouver, BC',
+      restaurantId: id,
+      priceLevel: 2,
+      rating: 4.5,
+      phoneNumber: '+1-604-555-0000',
+      url: 'https://example.com/sample-restaurant',
     };
   }
 }
+
+export default new RestaurantService();

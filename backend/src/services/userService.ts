@@ -1,143 +1,172 @@
-import { User } from '../models/User';
-import { AppError } from '../middleware/errorHandler';
+import User from '../models/User';
+import { UserProfileResponse, UserSettingsResponse } from '../types';
 
 export class UserService {
-  async getUserProfile(userId: string) {
-    const user = await User.findById(userId).select('-googleId -fcmToken');
-    
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
+  /**
+   * Get user profiles by IDs
+   */
+  async getUserProfiles(userIds: string[]): Promise<UserProfileResponse[]> {
+    const users = await User.find({ _id: { $in: userIds } });
 
-    return user;
+    return users.map(user => ({
+      userId: user._id.toString(),
+      name: user.name,
+      bio: user.bio,
+      profilePicture: user.profilePicture,
+      contactNumber: user.contactNumber,
+    }));
   }
 
-  async getUserSettings(userId: string) {
+  /**
+   * Get user settings
+   */
+  async getUserSettings(userId: string): Promise<UserSettingsResponse> {
     const user = await User.findById(userId);
-    
+
     if (!user) {
-      throw new AppError(404, 'User not found');
+      throw new Error('User not found');
     }
 
     return {
-      userId: user._id,
+      userId: user._id.toString(),
       name: user.name,
       bio: user.bio,
-      preferences: user.preferences,
+      preference: user.preference,
       profilePicture: user.profilePicture,
       credibilityScore: user.credibilityScore,
       contactNumber: user.contactNumber,
+      budget: user.budget || 0,
+      radiusKm: user.radiusKm || 5,
       status: user.status,
-      currentRoomId: user.currentRoomId,
-      currentGroupId: user.currentGroupId,
+      roomID: user.roomId,
+      groupID: user.groupId,
     };
   }
 
-  async updateUserProfile(userId: string, data: {
-    name?: string;
-    bio?: string;
-    profilePicture?: string;
-    contactNumber?: string;
-  }) {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: data, lastActive: new Date() },
-      { new: true, runValidators: true }
-    );
+  /**
+   * Create user profile
+   */
+  async createUserProfile(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      profilePicture?: string;
+      contactNumber?: string;
+    }
+  ): Promise<UserProfileResponse> {
+    const user = await User.findById(userId);
 
     if (!user) {
-      throw new AppError(404, 'User not found');
+      throw new Error('User not found');
     }
 
-    return user;
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+
+    await user.save();
+
+    return {
+      userId: user._id.toString(),
+      name: user.name,
+      bio: user.bio,
+      profilePicture: user.profilePicture,
+      contactNumber: user.contactNumber,
+    };
   }
 
-  async updateUserSettings(userId: string, data: {
-    name?: string;
-    bio?: string;
-    preferences?: {
-      cuisineTypes?: string[];
+  /**
+   * Update user settings
+   */
+  async updateUserSettings(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      preference?: string[];
+      profilePicture?: string;
+      contactNumber?: string;
       budget?: number;
       radiusKm?: number;
+    }
+  ): Promise<UserSettingsResponse> {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.preference !== undefined) user.preference = data.preference;
+    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined) user.budget = data.budget;
+    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
+
+    await user.save();
+
+    return this.getUserSettings(userId);
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateUserProfile(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      preference?: string[];
+      profilePicture?: string;
+      contactNumber?: string;
+      budget?: number;
+      radiusKm?: number;
+    }
+  ): Promise<UserProfileResponse> {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.preference !== undefined) user.preference = data.preference;
+    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined) user.budget = data.budget;
+    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
+
+    await user.save();
+
+    return {
+      userId: user._id.toString(),
+      name: user.name,
+      bio: user.bio,
+      profilePicture: user.profilePicture,
+      contactNumber: user.contactNumber,
     };
-    profilePicture?: string;
-    contactNumber?: string;
-  }) {
-    const updateData: any = { lastActive: new Date() };
-
-    if (data.name) updateData.name = data.name;
-    if (data.bio !== undefined) updateData.bio = data.bio;
-    if (data.profilePicture) updateData.profilePicture = data.profilePicture;
-    if (data.contactNumber) updateData.contactNumber = data.contactNumber;
-    
-    if (data.preferences) {
-      if (data.preferences.cuisineTypes) {
-        updateData['preferences.cuisineTypes'] = data.preferences.cuisineTypes;
-      }
-      if (data.preferences.budget !== undefined) {
-        updateData['preferences.budget'] = data.preferences.budget;
-      }
-      if (data.preferences.radiusKm !== undefined) {
-        updateData['preferences.radiusKm'] = data.preferences.radiusKm;
-      }
-    }
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
-
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-
-    return user;
   }
 
-  async deleteUser(userId: string) {
-    const user = await User.findByIdAndDelete(userId);
-    
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-
-    return { message: 'User deleted successfully' };
-  }
-
-  async updateUserLocation(userId: string, longitude: number, latitude: number) {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          location: {
-            type: 'Point',
-            coordinates: [longitude, latitude],
-          },
-          lastActive: new Date(),
-        },
-      },
-      { new: true }
-    );
+  /**
+   * Delete user
+   */
+  async deleteUser(userId: string): Promise<{ deleted: boolean }> {
+    const user = await User.findById(userId);
 
     if (!user) {
-      throw new AppError(404, 'User not found');
+      throw new Error('User not found');
     }
 
-    return user;
-  }
-
-  async updateFCMToken(userId: string, fcmToken: string) {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: { fcmToken, lastActive: new Date() } },
-      { new: true }
-    );
-
-    if (!user) {
-      throw new AppError(404, 'User not found');
+    if (user.roomId || user.groupId) {
+      throw new Error('Cannot delete account while in a room or group');
     }
 
-    return user;
+    await User.findByIdAndDelete(userId);
+
+    return { deleted: true };
   }
 }

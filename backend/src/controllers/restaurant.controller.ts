@@ -1,115 +1,101 @@
 import { Response, NextFunction } from 'express';
-import { AuthRequest } from '../middleware/auth.middleware';
-import { RestaurantService } from '../services/restaurantService';
-
-const restaurantService = new RestaurantService();
+import { AuthRequest } from '../types';
+import restaurantService from '../services/restaurantService';
 
 export class RestaurantController {
-  async getRestaurantsForGroup(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  /**
+   * GET /api/restaurant/search
+   * Search for restaurants near a location
+   */
+  async searchRestaurants(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { groupId } = req.params;
-      const { userIds } = req.body;
+      const { latitude, longitude, radius, cuisineTypes, priceLevel } = req.query;
 
-      if (!userIds || !Array.isArray(userIds)) {
-        res.status(400).json({ error: 'User IDs array is required' });
+      if (!latitude || !longitude) {
+        res.status(400).json({
+          Status: 400,
+          Message: { error: 'Latitude and longitude are required' },
+          Body: null
+        });
         return;
       }
 
-      const restaurants = await restaurantService.getRestaurantsForGroup(
-        userIds
+      const lat = parseFloat(latitude as string);
+      const lng = parseFloat(longitude as string);
+      const rad = radius ? parseInt(radius as string) : 5000;
+      const cuisines = cuisineTypes ? (cuisineTypes as string).split(',') : undefined;
+      const price = priceLevel ? parseInt(priceLevel as string) : undefined;
+
+      const restaurants = await restaurantService.searchRestaurants(
+        lat,
+        lng,
+        rad,
+        cuisines,
+        price
       );
 
       res.status(200).json({
-        groupId,
-        restaurants,
+        Status: 200,
+        Message: {},
+        Body: restaurants
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async searchRestaurants(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  /**
+   * GET /api/restaurant/:restaurantId
+   * Get restaurant details by ID
+   */
+  async getRestaurantDetails(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { latitude, longitude, cuisineTypes, maxBudget, radius } =
-        req.query;
+      const { restaurantId } = req.params;
 
-      if (!latitude || !longitude) {
-        res.status(400).json({ error: 'Location is required' });
-        return;
-      }
+      const restaurant = await restaurantService.getRestaurantDetails(restaurantId);
 
-      const restaurants = await restaurantService.searchRestaurants(
-        {
-          lat: parseFloat(latitude as string),
-          lng: parseFloat(longitude as string),
-        },
-        {
-          cuisineTypes: cuisineTypes
-            ? (cuisineTypes as string).split(',')
-            : [],
-          maxBudget: maxBudget ? parseFloat(maxBudget as string) : 50,
-          radius: radius ? parseFloat(radius as string) : 10,
-        }
-      );
-
-      res.status(200).json({ restaurants });
+      res.status(200).json({
+        Status: 200,
+        Message: {},
+        Body: restaurant
+      });
     } catch (error) {
       next(error);
     }
   }
 
-  async getPlaceDetails(req: AuthRequest, res: Response, next: NextFunction) {
+  /**
+   * GET /api/restaurant/recommendations/:groupId
+   * Get restaurant recommendations for a group
+   */
+  async getGroupRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { placeId } = req.params;
+      const { groupId } = req.params;
+      const { userPreferences } = req.body;
 
-      const details = await restaurantService.getPlaceDetails(placeId);
-
-      if (!details) {
-        res.status(404).json({ error: 'Place not found' });
+      if (!userPreferences || !Array.isArray(userPreferences)) {
+        res.status(400).json({
+          Status: 400,
+          Message: { error: 'User preferences array is required' },
+          Body: null
+        });
         return;
       }
 
-      res.status(200).json(details);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async calculateTravelTime(
-    req: AuthRequest,
-    res: Response,
-    next: NextFunction
-  ) {
-    try {
-      const { originLat, originLng, destLat, destLng } = req.query;
-
-      if (!originLat || !originLng || !destLat || !destLng) {
-        res.status(400).json({ error: 'Origin and destination required' });
-        return;
-      }
-
-      const travelInfo = await restaurantService.calculateTravelTime(
-        {
-          lat: parseFloat(originLat as string),
-          lng: parseFloat(originLng as string),
-        },
-        {
-          lat: parseFloat(destLat as string),
-          lng: parseFloat(destLng as string),
-        }
+      const recommendations = await restaurantService.getRecommendationsForGroup(
+        groupId,
+        userPreferences
       );
 
-      res.status(200).json(travelInfo);
+      res.status(200).json({
+        Status: 200,
+        Message: {},
+        Body: recommendations
+      });
     } catch (error) {
       next(error);
     }
   }
 }
+
+export const restaurantController = new RestaurantController();

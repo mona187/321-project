@@ -1,125 +1,148 @@
-import { getMessaging } from '../config/firebase';
-import { User } from '../models/User';
-import { AppError } from '../middleware/errorHandler';
+import { sendPushNotification, sendMulticastNotification } from '../config/firebase';
+import User from '../models/User';
+import { NotificationPayload } from '../types';
 
-export class NotificationService {
-  async sendNotification(userId: string, notification: {
-    title: string;
-    body: string;
-    data?: Record<string, string>;
-  }) {
-    try {
-      const user = await User.findById(userId);
-
-      if (!user || !user.fcmToken) {
-        console.log(`No FCM token for user ${userId}`);
-        return;
-      }
-
-      const message = {
-        token: user.fcmToken,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        data: notification.data || {},
-      };
-
-      const response = await getMessaging().send(message);
-      console.log('Successfully sent notification:', response);
-
-      return response;
-    } catch (error) {
-      console.error('Error sending notification:', error);
-      // Don't throw error, just log it
+/**
+ * Send notification to a single user
+ */
+export const sendNotificationToUser = async (
+  userId: string,
+  notification: NotificationPayload
+): Promise<void> => {
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
     }
-  }
 
-  async sendMulticastNotification(
-    userIds: string[],
-    notification: {
-      title: string;
-      body: string;
-      data?: Record<string, string>;
+    if (!user.fcmToken) {
+      console.warn(`User ${userId} has no FCM token registered`);
+      return;
     }
-  ) {
-    try {
-      const users = await User.find({
-        _id: { $in: userIds },
-        fcmToken: { $exists: true, $ne: null },
-      });
 
-      const tokens = users
-        .map((user) => user.fcmToken)
-        .filter((token): token is string => !!token);
+    await sendPushNotification(user.fcmToken, notification, notification.data);
+    console.log(`✅ Notification sent to user ${userId}`);
+  } catch (error) {
+    console.error(`Failed to send notification to user ${userId}:`, error);
+    throw error;
+  }
+};
 
-      if (tokens.length === 0) {
-        console.log('No valid FCM tokens found');
-        return;
-      }
+/**
+ * Send notification to multiple users
+ */
+export const sendNotificationToUsers = async (
+  userIds: string[],
+  notification: NotificationPayload
+): Promise<void> => {
+  try {
+    const users = await User.find({ _id: { $in: userIds } });
+    
+    const tokens = users
+      .map(user => user.fcmToken)
+      .filter((token): token is string => token !== null && token !== undefined);
 
-      const message = {
-        tokens,
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        data: notification.data || {},
-      };
-
-      const response = await getMessaging().sendEachForMulticast(message);
-      console.log(
-        `Successfully sent ${response.successCount} notifications`
-      );
-
-      return response;
-    } catch (error) {
-      console.error('Error sending multicast notification:', error);
+    if (tokens.length === 0) {
+      console.warn('No valid FCM tokens found for the provided users');
+      return;
     }
-  }
 
-  // Specific notification helpers
-  async notifyRoomUpdate(roomId: string, userIds: string[], message: string) {
-    await this.sendMulticastNotification(userIds, {
-      title: 'Waiting Room Update',
-      body: message,
-      data: { type: 'room_update', roomId },
-    });
+    await sendMulticastNotification(tokens, notification, notification.data);
+    console.log(`✅ Notification sent to ${tokens.length} users`);
+  } catch (error) {
+    console.error('Failed to send notifications to users:', error);
+    throw error;
   }
+};
 
-  async notifyGroupFormed(groupId: string, userIds: string[]) {
-    await this.sendMulticastNotification(userIds, {
-      title: 'Match Found!',
-      body: 'Your group has been formed. Start voting on restaurants!',
-      data: { type: 'group_formed', groupId },
-    });
-  }
+/**
+ * Send notification to all members of a room
+ */
+export const notifyRoomMembers = async (
+  memberIds: string[],
+  notification: NotificationPayload
+): Promise<void> => {
+  await sendNotificationToUsers(memberIds, notification);
+};
 
-  async notifyVotingStarted(groupId: string, userIds: string[]) {
-    await this.sendMulticastNotification(userIds, {
-      title: 'Voting Started',
-      body: 'Start swiping on restaurant options!',
-      data: { type: 'voting_started', groupId },
-    });
-  }
+/**
+ * Send notification to all members of a group
+ */
+export const notifyGroupMembers = async (
+  memberIds: string[],
+  notification: NotificationPayload
+): Promise<void> => {
+  await sendNotificationToUsers(memberIds, notification);
+};
 
-  async notifyRestaurantSelected(
-    groupId: string,
-    userIds: string[],
-    restaurantName: string
-  ) {
-    await this.sendMulticastNotification(userIds, {
-      title: 'Restaurant Selected!',
-      body: `Your group will meet at ${restaurantName}`,
-      data: { type: 'restaurant_selected', groupId },
-    });
-  }
+/**
+ * Notify user when room is ready (matched)
+ */
+export const notifyRoomMatched = async (
+  userId: string,
+  roomId: string,
+  groupId: string
+): Promise<void> => {
+  const notification: NotificationPayload = {
+    title: 'Group Matched! 🎉',
+    body: 'Your waiting room is full! Time to vote for a restaurant.',
+    data: {
+      type: 'room_matched',
+      roomId,
+      groupId,
+    },
+  };
 
-  async notifyRoomExpired(userIds: string[]) {
-    await this.sendMulticastNotification(userIds, {
-      title: 'Waiting Room Expired',
-      body: 'Not enough members joined. Please try again.',
-      data: { type: 'room_expired' },
-    });
-  }
-}
+  await sendNotificationToUser(userId, notification);
+};
+
+/**
+ * Notify user when room expires
+ */
+export const notifyRoomExpired = async (
+  userId: string,
+  roomId: string
+): Promise<void> => {
+  const notification: NotificationPayload = {
+    title: 'Room Expired ⏰',
+    body: 'Your waiting room expired. Try matching again!',
+    data: {
+      type: 'room_expired',
+      roomId,
+    },
+  };
+
+  await sendNotificationToUser(userId, notification);
+};
+
+/**
+ * Notify group when restaurant is selected
+ */
+export const notifyRestaurantSelected = async (
+  memberIds: string[],
+  restaurantName: string,
+  groupId: string
+): Promise<void> => {
+  const notification: NotificationPayload = {
+    title: 'Restaurant Selected! 🍽️',
+    body: `Your group chose ${restaurantName}. See you there!`,
+    data: {
+      type: 'restaurant_selected',
+      groupId,
+      restaurantName,
+    },
+  };
+
+  await sendNotificationToUsers(memberIds, notification);
+};
+
+export default {
+  sendNotificationToUser,
+  sendNotificationToUsers,
+  notifyRoomMembers,
+  notifyGroupMembers,
+  notifyRoomMatched,
+  notifyRoomExpired,
+  notifyRestaurantSelected,
+};

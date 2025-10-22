@@ -1,20 +1,49 @@
 import { Router } from 'express';
-import { UserController } from '../controllers/user.controller';
-import { authenticateToken } from '../middleware/auth.middleware';
+import { userController } from '../controllers/user.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
-const userController = new UserController();
 
-// All routes require authentication
-router.use(authenticateToken);
+/**
+ * @route   GET /api/user/profile/:ids
+ * @desc    Get user profiles by IDs (comma-separated)
+ * @access  Public
+ */
+router.get('/profile/:ids', userController.getUserProfiles.bind(userController));
 
-router.get('/profile', userController.getProfile);
-router.get('/settings', userController.getSettings);
-router.post('/profile', userController.updateProfile);
-router.post('/settings', userController.updateSettings);
-router.put('/profile', userController.updateProfile);
-router.delete('/:userId', userController.deleteUser);
-router.post('/location', userController.updateLocation);
-router.post('/fcm-token', userController.updateFCMToken);
+/**
+ * @route   GET /api/user/settings
+ * @desc    Get current user's settings
+ * @access  Private
+ */
+router.get('/settings', authMiddleware, userController.getUserSettings.bind(userController));
+
+/**
+ * @route   POST /api/user/profile
+ * @desc    Create/update user profile
+ * @access  Private
+ */
+router.post('/profile', authMiddleware, userController.createUserProfile.bind(userController));
+
+/**
+ * @route   POST /api/user/settings
+ * @desc    Update user settings
+ * @access  Private
+ */
+router.post('/settings', authMiddleware, userController.updateUserSettings.bind(userController));
+
+/**
+ * @route   PUT /api/user/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
+router.put('/profile', authMiddleware, userController.updateUserProfile.bind(userController));
+
+/**
+ * @route   DELETE /api/user/:userId
+ * @desc    Delete user account
+ * @access  Private
+ */
+router.delete('/:userId', authMiddleware, userController.deleteUser.bind(userController));
 
 export default router;

@@ -1,33 +1,108 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { AuthRequest } from '../types';
 
-export interface AuthRequest extends Request {
-  userId?: string;
+export interface JWTPayload {
+  userId: string;
+  email: string;
+  googleId: string;
+  iat?: number;
+  exp?: number;
 }
 
-export const authenticateToken = (
+export const authMiddleware = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-): void => {
+): Promise<void> => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      res.status(401).json({ error: 'No token provided' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'No token provided'
+      });
       return;
     }
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error('JWT_SECRET not configured');
+    // Extract token
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify JWT secret exists
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('JWT_SECRET is not defined in environment variables');
+      res.status(500).json({
+        error: 'Server Error',
+        message: 'Authentication configuration error'
+      });
+      return;
     }
 
-    const decoded = jwt.verify(token, secret) as { userId: string };
-    req.userId = decoded.userId;
+    // Verify token
+    const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+
+    // Attach user info to request
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+      googleId: decoded.googleId
+    };
+
     next();
   } catch (error) {
-    res.status(403).json({ error: 'Invalid or expired token' });
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid token'
+      });
+      return;
+    }
+
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Token expired'
+      });
+      return;
+    }
+
+    console.error('Auth middleware error:', error);
+    res.status(500).json({
+      error: 'Server Error',
+      message: 'Authentication failed'
+    });
+  }
+};
+
+// Optional middleware to check if user is authenticated but don't require it
+export const optionalAuth = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const jwtSecret = process.env.JWT_SECRET;
+
+      if (jwtSecret) {
+        const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+        req.user = {
+          userId: decoded.userId,
+          email: decoded.email,
+          googleId: decoded.googleId
+        };
+      }
+    }
+
+    next();
+  } catch (error) {
+    // If optional auth fails, just continue without user
+    next();
   }
 };
