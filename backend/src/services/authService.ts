@@ -33,7 +33,10 @@ export class AuthService {
     }
   }
 
-  async authenticateUser(idToken: string, isSignup: boolean = false): Promise<{
+  async authenticateUser(
+    idToken: string,
+    isSignup: boolean = false
+  ): Promise<{
     token: string;
     user: any;
     isNewUser: boolean;
@@ -41,11 +44,14 @@ export class AuthService {
   }> {
     const googleUser = await this.verifyGoogleToken(idToken);
 
-    let user = await User.findOne({ googleId: googleUser.googleId });
+    let user = await User.findOne({ email: googleUser.email });
 
+    // -------------------------------------------
+    // CASE 1: no user in DB
+    // -------------------------------------------
     if (!user) {
       if (isSignup) {
-        // Only create new user if it's a signup request
+        // ✅ Create a new account (signup flow)
         user = await User.create({
           googleId: googleUser.googleId,
           email: googleUser.email,
@@ -57,49 +63,57 @@ export class AuthService {
           radiusKm: 5,
           status: UserStatus.ONLINE,
         });
-        
-        const token = this.generateToken(user._id.toString());
+
+        // ✅ Return signup confirmation (no token yet)
         return {
-          token,
-          user: this.sanitizeUser(user),
+          token: '',
+          user: null,
           isNewUser: true,
+          message: 'Account created successfully! Please sign in to continue.',
         };
       } else {
-        // For signin, user must exist
+        // ❌ Trying to sign in without an account
         throw new Error('No account found! Please sign up first.');
       }
-    } else {
-      // User exists
-      if (isSignup) {
-        // If user exists and they're trying to signup, throw error
-        throw new Error('You already have an account! Please sign in instead.');
-      } else {
-        // For signin, update their info if needed and return token
-        user.status = UserStatus.ONLINE;
-        await user.save();
-        
-        const token = this.generateToken(user._id.toString());
-        return {
-          token,
-          user: this.sanitizeUser(user),
-          isNewUser: false,
-        };
-      }
     }
+
+    // -------------------------------------------
+    // CASE 2: user already exists
+    // -------------------------------------------
+    if (isSignup) {
+      // ❌ Trying to sign up again
+      throw new Error('You already have an account! Please sign in instead.');
+    }
+
+    // ✅ Valid sign-in flow
+    user.status = UserStatus.ONLINE;
+    await user.save();
+
+    const token = this.generateToken(user._id.toString());
+
+    return {
+      token,
+      user: this.sanitizeUser(user),
+      isNewUser: false,
+      message: 'Signed in successfully!',
+    };
   }
+
+  // -------------------------------------------
+  // Helpers
+  // -------------------------------------------
 
   generateToken(userId: string): string {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error('JWT_SECRET not configured');
     }
-
     return jwt.sign({ userId }, secret, { expiresIn: '7d' });
   }
 
   sanitizeUser(user: any) {
     return {
-      userId: parseInt(user._id.toString().slice(-6), 16), // Convert to int-like format (smaller number)
+      userId: parseInt(user._id.toString().slice(-6), 16),
       name: user.name,
       bio: user.bio || '',
       preference: user.preference || [],
