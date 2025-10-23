@@ -6,12 +6,16 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import com.example.cpen_321.data.network.api.UserApi
+import com.example.cpen_321.data.network.api.RestaurantApi
+import com.example.cpen_321.data.network.api.MatchingApi
 import com.example.cpen_321.data.repository.AuthRepository
 import com.example.cpen_321.data.repository.AuthRepositoryImpl
 import com.example.cpen_321.data.repository.MatchRepository
 import com.example.cpen_321.data.repository.MatchRepositoryImpl
 import com.example.cpen_321.data.repository.UserRepository
 import com.example.cpen_321.data.repository.UserRepositoryImpl
+import com.example.cpen_321.data.repository.RestaurantRepository
+import com.example.cpen_321.data.repository.RestaurantRepositoryImpl
 import dagger.Binds
 
 @Module
@@ -30,8 +34,14 @@ object RepositoryModule {
     // Match Repository
     @Provides
     @Singleton
-    fun provideMatchRepository(userApi: UserApi): MatchRepository =
-        MatchRepositoryImpl(userApi)
+    fun provideMatchRepository(userApi: UserApi, matchingApi: MatchingApi): MatchRepository =
+        MatchRepositoryImpl(userApi, matchingApi)
+
+    // Restaurant Repository
+    @Provides
+    @Singleton
+    fun provideRestaurantRepository(restaurantApi: RestaurantApi): RestaurantRepository =
+        RestaurantRepositoryImpl(restaurantApi)
 
 
 }

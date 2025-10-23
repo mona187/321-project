@@ -35,10 +35,12 @@ fun MainBottomBar(navController: NavController) {
                                 contentDescription = "Localized description",
                             )
                         }
-                        IconButton(onClick = { /* do something */ }) {
+                        IconButton(onClick = {
+                            navController.navigate("group")
+                        }) {
                             Icon(
                                 Icons.Filled.Groups,
-                                contentDescription = "Localized description",
+                                contentDescription = "Group Screen",
                             )
                         }
                         IconButton(onClick = { navController.navigate("settings")}) {

@@ -1,8 +1,14 @@
 // di/NetworkModule.kt
 package com.example.cpen_321.di
 
+import com.example.cpen_321.data.local.TokenManager
 import com.example.cpen_321.data.network.api.AuthApi
 import com.example.cpen_321.data.network.api.UserApi
+import com.example.cpen_321.data.network.api.RestaurantApi
+import com.example.cpen_321.data.network.api.MatchingApi
+import com.example.cpen_321.data.network.interceptors.AuthInterceptor
+
+import kotlinx.coroutines.runBlocking
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,9 +35,15 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(logging: HttpLoggingInterceptor): OkHttpClient =
+    fun provideOkHttpClient(
+        logging: HttpLoggingInterceptor,
+        tokenManager: TokenManager
+    ): OkHttpClient =
         OkHttpClient.Builder()
             .addInterceptor(logging)
+            .addInterceptor(AuthInterceptor { 
+                runBlocking { tokenManager.getTokenSync() }
+            })
             .build()
 
     @Provides
@@ -54,6 +66,16 @@ object NetworkModule {
     @Singleton
     fun provideUserApi(retrofit: Retrofit): UserApi =
         retrofit.create(UserApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideRestaurantApi(retrofit: Retrofit): RestaurantApi =
+        retrofit.create(RestaurantApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideMatchingApi(retrofit: Retrofit): MatchingApi =
+        retrofit.create(MatchingApi::class.java)
 }
 
 

@@ -13,6 +13,7 @@ data class ApiResponse<T>(
     // For error responses
     val error: String? = null,
     val details: List<ValidationError>? = null
+
 )
 
 

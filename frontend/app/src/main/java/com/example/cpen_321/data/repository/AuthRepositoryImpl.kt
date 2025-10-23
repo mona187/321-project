@@ -7,7 +7,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
-import com.cpen321.data.local.TokenManager
+import com.example.cpen_321.data.local.TokenManager
 import com.example.cpen_321.BuildConfig
 import com.example.cpen_321.data.network.api.RetrofitClient
 
@@ -180,7 +180,6 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun getCurrentUser(): User? {
         return cachedUser
     }
-
 
     override suspend fun isUserAuthenticated(): Boolean {
         val tokenExists = doesTokenExist()

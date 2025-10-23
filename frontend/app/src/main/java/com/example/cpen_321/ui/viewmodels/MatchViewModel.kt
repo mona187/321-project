@@ -14,6 +14,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import org.threeten.bp.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import com.example.cpen_321.utils.SocketManager
+import com.example.cpen_321.data.network.api.JoinMatchingRequest
 
 @HiltViewModel
 class MatchViewModel @Inject constructor(
@@ -24,6 +26,38 @@ class MatchViewModel @Inject constructor(
     val state: StateFlow<WaitingRoomState> = _state //read-only version that UI can access
 
     private var timerJob: Job? = null // Job represents a coroutine, in this case timer
+
+    fun joinMatching(budget: Double, cuisine: List<String>, radiusKm: Double) {
+        viewModelScope.launch {
+            try {
+                val request = JoinMatchingRequest(
+                    budget = budget,
+                    cuisine = cuisine,
+                    radiusKm = radiusKm
+                )
+                
+                val result = matchRepository.joinMatching(request)
+                if (result.isSuccessful) {
+                    val response = result.body()
+                    println("✅ Successfully joined matching pool: $response")
+                    
+                    // Store roomId for socket communication
+                    response?.roomId?.let { roomId ->
+                        _state.value = _state.value.copy(roomId = roomId)
+                        
+                        // Join the room via socket
+                        val joinData = JSONObject()
+                        joinData.put("roomId", roomId)
+                        SocketManager.emit("join_room", joinData)
+                    }
+                } else {
+                    println("❌ Failed to join matching pool: ${result.errorBody()?.string()}")
+                }
+            } catch (e: Exception) {
+                println("❌ Error joining matching: ${e.message}")
+            }
+        }
+    }
 
     fun connectSocket(userId: Int?){
         SocketManager.connect()
@@ -72,9 +106,12 @@ class MatchViewModel @Inject constructor(
         // event listener for group ready
         SocketManager.on(event = "group_ready"){ payload ->
             viewModelScope.launch {
+                val groupId = payload.optString("groupId")
                 _state.value = _state.value.copy(
-                    groupReady = true
+                    groupReady = true,
+                    groupId = groupId
                 )
+                println("🎉 Group ready! GroupId: $groupId")
             }
         }
 

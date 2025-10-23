@@ -1,4 +1,4 @@
-package com.cpen321.data.local
+package com.example.cpen_321.data.local
 
 import android.content.Context
 import android.util.Log
