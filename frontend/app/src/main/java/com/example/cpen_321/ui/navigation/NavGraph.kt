@@ -21,11 +21,14 @@ fun AppNavGraph(navController: NavHostController) {
 
     // ✅ Only navigate after auth check is done
     LaunchedEffect(uiState.isCheckingAuth, uiState.isAuthenticated, uiState.requiresProfileSetup) {
+        android.util.Log.d("NavGraph", "Navigation effect triggered - isCheckingAuth: ${uiState.isCheckingAuth}, isAuthenticated: ${uiState.isAuthenticated}, requiresProfileSetup: ${uiState.requiresProfileSetup}")
+        
         if (uiState.isCheckingAuth) return@LaunchedEffect
 
         when {
             // New user who just signed up via Google
             uiState.isAuthenticated && uiState.requiresProfileSetup -> {
+                android.util.Log.d("NavGraph", "Navigating to SETTINGS")
                 navController.navigate(NavRoutes.SETTINGS) {
                     popUpTo(NavRoutes.AUTH) { inclusive = true }
                 }
@@ -33,14 +36,18 @@ fun AppNavGraph(navController: NavHostController) {
 
             // Returning authenticated user
             uiState.isAuthenticated && !uiState.requiresProfileSetup -> {
+                android.util.Log.d("NavGraph", "Navigating to HOME")
                 navController.navigate(NavRoutes.HOME) {
                     popUpTo(NavRoutes.AUTH) { inclusive = true }
                 }
             }
 
-            // Not authenticated yet → stay on Auth screen
-            else -> {
-                // no nav — Auth is already the start destination
+            // User signed out or not authenticated → navigate to Auth screen
+            !uiState.isAuthenticated -> {
+                android.util.Log.d("NavGraph", "Navigating to AUTH (signout)")
+                navController.navigate(NavRoutes.AUTH) {
+                    popUpTo(0) { inclusive = true } // Clear entire back stack
+                }
             }
         }
     }

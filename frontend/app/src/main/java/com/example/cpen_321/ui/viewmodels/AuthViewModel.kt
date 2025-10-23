@@ -147,8 +147,26 @@ class AuthViewModel @Inject constructor(
 
     fun signOut() {
         viewModelScope.launch {
-            authRepository.clearToken()
-            _uiState.value = AuthUiState(isAuthenticated = false)
+            try {
+                Log.d(TAG, "Starting sign out process...")
+                authRepository.clearToken()
+                Log.d(TAG, "Token cleared successfully")
+                _uiState.value = _uiState.value.copy(
+                    isAuthenticated = false,
+                    user = null,
+                    requiresProfileSetup = false,
+                    isSigningIn = false,
+                    isSigningUp = false,
+                    errorMessage = null,
+                    successMessage = null
+                )
+                Log.d(TAG, "UI state updated - isAuthenticated: ${_uiState.value.isAuthenticated}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during sign out", e)
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Error signing out: ${e.message}"
+                )
+            }
         }
     }
 
