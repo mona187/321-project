@@ -44,6 +44,32 @@ export class UserService {
   }
 
   /**
+   * Get most recent user settings (for unauthenticated users)
+   */
+  async getMostRecentUserSettings(): Promise<UserSettingsResponse> {
+    const user = await User.findOne().sort({ createdAt: -1 });
+
+    if (!user) {
+      throw new Error('No user found');
+    }
+
+    return {
+      userId: parseInt(user._id.toString().slice(-6), 16),
+      name: user.name,
+      bio: user.bio,
+      preference: user.preference,
+      profilePicture: user.profilePicture,
+      credibilityScore: user.credibilityScore,
+      contactNumber: user.contactNumber,
+      budget: user.budget || 0,
+      radiusKm: user.radiusKm || 5,
+      status: user.status,
+      roomID: user.roomId,
+      groupID: user.groupId,
+    };
+  }
+
+  /**
    * Create user profile
    */
   async createUserProfile(
