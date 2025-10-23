@@ -26,7 +26,7 @@ class UserRepositoryImpl @Inject constructor(
             return null
         }
 
-        val response = userApi.getUserProfiles(listOf(currentUser.userId)) // pass list even for single user
+        val response = userApi.getUserProfiles(currentUser.userId.toString()) // convert to comma-separated string
         return if (response.isSuccessful && !response.body().isNullOrEmpty()) {
             response.body()!!.first()
         } else {
@@ -36,7 +36,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getUserProfile(userId: Int): UserProfile? { // For viewing other user profiles
-        val response = userApi.getUserProfiles(listOf(userId))
+        val response = userApi.getUserProfiles(userId.toString())
         return if (response.isSuccessful && !response.body().isNullOrEmpty()) {
             response.body()!!.first()
         } else {
@@ -47,10 +47,12 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun createUserSettings(user: User): User {
         val response = userApi.createUserSettings(user)
-        if (response.isSuccessful) {
-            return response.body()!!
+        if (response.isSuccessful && response.body() != null) {
+            return response.body()!!.data!!
         } else {
-            throw Exception("Failed to create user settings: ${response.errorBody()?.string()}")
+            val errorMsg = response.errorBody()?.string() ?: "Failed to create user settings"
+            Log.e(TAG, "Error creating user: $errorMsg")
+            throw Exception(errorMsg)
         }
     }
 
@@ -59,7 +61,7 @@ class UserRepositoryImpl @Inject constructor(
         return try {
             val response = userApi.getUserSettings()
             if (response.isSuccessful && response.body() != null) {
-                response.body()!!
+                response.body()!!.data!!
             } else {
                 val errorMsg = response.errorBody()?.string() ?: "Failed to fetch user settings"
                 Log.e(TAG, "Error fetching user: $errorMsg")
@@ -82,7 +84,7 @@ class UserRepositoryImpl @Inject constructor(
         return try {
             val response = userApi.updateUserSettings(user)
             if (response.isSuccessful && response.body() != null) {
-                response.body()!!
+                response.body()!!.data!!
             } else {
                 val errorMsg = response.errorBody()?.string() ?: "Failed to update user settings"
                 Log.e(TAG, "Error updating user: $errorMsg")

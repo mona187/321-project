@@ -48,9 +48,9 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    // Load user info when screen opens (skip for first-time)
+    // Load user info when screen opens
     LaunchedEffect(Unit) {
-        if (!firstTimeSetup) viewModel.loadUserSettings()
+        viewModel.loadUserSettings()
     }
 
     // Navigate after saving successfully
@@ -113,6 +113,10 @@ fun SettingsScreen(
 
                 // ----- Name -----
                 var name by remember { mutableStateOf(user?.name ?: "") }
+                // Update name when user data changes
+                LaunchedEffect(user) {
+                    user?.name?.let { name = it }
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -170,6 +174,10 @@ fun SettingsScreen(
 
                 // ----- Bio -----
                 var bio by remember { mutableStateOf(user?.bio ?: "") }
+                // Update bio when user data changes
+                LaunchedEffect(user) {
+                    user?.bio?.let { bio = it }
+                }
                 OutlinedTextField(
                     value = bio,
                     onValueChange = { bio = it },
@@ -181,6 +189,10 @@ fun SettingsScreen(
 
                 // ----- Contact Number -----
                 var contactNumber by remember { mutableStateOf(user?.contactNumber ?: "") }
+                // Update contact number when user data changes
+                LaunchedEffect(user) {
+                    user?.contactNumber?.let { contactNumber = it }
+                }
                 OutlinedTextField(
                     value = contactNumber,
                     onValueChange = { contactNumber = it },
@@ -192,6 +204,10 @@ fun SettingsScreen(
 
                 // ----- Budget -----
                 var budgetText by remember { mutableStateOf(user?.budget?.toString() ?: "") }
+                // Update budget when user data changes
+                LaunchedEffect(user) {
+                    user?.budget?.let { budgetText = it.toString() }
+                }
                 OutlinedTextField(
                     value = budgetText,
                     onValueChange = { newValue ->
@@ -211,9 +227,12 @@ fun SettingsScreen(
                     "Italian", "Indian", "Chinese", "Japanese",
                     "Mexican", "Greek", "Thai", "American"
                 )
-                val selectedPrefs = remember {
-                    mutableStateListOf<String>().apply {
-                        addAll(user?.preference ?: emptyList())
+                val selectedPrefs = remember { mutableStateListOf<String>() }
+                // Update preferences when user data changes
+                LaunchedEffect(user) {
+                    user?.preference?.let { preferences ->
+                        selectedPrefs.clear()
+                        selectedPrefs.addAll(preferences)
                     }
                 }
 
@@ -221,6 +240,13 @@ fun SettingsScreen(
                     text = "Cuisine Preferences",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
+                )
+                
+                // Debug: Show current preferences
+                Text(
+                    text = "Selected: ${selectedPrefs.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -233,8 +259,13 @@ fun SettingsScreen(
                         FilterChip(
                             selected = selectedPrefs.contains(cuisine),
                             onClick = {
-                                if (selectedPrefs.contains(cuisine)) selectedPrefs.remove(cuisine)
-                                else selectedPrefs.add(cuisine)
+                                if (selectedPrefs.contains(cuisine)) {
+                                    selectedPrefs.remove(cuisine)
+                                } else {
+                                    selectedPrefs.add(cuisine)
+                                }
+                                // Debug: Print current preferences
+                                println("DEBUG: Selected preferences: $selectedPrefs")
                             },
                             label = { Text(cuisine) }
                         )
@@ -245,6 +276,10 @@ fun SettingsScreen(
 
                 // ----- Location Radius -----
                 var radius by remember { mutableStateOf(user?.radiusKm?.toFloat() ?: 10f) }
+                // Update radius when user data changes
+                LaunchedEffect(user) {
+                    user?.radiusKm?.let { radius = it.toFloat() }
+                }
                 Text("Maximum Search Radius: ${radius.toInt()} km")
                 Slider(
                     value = radius,
@@ -254,9 +289,22 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(32.dp))
 
+                // Debug: Show what will be saved
+                Text(
+                    text = "Will save preferences: ${selectedPrefs.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                
+                Spacer(Modifier.height(8.dp))
+
                 // ----- Save Button -----
                 Button(
                     onClick = {
+                        // Debug: Print what we're about to save
+                        println("DEBUG: Saving preferences: $selectedPrefs")
+                        println("DEBUG: Preferences as list: ${selectedPrefs.toList()}")
+                        
                         val updatedUser = (user ?: User(
                             userId = 0,
                             name = name,
@@ -265,7 +313,7 @@ fun SettingsScreen(
                             preference = selectedPrefs.toList(),
                             profilePicture = imageUri?.toString(),
                             credibilityScore = null,
-                            budget = null,
+                            budget = budgetText.toDoubleOrNull(),
                             radiusKm = radius.toDouble(),
                             status = null,
                             roomId = null,
@@ -276,6 +324,7 @@ fun SettingsScreen(
                             contactNumber = contactNumber,
                             preference = selectedPrefs.toList(),
                             profilePicture = imageUri?.toString() ?: user?.profilePicture,
+                            budget = budgetText.toDoubleOrNull(),
                             radiusKm = radius.toDouble()
                         )
 

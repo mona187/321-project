@@ -8,17 +8,18 @@ import com.example.cpen_321.data.model.User
 import retrofit2.http.PUT
 import retrofit2.http.Body
 import retrofit2.http.POST
+import com.example.cpen_321.data.network.dto.ApiResponse
 
 interface UserApi {
-    @GET("/api/user/profile")
-    suspend fun getUserProfiles(@Query("ids") ids: List<Int>): Response<List<UserProfile>>
+    @GET("user/profile")
+    suspend fun getUserProfiles(@Query("ids") ids: String): Response<List<UserProfile>>
 
-    @GET("/api/user/settings")
-    suspend fun getUserSettings(): Response<User>
+    @GET("user/settings")
+    suspend fun getUserSettings(): Response<ApiResponse<User>>
 
-    @PUT("/api/user/settings")
-    suspend fun updateUserSettings(@Body userSettings: User): Response<User>
+    @PUT("user/settings")
+    suspend fun updateUserSettings(@Body userSettings: User): Response<ApiResponse<User>>
 
-    @POST("/api/user/settings")
-    suspend fun createUserSettings(@Body userSettings: User): Response<User>
+    @POST("user/settings")
+    suspend fun createUserSettings(@Body userSettings: User): Response<ApiResponse<User>>
 }

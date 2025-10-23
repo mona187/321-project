@@ -10,6 +10,6 @@ class MatchRepositoryImpl @Inject constructor(
 ) : MatchRepository {
 
     override suspend fun getUserProfilesForRoom(memberIds: List<Int>): Response<List<UserProfile>> {
-        return userApi.getUserProfiles(memberIds) // Retrofit will automatically serialize list
+        return userApi.getUserProfiles(memberIds.joinToString(",")) // Convert list to comma-separated string
     }
 }
