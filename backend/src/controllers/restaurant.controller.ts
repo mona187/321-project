@@ -71,7 +71,8 @@ export class RestaurantController {
   async getGroupRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { groupId } = req.params;
-      const { userPreferences } = req.body;
+      // Accept array directly from request body
+      const userPreferences = Array.isArray(req.body) ? req.body : req.body.userPreferences;
 
       if (!userPreferences || !Array.isArray(userPreferences)) {
         res.status(400).json({
@@ -88,9 +89,8 @@ export class RestaurantController {
       );
 
       res.status(200).json({
-        Status: 200,
-        Message: {},
-        Body: recommendations
+        message: "Success",
+        data: recommendations
       });
     } catch (error) {
       next(error);

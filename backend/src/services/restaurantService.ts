@@ -133,7 +133,7 @@ export class RestaurantService {
       location: { coordinates: [number, number] };
       radiusKm: number;
     }>
-  ): Promise<RestaurantType[]> {
+  ): Promise<Array<{restaurant: RestaurantType, score: number, reasons: string[]}>> {
     // Calculate average location
     const avgLat = userPreferences.reduce((sum, p) => sum + p.location.coordinates[1], 0) / userPreferences.length;
     const avgLng = userPreferences.reduce((sum, p) => sum + p.location.coordinates[0], 0) / userPreferences.length;
@@ -157,7 +157,12 @@ export class RestaurantService {
       Math.min(4, priceLevel)
     );
 
-    return restaurants;
+    // Convert to recommendations with scores
+    return restaurants.map(restaurant => ({
+      restaurant,
+      score: 0.85, // Mock score for now
+      reasons: ["Great location", "Matches your cuisine preferences", "Within budget"]
+    }));
   }
 
   /**
