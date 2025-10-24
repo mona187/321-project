@@ -104,7 +104,8 @@ fun AppNavGraph(
         // Profile Config Screen
         composable(NavRoutes.PROFILE_CONFIG) {
             ProfileConfigScreen(
-                navController = navController
+                navController = navController,
+                authViewModel = authViewModel
             )
         }
 

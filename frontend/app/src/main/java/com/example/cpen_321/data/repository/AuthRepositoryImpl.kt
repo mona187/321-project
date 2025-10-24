@@ -21,6 +21,90 @@ class AuthRepositoryImpl(
 
     private val authAPI = RetrofitClient.authAPI
 
+    override suspend fun signUp(idToken: String): ApiResult<AuthResponse> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.signUp(GoogleAuthRequest(idToken))
+
+                if (response.isSuccessful) {
+                    val authResponse = response.body()
+                    if (authResponse != null) {
+                        // Save token and user info
+                        tokenManager.saveToken(authResponse.token)
+                        tokenManager.saveUserInfo(
+                            userId = authResponse.user.userId,
+                            email = authResponse.user.email,
+                            googleId = "" // Backend doesn't return googleId in response
+                        )
+
+                        ApiResult.Success(authResponse)
+                    } else {
+                        ApiResult.Error("Empty response from server")
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = when (response.code()) {
+                        409 -> "Account already exists. Please sign in instead."
+                        400 -> "Invalid request. Please try again."
+                        401 -> "Authentication failed. Please try again."
+                        else -> errorBody ?: "Sign up failed. Please try again."
+                    }
+                    ApiResult.Error(
+                        message = errorMessage,
+                        code = response.code()
+                    )
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
+                )
+            }
+        }
+    }
+
+    override suspend fun signIn(idToken: String): ApiResult<AuthResponse> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val response = authAPI.signIn(GoogleAuthRequest(idToken))
+
+                if (response.isSuccessful) {
+                    val authResponse = response.body()
+                    if (authResponse != null) {
+                        // Save token and user info
+                        tokenManager.saveToken(authResponse.token)
+                        tokenManager.saveUserInfo(
+                            userId = authResponse.user.userId,
+                            email = authResponse.user.email,
+                            googleId = "" // Backend doesn't return googleId in response
+                        )
+
+                        ApiResult.Success(authResponse)
+                    } else {
+                        ApiResult.Error("Empty response from server")
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    val errorMessage = when (response.code()) {
+                        404 -> "Account not found. Please sign up first."
+                        400 -> "Invalid request. Please try again."
+                        401 -> "Authentication failed. Please try again."
+                        else -> errorBody ?: "Sign in failed. Please try again."
+                    }
+                    ApiResult.Error(
+                        message = errorMessage,
+                        code = response.code()
+                    )
+                }
+            } catch (e: Exception) {
+                ApiResult.Error(
+                    message = e.localizedMessage ?: "Network error occurred",
+                    code = null
+                )
+            }
+        }
+    }
+
     override suspend fun googleAuth(idToken: String): ApiResult<AuthResponse> {
         return withContext(Dispatchers.IO) {
             try {

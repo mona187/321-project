@@ -56,7 +56,8 @@ fun AuthScreen(
         errorMessage?.let { message ->
             snackBarHostState.showSnackbar(
                 message = message,
-                duration = SnackbarDuration.Long
+                duration = SnackbarDuration.Long,
+                actionLabel = "Dismiss"
             )
             viewModel.clearError()
         }
@@ -99,14 +100,16 @@ fun AuthScreen(
                         handleGoogleSignIn(
                             context = context as? ComponentActivity,
                             viewModel = viewModel,
-                            snackbarHostState = snackBarHostState
+                            snackbarHostState = snackBarHostState,
+                            isSignUp = false
                         )
                     },
                     onSignUpClick = {
                         handleGoogleSignIn(
                             context = context as? ComponentActivity,
                             viewModel = viewModel,
-                            snackbarHostState = snackBarHostState
+                            snackbarHostState = snackBarHostState,
+                            isSignUp = true
                         )
                     }
                 )
@@ -117,6 +120,18 @@ fun AuthScreen(
                         modifier = Modifier.size(40.dp),
                         color = Color.Black,
                         strokeWidth = 3.dp
+                    )
+                }
+
+                // Show error message if any
+                errorMessage?.let { message ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = message,
+                        color = Color.Red,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
             }
@@ -189,13 +204,14 @@ private fun AuthButtons(
 // ========================= GOOGLE SIGN-IN LOGIC =========================
 
 /**
- * Handle Google Sign-In process
+ * Handle Google Sign-In/Sign-Up process
  * Fixed to work without Google account by setting filterByAuthorizedAccounts = false
  */
 private fun handleGoogleSignIn(
     context: ComponentActivity?,
     viewModel: AuthViewModel,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    isSignUp: Boolean
 ) {
     if (context == null) {
         Log.e("AuthScreen", "❌ Context is not a ComponentActivity")
@@ -232,10 +248,14 @@ private fun handleGoogleSignIn(
             val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
             val idToken = credential.idToken
 
-            Log.d("AuthScreen", "✅ Got Google ID token, authenticating with backend...")
+            Log.d("AuthScreen", "✅ Got Google ID token, ${if (isSignUp) "signing up" else "signing in"} with backend...")
 
             // Authenticate with backend
-            viewModel.signInWithGoogle(idToken)
+            if (isSignUp) {
+                viewModel.signUpWithGoogle(idToken)
+            } else {
+                viewModel.signInWithGoogle(idToken)
+            }
 
         } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
             Log.d("AuthScreen", "ℹ️ User cancelled sign-in")

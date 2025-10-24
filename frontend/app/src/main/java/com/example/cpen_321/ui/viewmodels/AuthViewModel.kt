@@ -98,9 +98,71 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Authenticate with Google ID token
+     * Sign up with Google ID token (create new account)
+     */
+    fun signUpWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            when (val result = authRepository.signUp(idToken)) {
+                is ApiResult.Success -> {
+                    _currentUser.value = result.data.user
+                    _authState.value = AuthState.Authenticated
+
+                    // Connect to socket with token
+                    socketManager.connect(result.data.token)
+
+                    _errorMessage.value = null
+                }
+                is ApiResult.Error -> {
+                    _authState.value = AuthState.Error(result.message)
+                    _errorMessage.value = "Sign up failed: ${result.message}"
+                }
+                is ApiResult.Loading -> {
+                    // Already handled by _isLoading
+                }
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Sign in with Google ID token (existing account)
      */
     fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            when (val result = authRepository.signIn(idToken)) {
+                is ApiResult.Success -> {
+                    _currentUser.value = result.data.user
+                    _authState.value = AuthState.Authenticated
+
+                    // Connect to socket with token
+                    socketManager.connect(result.data.token)
+
+                    _errorMessage.value = null
+                }
+                is ApiResult.Error -> {
+                    _authState.value = AuthState.Error(result.message)
+                    _errorMessage.value = "Sign in failed: ${result.message}"
+                }
+                is ApiResult.Loading -> {
+                    // Already handled by _isLoading
+                }
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Authenticate with Google ID token (legacy - find or create)
+     */
+    fun authenticateWithGoogle(idToken: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null

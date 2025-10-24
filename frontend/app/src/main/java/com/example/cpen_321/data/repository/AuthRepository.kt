@@ -10,7 +10,17 @@ import com.example.cpen_321.data.network.dto.AuthUser
 interface AuthRepository {
 
     /**
-     * Authenticate with Google ID token
+     * Sign up with Google ID token (create new account)
+     */
+    suspend fun signUp(idToken: String): ApiResult<AuthResponse>
+
+    /**
+     * Sign in with Google ID token (existing account)
+     */
+    suspend fun signIn(idToken: String): ApiResult<AuthResponse>
+
+    /**
+     * Authenticate with Google ID token (legacy - find or create)
      */
     suspend fun googleAuth(idToken: String): ApiResult<AuthResponse>
 

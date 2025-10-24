@@ -17,8 +17,26 @@ import retrofit2.http.POST
 interface AuthAPI {
 
     /**
+     * POST /api/auth/signup
+     * Sign up with Google (create new account)
+     */
+    @POST("api/auth/signup")
+    suspend fun signUp(
+        @Body request: GoogleAuthRequest
+    ): Response<AuthResponse>
+
+    /**
+     * POST /api/auth/signin
+     * Sign in with Google (existing account)
+     */
+    @POST("api/auth/signin")
+    suspend fun signIn(
+        @Body request: GoogleAuthRequest
+    ): Response<AuthResponse>
+
+    /**
      * POST /api/auth/google
-     * Exchange Google ID token for JWT
+     * Exchange Google ID token for JWT (legacy - find or create)
      */
     @POST("api/auth/google")
     suspend fun googleAuth(

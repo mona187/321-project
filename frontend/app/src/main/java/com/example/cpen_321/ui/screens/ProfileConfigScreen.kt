@@ -13,18 +13,35 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.cpen_321.ui.components.MainBottomBar
+import com.example.cpen_321.ui.viewmodels.AuthViewModel
+import com.example.cpen_321.ui.viewmodels.AuthState
 
 @Composable
 fun ProfileConfigScreen(
-    navController: NavController
+    navController: NavController,
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
+    // Handle logout navigation - simplified approach
+    val authState = authViewModel.authState.collectAsState()
+    
+    LaunchedEffect(authState.value) {
+        if (authState.value is AuthState.Unauthenticated) {
+            // Navigate to auth screen when logged out
+            navController.navigate(NavRoutes.AUTH) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
     Scaffold(
         bottomBar = { MainBottomBar(navController = navController) }
     ) { innerPadding ->
@@ -111,6 +128,27 @@ fun ProfileConfigScreen(
                 Text(
                     text = "Go Back",
                     color = Color.Black,
+                    fontSize = 20.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Logout button
+            Button(
+                onClick = {
+                    authViewModel.logout()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF5722) // Red color for logout
+                )
+            ) {
+                Text(
+                    text = "Logout",
+                    color = Color.White,
                     fontSize = 20.sp
                 )
             }
