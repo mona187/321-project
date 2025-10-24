@@ -25,6 +25,7 @@ class TokenManager(context: Context) {
         private const val KEY_USER_ID = "user_id"
         private const val KEY_EMAIL = "email"
         private const val KEY_GOOGLE_ID = "google_id"
+        private const val KEY_PROFILE_PICTURE = "profile_picture"
 
         @Volatile
         private var INSTANCE: TokenManager? = null
@@ -53,11 +54,12 @@ class TokenManager(context: Context) {
     /**
      * Save user information
      */
-    fun saveUserInfo(userId: String, email: String, googleId: String) {
+    fun saveUserInfo(userId: String, email: String, googleId: String, profilePicture: String? = null) {
         sharedPreferences.edit().apply {
             putString(KEY_USER_ID, userId)
             putString(KEY_EMAIL, email)
             putString(KEY_GOOGLE_ID, googleId)
+            putString(KEY_PROFILE_PICTURE, profilePicture)
             apply()
         }
     }
@@ -74,6 +76,13 @@ class TokenManager(context: Context) {
      */
     fun getEmail(): String? {
         return sharedPreferences.getString(KEY_EMAIL, null)
+    }
+
+    /**
+     * Get profile picture
+     */
+    fun getProfilePicture(): String? {
+        return sharedPreferences.getString(KEY_PROFILE_PICTURE, null)
     }
 
     /**

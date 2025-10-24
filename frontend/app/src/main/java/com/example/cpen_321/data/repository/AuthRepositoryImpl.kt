@@ -34,7 +34,8 @@ class AuthRepositoryImpl(
                         tokenManager.saveUserInfo(
                             userId = authResponse.user.userId,
                             email = authResponse.user.email,
-                            googleId = "" // Backend doesn't return googleId in response
+                            googleId = "", // Backend doesn't return googleId in response
+                            profilePicture = authResponse.user.profilePicture
                         )
 
                         ApiResult.Success(authResponse)
@@ -76,7 +77,8 @@ class AuthRepositoryImpl(
                         tokenManager.saveUserInfo(
                             userId = authResponse.user.userId,
                             email = authResponse.user.email,
-                            googleId = "" // Backend doesn't return googleId in response
+                            googleId = "", // Backend doesn't return googleId in response
+                            profilePicture = authResponse.user.profilePicture
                         )
 
                         ApiResult.Success(authResponse)
@@ -118,7 +120,8 @@ class AuthRepositoryImpl(
                         tokenManager.saveUserInfo(
                             userId = authResponse.user.userId,
                             email = authResponse.user.email,
-                            googleId = "" // Backend doesn't return googleId in response
+                            googleId = "", // Backend doesn't return googleId in response
+                            profilePicture = authResponse.user.profilePicture
                         )
 
                         ApiResult.Success(authResponse)

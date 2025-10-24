@@ -45,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.cpen_321.ui.viewmodels.UserViewModel
 import com.example.cpen_321.utils.Base64ImageHelper
+import com.example.cpen_321.utils.rememberBase64ImagePainter
 import kotlinx.coroutines.launch
 
 private const val TAG = "ProfileScreen"
@@ -189,8 +190,15 @@ fun ProfileScreen(
                                 )
                             }
                             profilePictureUrl.isNotEmpty() -> {
+                                // Check if it's a Base64 data URI or regular URL
+                                val painter = if (profilePictureUrl.startsWith("data:image/")) {
+                                    rememberBase64ImagePainter(profilePictureUrl)
+                                } else {
+                                    rememberAsyncImagePainter(profilePictureUrl)
+                                }
+                                
                                 Image(
-                                    painter = rememberAsyncImagePainter(profilePictureUrl),
+                                    painter = painter,
                                     contentDescription = "Profile Picture",
                                     modifier = Modifier
                                         .fillMaxSize()

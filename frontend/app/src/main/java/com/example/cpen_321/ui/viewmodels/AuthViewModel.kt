@@ -6,6 +6,7 @@ import com.example.cpen_321.data.local.TokenManager
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.AuthUser
 import com.example.cpen_321.data.repository.AuthRepository
+import com.example.cpen_321.data.repository.UserRepository
 import com.example.cpen_321.utils.SocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
     private val socketManager: SocketManager,
     private val tokenManager: TokenManager  // ✅ ADDED: Inject TokenManager
 ) : ViewModel() {
@@ -113,6 +115,11 @@ class AuthViewModel @Inject constructor(
                     // Connect to socket with token
                     socketManager.connect(result.data.token)
 
+                    // Sync profile picture to backend if available
+                    result.data.user.profilePicture?.let { profilePicture ->
+                        syncProfilePictureToBackend(profilePicture)
+                    }
+
                     _errorMessage.value = null
                 }
                 is ApiResult.Error -> {
@@ -143,6 +150,11 @@ class AuthViewModel @Inject constructor(
 
                     // Connect to socket with token
                     socketManager.connect(result.data.token)
+
+                    // Sync profile picture to backend if available
+                    result.data.user.profilePicture?.let { profilePicture ->
+                        syncProfilePictureToBackend(profilePicture)
+                    }
 
                     _errorMessage.value = null
                 }
@@ -254,6 +266,25 @@ class AuthViewModel @Inject constructor(
      */
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    /**
+     * Sync profile picture to backend
+     */
+    private fun syncProfilePictureToBackend(profilePicture: String) {
+        viewModelScope.launch {
+            try {
+                userRepository.updateUserProfile(
+                    name = null,
+                    bio = null,
+                    profilePicture = profilePicture,
+                    contactNumber = null
+                )
+            } catch (e: Exception) {
+                // Log error but don't show to user as this is a background sync
+                android.util.Log.w("AuthViewModel", "Failed to sync profile picture: ${e.message}")
+            }
+        }
     }
 
     /**

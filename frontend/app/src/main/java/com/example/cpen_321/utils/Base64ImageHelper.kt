@@ -4,6 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImagePainter
+import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -105,6 +112,35 @@ object Base64ImageHelper {
     }
 
     /**
+     * Decode Base64 data URI to Bitmap
+     */
+    suspend fun decodeBase64ToBitmap(base64DataUri: String): Result<Bitmap> = withContext(Dispatchers.IO) {
+        try {
+            // Remove data URI prefix if present
+            val base64String = if (base64DataUri.startsWith("data:image/")) {
+                base64DataUri.substringAfter("base64,")
+            } else {
+                base64DataUri
+            }
+
+            // Decode Base64 to bytes
+            val imageBytes = android.util.Base64.decode(base64String, android.util.Base64.DEFAULT)
+            
+            // Convert bytes to Bitmap
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            
+            if (bitmap == null) {
+                Result.failure(Exception("Failed to decode Base64 to Bitmap"))
+            } else {
+                Result.success(bitmap)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("Base64ImageHelper", "Failed to decode Base64", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Get approximate file size in KB
      */
     fun getBase64SizeKB(base64String: String): Double {
@@ -112,5 +148,24 @@ object Base64ImageHelper {
         val base64Only = base64String.substringAfter("base64,")
         // Base64 encoding increases size by ~33%
         return (base64Only.length * 0.75) / 1024.0
+    }
+}
+
+/**
+ * Composable function to create a painter for Base64 data URIs
+ */
+@Composable
+fun rememberBase64ImagePainter(base64DataUri: String): androidx.compose.ui.graphics.painter.Painter {
+    val context = LocalContext.current
+    val bitmap = remember(base64DataUri) {
+        kotlinx.coroutines.runBlocking {
+            Base64ImageHelper.decodeBase64ToBitmap(base64DataUri).getOrNull()
+        }
+    }
+    
+    return remember(bitmap) {
+        bitmap?.let { 
+            BitmapPainter(it.asImageBitmap())
+        } ?: androidx.compose.ui.graphics.painter.ColorPainter(androidx.compose.ui.graphics.Color.Gray)
     }
 }
