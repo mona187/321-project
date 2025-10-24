@@ -1,5 +1,6 @@
 package com.example.cpen_321.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cpen_321.data.model.Group
@@ -147,28 +148,42 @@ class GroupViewModel @Inject constructor(
     /**
      * Vote for a restaurant
      */
+    // GroupViewModel.kt - Add detailed logging in voteForRestaurant
     fun voteForRestaurant(restaurantId: String, restaurant: Restaurant) {
         viewModelScope.launch {
-            val groupId = _currentGroup.value?.groupId ?: return@launch
+            val groupId = _currentGroup.value?.groupId
+            Log.d("VoteDebug", "=== VOTE START ===")
+            Log.d("VoteDebug", "groupId: $groupId")
+            Log.d("VoteDebug", "restaurantId: $restaurantId")
+            Log.d("VoteDebug", "restaurant: ${restaurant.name}")
+
+            if (groupId == null) {
+                Log.e("VoteDebug", "ERROR: groupId is null!")
+                return@launch
+            }
 
             _isLoading.value = true
             _errorMessage.value = null
 
             when (val result = groupRepository.voteForRestaurant(groupId, restaurantId, restaurant)) {
                 is ApiResult.Success -> {
+                    Log.d("VoteDebug", "✅ Vote API Success")
+                    Log.d("VoteDebug", "Returned votes: ${result.data}")
                     _currentVotes.value = result.data
                     _userVote.value = restaurantId
                     _successMessage.value = "Vote submitted successfully"
+                    loadGroupStatus()
                 }
                 is ApiResult.Error -> {
+                    Log.e("VoteDebug", "❌ Vote API Error: ${result.message}")
+                    Log.e("VoteDebug", "Error code: ${result.code}")
                     _errorMessage.value = result.message
                 }
-                is ApiResult.Loading -> {
-                    // Already handled
-                }
+                is ApiResult.Loading -> {}
             }
 
             _isLoading.value = false
+            Log.d("VoteDebug", "=== VOTE END ===")
         }
     }
 
@@ -210,7 +225,11 @@ class GroupViewModel @Inject constructor(
      * Subscribe to group socket channel (for external use)
      */
     fun subscribeToGroup(groupId: String) {
+        Log.d("SocketDebug", "=== SUBSCRIBING TO GROUP ===")
+        Log.d("SocketDebug", "groupId: $groupId")
+        Log.d("SocketDebug", "Socket connected: ${socketManager.isConnected()}")
         socketManager.subscribeToGroup(groupId)
+        Log.d("SocketDebug", "Subscription command sent")
     }
 
     /**
@@ -262,24 +281,30 @@ class GroupViewModel @Inject constructor(
      * Handle vote update from socket
      */
     private fun handleVoteUpdate(data: JSONObject) {
+        Log.d("SocketDebug", "🔔 VOTE_UPDATE EVENT RECEIVED")
+        Log.d("SocketDebug", "Raw data: $data")
+
         viewModelScope.launch {
             val restaurantId = data.getStringSafe("restaurantId")
             val votes = data.getJSONObjectSafe("votes")
-            val totalVotes = data.getIntSafe("totalVotes")
-            val membersVoted = data.getIntSafe("membersVoted")
-            val totalMembers = data.getIntSafe("totalMembers")
 
-            // Convert votes JSONObject to Map
+            Log.d("SocketDebug", "restaurantId: $restaurantId")
+            Log.d("SocketDebug", "votes JSON: $votes")
+
             votes?.let { votesJson ->
                 val votesMap = mutableMapOf<String, Int>()
                 votesJson.keys().forEach { key ->
                     val keyStr = key.toString()
-                    votesMap[keyStr] = votesJson.getIntSafe(keyStr)
+                    val count = votesJson.getIntSafe(keyStr)
+                    votesMap[keyStr] = count
+                    Log.d("SocketDebug", "Vote: $keyStr -> $count")
                 }
+
+                Log.d("SocketDebug", "Setting votes: $votesMap")
                 _currentVotes.value = votesMap
+                Log.d("SocketDebug", "Votes updated. Current: ${_currentVotes.value}")
             }
 
-            // Update member vote status
             updateMemberVoteStatus()
         }
     }
@@ -289,9 +314,17 @@ class GroupViewModel @Inject constructor(
      */
     private fun handleRestaurantSelected(data: JSONObject) {
         viewModelScope.launch {
+            android.util.Log.d("GroupViewModel", "═══════════════════════════════════")
+            android.util.Log.d("GroupViewModel", "🎉 RESTAURANT_SELECTED EVENT RECEIVED!")
+            android.util.Log.d("GroupViewModel", "Raw data: $data")
+
             val restaurantId = data.getStringSafe("restaurantId")
             val restaurantName = data.getStringSafe("restaurantName")
             val votes = data.getJSONObjectSafe("votes")
+
+            android.util.Log.d("GroupViewModel", "restaurantId: $restaurantId")
+            android.util.Log.d("GroupViewModel", "restaurantName: $restaurantName")
+            android.util.Log.d("GroupViewModel", "votes: $votes")
 
             // Create Restaurant object
             val restaurant = Restaurant(
@@ -300,7 +333,12 @@ class GroupViewModel @Inject constructor(
                 location = "" // Will be filled from full data
             )
 
+            android.util.Log.d("GroupViewModel", "🏪 Created restaurant object: $restaurant")
+
+            android.util.Log.d("GroupViewModel", "⬆️ Setting _selectedRestaurant.value...")
             _selectedRestaurant.value = restaurant
+            android.util.Log.d("GroupViewModel", "✅ _selectedRestaurant.value SET!")
+            android.util.Log.d("GroupViewModel", "Current value: ${_selectedRestaurant.value}")
 
             // Update current group's restaurantSelected flag
             _currentGroup.value = _currentGroup.value?.copy(
@@ -309,6 +347,7 @@ class GroupViewModel @Inject constructor(
             )
 
             _successMessage.value = "Restaurant selected: $restaurantName"
+            android.util.Log.d("GroupViewModel", "═══════════════════════════════════")
         }
     }
 

@@ -373,7 +373,7 @@ private fun GroupContent(
                 onClick = {
                     // Navigate to group voting screen
                     currentGroup.groupId?.let { groupId ->
-                        navController.navigate("group_voting/$groupId")
+                        navController.navigate("vote_restaurant/$groupId")
                     }
                 },
                 modifier = Modifier

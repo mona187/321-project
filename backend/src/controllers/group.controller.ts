@@ -82,7 +82,10 @@ export class GroupController {
       res.status(200).json({
         Status: 200,
         Message: { text: result.message },
-        Body: { Current_votes: result.Current_votes }
+        Body: {
+          message: result.message,
+          Current_votes: result.Current_votes
+        }
       });
     } catch (error) {
       next(error);

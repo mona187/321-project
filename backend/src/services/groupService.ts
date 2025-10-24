@@ -66,6 +66,11 @@ export class GroupService {
 
     // Add/update vote
     group.addVote(userId, restaurantId);
+    
+    // Mark Map fields as modified for Mongoose to persist changes
+    group.markModified('votes');
+    group.markModified('restaurantVotes');
+    
     await group.save();
 
     // Convert Map to object for response
@@ -110,7 +115,7 @@ export class GroupService {
           groupId
         );
 
-        console.log(`✅ Restaurant selected for group ${groupId}`);
+        console.log(`âœ… Restaurant selected for group ${groupId}`);
       }
     }
 
@@ -146,7 +151,7 @@ export class GroupService {
     if (group.members.length === 0) {
       // Delete empty group
       await Group.findByIdAndDelete(groupId);
-      console.log(`🗑️ Deleted empty group: ${groupId}`);
+      console.log(`ðŸ—‘ï¸ Deleted empty group: ${groupId}`);
     } else {
       await group.save();
 
@@ -223,7 +228,7 @@ export class GroupService {
     // Delete group
     await Group.findByIdAndDelete(groupId);
 
-    console.log(`✅ Closed group: ${groupId}`);
+    console.log(`âœ… Closed group: ${groupId}`);
   }
 
   /**
@@ -267,7 +272,7 @@ export class GroupService {
           });
         }
 
-        console.log(`⏰ Auto-selected restaurant for expired group: ${group._id}`);
+        console.log(`â° Auto-selected restaurant for expired group: ${group._id}`);
       } else {
         // No votes - disband group
         await this.closeGroup(group._id.toString());
@@ -281,7 +286,7 @@ export class GroupService {
           },
         });
 
-        console.log(`⏰ Disbanded expired group with no votes: ${group._id}`);
+        console.log(`â° Disbanded expired group with no votes: ${group._id}`);
       }
     }
   }
