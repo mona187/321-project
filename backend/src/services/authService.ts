@@ -2,12 +2,43 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import User, { UserStatus } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
+import axios from 'axios';
 
 export class AuthService {
   private googleClient: OAuth2Client;
 
   constructor() {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  }
+
+  /**
+   * Convert Google profile picture URL to Base64
+   */
+  private async convertGoogleProfilePictureToBase64(profilePictureUrl: string): Promise<string> {
+    try {
+      if (!profilePictureUrl || !profilePictureUrl.startsWith('https://lh3.googleusercontent.com/')) {
+        return profilePictureUrl; // Return as-is if not a Google URL
+      }
+
+      console.log(`[AuthService] Converting Google profile picture to Base64: ${profilePictureUrl}`);
+      
+      const response = await axios.get(profilePictureUrl, {
+        responseType: 'arraybuffer',
+        timeout: 10000
+      });
+
+      const buffer = Buffer.from(response.data);
+      const base64 = buffer.toString('base64');
+      const mimeType = response.headers['content-type'] || 'image/png';
+      
+      const base64DataUri = `data:${mimeType};base64,${base64}`;
+      console.log(`[AuthService] Successfully converted to Base64 (${base64DataUri.length} chars)`);
+      
+      return base64DataUri;
+    } catch (error) {
+      console.error(`[AuthService] Failed to convert profile picture to Base64:`, error);
+      return profilePictureUrl; // Return original URL if conversion fails
+    }
   }
 
   /**
@@ -53,13 +84,19 @@ export class AuthService {
   }): Promise<any> {
     let user = await User.findOne({ googleId: googleData.googleId });
 
+    // Convert Google profile picture to Base64 if present
+    let convertedProfilePicture = '';
+    if (googleData.picture) {
+      convertedProfilePicture = await this.convertGoogleProfilePictureToBase64(googleData.picture);
+    }
+
     if (!user) {
       // Create new user
       user = await User.create({
         googleId: googleData.googleId,
         email: googleData.email,
         name: googleData.name,
-        profilePicture: googleData.picture || '',
+        profilePicture: convertedProfilePicture,
         status: UserStatus.ONLINE,
         preference: [],
         credibilityScore: 100,
@@ -71,8 +108,12 @@ export class AuthService {
     } else {
       // Update existing user
       user.status = UserStatus.ONLINE;
-      if (googleData.picture) {
-        user.profilePicture = googleData.picture;
+      // Only update profile picture if user doesn't have a custom one
+      if (convertedProfilePicture && (!user.profilePicture || user.profilePicture === '')) {
+        user.profilePicture = convertedProfilePicture;
+        console.log(`✅ Updated profile picture from Google for user: ${user._id}`);
+      } else if (user.profilePicture && user.profilePicture !== '') {
+        console.log(`✅ Keeping existing custom profile picture for user: ${user._id}`);
       }
       await user.save();
       console.log(`✅ User logged in: ${user._id}`);

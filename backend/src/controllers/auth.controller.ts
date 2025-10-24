@@ -3,8 +3,10 @@ import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import User, { UserStatus } from '../models/User';
 import { AuthRequest, GoogleAuthRequest, AuthResponse } from '../types';
+import { AuthService } from '../services/authService';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const authService = new AuthService();
 
 export class AuthController {
   /**
@@ -23,26 +25,11 @@ export class AuthController {
         return;
       }
 
-      // Verify Google token
-      const ticket = await client.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-
-      const payload = ticket.getPayload();
-
-      if (!payload || !payload.sub || !payload.email) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid Google token'
-        });
-        return;
-      }
-
-      const { sub: googleId, email, name, picture } = payload;
+      // Verify Google token and get user data
+      const googleData = await authService.verifyGoogleToken(idToken);
 
       // Check if user already exists
-      const existingUser = await User.findOne({ googleId });
+      const existingUser = await User.findOne({ googleId: googleData.googleId });
       if (existingUser) {
         res.status(409).json({
           error: 'Conflict',
@@ -51,20 +38,8 @@ export class AuthController {
         return;
       }
 
-      // Create new user
-      const user = await User.create({
-        googleId,
-        email,
-        name: name || 'User',
-        profilePicture: picture || '',
-        status: UserStatus.ONLINE,
-        preference: [],
-        credibilityScore: 100,
-        budget: 0,
-        radiusKm: 5,
-      });
-
-      console.log(`✅ New user created: ${user._id}`);
+      // Create new user using AuthService (includes profile picture conversion)
+      const user = await authService.findOrCreateUser(googleData);
 
       // Generate JWT
       const jwtSecret = process.env.JWT_SECRET;
@@ -120,26 +95,11 @@ export class AuthController {
         return;
       }
 
-      // Verify Google token
-      const ticket = await client.verifyIdToken({
-        idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-
-      const payload = ticket.getPayload();
-
-      if (!payload || !payload.sub || !payload.email) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid Google token'
-        });
-        return;
-      }
-
-      const { sub: googleId, picture } = payload;
+      // Verify Google token and get user data
+      const googleData = await authService.verifyGoogleToken(idToken);
 
       // Find existing user
-      const user = await User.findOne({ googleId });
+      const user = await User.findOne({ googleId: googleData.googleId });
       if (!user) {
         res.status(404).json({
           error: 'Not Found',
@@ -148,13 +108,8 @@ export class AuthController {
         return;
       }
 
-      // Update last login status
-      user.status = UserStatus.ONLINE;
-      if (picture) {
-        user.profilePicture = picture;
-      }
-      await user.save();
-      console.log(`✅ User logged in: ${user._id}`);
+      // Update user using AuthService (includes profile picture conversion)
+      const updatedUser = await authService.findOrCreateUser(googleData);
 
       // Generate JWT
       const jwtSecret = process.env.JWT_SECRET;
@@ -168,9 +123,9 @@ export class AuthController {
 
       const token = jwt.sign(
         {
-          userId: user._id.toString(),
-          email: user.email,
-          googleId: user.googleId,
+          userId: updatedUser._id.toString(),
+          email: updatedUser.email,
+          googleId: updatedUser.googleId,
         },
         jwtSecret,
         { expiresIn: '7d' }
@@ -180,11 +135,11 @@ export class AuthController {
       const response: AuthResponse = {
         token,
         user: {
-          userId: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          profilePicture: user.profilePicture,
-          credibilityScore: user.credibilityScore,
+          userId: updatedUser._id.toString(),
+          name: updatedUser.name,
+          email: updatedUser.email,
+          profilePicture: updatedUser.profilePicture,
+          credibilityScore: updatedUser.credibilityScore,
         },
       };
 

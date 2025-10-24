@@ -1,7 +1,38 @@
 import User from '../models/User';
 import { UserProfileResponse, UserSettingsResponse } from '../types';
+import axios from 'axios';
 
 export class UserService {
+  /**
+   * Convert Google profile picture URL to Base64
+   */
+  private async convertGoogleProfilePictureToBase64(profilePictureUrl: string): Promise<string> {
+    try {
+      if (!profilePictureUrl || !profilePictureUrl.startsWith('https://lh3.googleusercontent.com/')) {
+        return profilePictureUrl; // Return as-is if not a Google URL
+      }
+
+      console.log(`[UserService] Converting Google profile picture to Base64: ${profilePictureUrl}`);
+      
+      const response = await axios.get(profilePictureUrl, {
+        responseType: 'arraybuffer',
+        timeout: 10000
+      });
+
+      const buffer = Buffer.from(response.data);
+      const base64 = buffer.toString('base64');
+      const mimeType = response.headers['content-type'] || 'image/png';
+      
+      const base64DataUri = `data:${mimeType};base64,${base64}`;
+      console.log(`[UserService] Successfully converted to Base64 (${base64DataUri.length} chars)`);
+      
+      return base64DataUri;
+    } catch (error) {
+      console.error(`[UserService] Failed to convert profile picture to Base64:`, error);
+      return profilePictureUrl; // Return original URL if conversion fails
+    }
+  }
+
   /**
    * Get user profiles by IDs
    */
@@ -21,11 +52,15 @@ export class UserService {
    * Get user settings
    */
   async getUserSettings(userId: string): Promise<UserSettingsResponse> {
+    console.log(`[UserService] getUserSettings called for userId: ${userId}`);
+    
     const user = await User.findById(userId);
 
     if (!user) {
       throw new Error('User not found');
     }
+
+    console.log(`[UserService] User found. profilePicture: "${user.profilePicture}"`);
 
     return {
       userId: user._id.toString(),
@@ -61,10 +96,10 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined) user.name = data.name;
-    if (data.bio !== undefined) user.bio = data.bio;
-    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
-    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+    if (data.name !== undefined && data.name !== null) user.name = data.name;
+    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
+    if (data.profilePicture !== undefined && data.profilePicture !== null) user.profilePicture = data.profilePicture;
+    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
 
     await user.save();
 
@@ -92,21 +127,31 @@ export class UserService {
       radiusKm?: number;
     }
   ): Promise<UserSettingsResponse> {
+    console.log(`[UserService] updateUserSettings called for userId: ${userId}`);
+    console.log(`[UserService] Data received:`, data);
+    
     const user = await User.findById(userId);
 
     if (!user) {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined) user.name = data.name;
-    if (data.bio !== undefined) user.bio = data.bio;
-    if (data.preference !== undefined) user.preference = data.preference;
-    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
-    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
-    if (data.budget !== undefined) user.budget = data.budget;
-    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
+    if (data.name !== undefined && data.name !== null) user.name = data.name;
+    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
+    if (data.preference !== undefined && data.preference !== null) user.preference = data.preference;
+    if (data.profilePicture !== undefined && data.profilePicture !== null) {
+      console.log(`[UserService] Updating profilePicture from "${user.profilePicture}" to "${data.profilePicture}"`);
+      
+      // Convert Google profile picture URL to Base64 if it's a Google URL
+      const convertedProfilePicture = await this.convertGoogleProfilePictureToBase64(data.profilePicture);
+      user.profilePicture = convertedProfilePicture;
+    }
+    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined && data.budget !== null) user.budget = data.budget;
+    if (data.radiusKm !== undefined && data.radiusKm !== null) user.radiusKm = data.radiusKm;
 
     await user.save();
+    console.log(`[UserService] User saved. Current profilePicture: "${user.profilePicture}"`);
 
     return this.getUserSettings(userId);
   }
@@ -132,13 +177,17 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined) user.name = data.name;
-    if (data.bio !== undefined) user.bio = data.bio;
-    if (data.preference !== undefined) user.preference = data.preference;
-    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
-    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
-    if (data.budget !== undefined) user.budget = data.budget;
-    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
+    if (data.name !== undefined && data.name !== null) user.name = data.name;
+    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
+    if (data.preference !== undefined && data.preference !== null) user.preference = data.preference;
+    if (data.profilePicture !== undefined && data.profilePicture !== null) {
+      // Convert Google profile picture URL to Base64 if it's a Google URL
+      const convertedProfilePicture = await this.convertGoogleProfilePictureToBase64(data.profilePicture);
+      user.profilePicture = convertedProfilePicture;
+    }
+    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined && data.budget !== null) user.budget = data.budget;
+    if (data.radiusKm !== undefined && data.radiusKm !== null) user.radiusKm = data.radiusKm;
 
     await user.save();
 
