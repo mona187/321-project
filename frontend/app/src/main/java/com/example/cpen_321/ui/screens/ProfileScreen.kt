@@ -70,8 +70,27 @@ fun ProfileScreen(
     var bio by remember { mutableStateOf("") }
     var contactNumber by remember { mutableStateOf("") }
     var profilePictureUrl by remember { mutableStateOf("") }
+    var selectedImageBase64 by remember { mutableStateOf("") } // Temporary storage for selected image
     var isUploadingImage by remember { mutableStateOf(false) }
     var hasUnsavedImage by remember { mutableStateOf(false) }
+    var contactNumberError by remember { mutableStateOf("") }
+    
+    // Original values to track changes
+    var originalName by remember { mutableStateOf("") }
+    var originalBio by remember { mutableStateOf("") }
+    var originalContactNumber by remember { mutableStateOf("") }
+    var originalProfilePicture by remember { mutableStateOf("") }
+
+    // Validate phone number (only digits)
+    fun validatePhoneNumber(phone: String): String {
+        return when {
+            phone.isEmpty() -> "" // Empty is allowed
+            phone.any { !it.isDigit() } -> "Phone number must contain only digits"
+            phone.length < 10 -> "Phone number must be at least 10 digits"
+            phone.length > 15 -> "Phone number must be no more than 15 digits"
+            else -> ""
+        }
+    }
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -86,9 +105,9 @@ fun ProfileScreen(
                 val result = Base64ImageHelper.encodeImageToBase64(it, context)
                 result.onSuccess { base64String ->
                     Log.d(TAG, "Base64 encoding successful (${base64String.length} chars)")
-                    profilePictureUrl = base64String
+                    selectedImageBase64 = base64String // Store temporarily, don't save yet
                     isUploadingImage = false
-                    snackbarHostState.showSnackbar("Image selected")
+                    snackbarHostState.showSnackbar("Image selected - click Save to apply changes")
                 }.onFailure { error ->
                     Log.e(TAG, "Base64 encoding failed", error)
                     isUploadingImage = false
@@ -118,10 +137,19 @@ fun ProfileScreen(
             name = settings.name ?: ""
             bio = settings.bio ?: ""
             contactNumber = settings.contactNumber ?: ""
+            
+            // Validate the loaded contact number
+            contactNumberError = validatePhoneNumber(contactNumber)
+
+            // Store original values for change detection
+            originalName = settings.name ?: ""
+            originalBio = settings.bio ?: ""
+            originalContactNumber = settings.contactNumber ?: ""
 
             // CRITICAL FIX: Only load backend image if user hasn't selected a new one
             if (!hasUnsavedImage) {
                 profilePictureUrl = settings.profilePicture ?: ""
+                originalProfilePicture = settings.profilePicture ?: ""
                 Log.d(TAG, "Loaded profile picture from backend (${profilePictureUrl.length} chars)")
                 Log.d(TAG, "Profile picture URL: $profilePictureUrl")
                 Log.d(TAG, "Profile picture type: ${if (profilePictureUrl.startsWith("data:image/")) "Base64" else "URL"}")
@@ -129,6 +157,31 @@ fun ProfileScreen(
                 Log.d(TAG, "Keeping newly selected image (not overwriting with backend)")
             }
         }
+    }
+
+    // Clear selected image after successful save and update original values
+    LaunchedEffect(isLoading) {
+        if (!isLoading && selectedImageBase64.isNotEmpty()) {
+            // Save was successful, clear the selected image and update original values
+            selectedImageBase64 = ""
+            hasUnsavedImage = false
+            originalName = name
+            originalBio = bio
+            originalContactNumber = contactNumber
+            originalProfilePicture = profilePictureUrl
+            Log.d(TAG, "Cleared selected image after successful save and updated original values")
+        }
+    }
+
+    // Check if there are any changes
+    val hasChanges = remember(name, bio, contactNumber, selectedImageBase64, originalName, originalBio, originalContactNumber, originalProfilePicture) {
+        val nameChanged = name != originalName
+        val bioChanged = bio != originalBio
+        val contactChanged = contactNumber != originalContactNumber
+        val imageChanged = selectedImageBase64.isNotEmpty()
+        
+        Log.d(TAG, "Change detection - Name: $nameChanged, Bio: $bioChanged, Contact: $contactChanged, Image: $imageChanged")
+        nameChanged || bioChanged || contactChanged || imageChanged
     }
 
     // Show success message and reload
@@ -140,6 +193,12 @@ fun ProfileScreen(
 
             // Mark that we no longer have unsaved changes
             hasUnsavedImage = false
+            
+            // Update original values after successful save
+            originalName = name
+            originalBio = bio
+            originalContactNumber = contactNumber
+            originalProfilePicture = profilePictureUrl
 
             // Reload to get fresh data from backend
             viewModel.loadUserSettings()
@@ -197,6 +256,11 @@ fun ProfileScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(40.dp)
                                 )
+                            }
+                            selectedImageBase64.isNotEmpty() -> {
+                                // Show selected image (temporary)
+                                Log.d(TAG, "Using selected image (temporary)")
+                                rememberBase64ImagePainter(selectedImageBase64)
                             }
                             profilePictureUrl.isNotEmpty() -> {
                                 // Check if it's a Base64 data URI or regular URL
@@ -299,13 +363,21 @@ fun ProfileScreen(
                 // Contact Number field
                 OutlinedTextField(
                     value = contactNumber,
-                    onValueChange = { contactNumber = it },
+                    onValueChange = { newValue ->
+                        // Only allow digits
+                        contactNumber = newValue.filter { it.isDigit() }
+                        contactNumberError = validatePhoneNumber(contactNumber)
+                    },
                     label = { Text("Phone Number:") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp),
                     enabled = !isLoading,
-                    singleLine = true
+                    singleLine = true,
+                    isError = contactNumberError.isNotEmpty(),
+                    supportingText = if (contactNumberError.isNotEmpty()) {
+                        { Text(contactNumberError, color = Color.Red) }
+                    } else null
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -339,7 +411,9 @@ fun ProfileScreen(
                                 name = name.ifEmpty { currentSettings?.name },
                                 bio = bio.ifEmpty { null },
                                 contactNumber = contactNumber.ifEmpty { null },
-                                profilePicture = if (profilePictureUrl.isNotEmpty()) {
+                                profilePicture = if (selectedImageBase64.isNotEmpty()) {
+                                    selectedImageBase64
+                                } else if (profilePictureUrl.isNotEmpty()) {
                                     profilePictureUrl
                                 } else {
                                     null
@@ -355,7 +429,7 @@ fun ProfileScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFFD54F)
                         ),
-                        enabled = !isLoading && !isUploadingImage && name.isNotEmpty()
+                        enabled = !isLoading && !isUploadingImage && name.isNotEmpty() && hasChanges && contactNumberError.isEmpty()
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
