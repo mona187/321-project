@@ -228,15 +228,20 @@ class GroupViewModel @Inject constructor(
         Log.d("SocketDebug", "=== SUBSCRIBING TO GROUP ===")
         Log.d("SocketDebug", "groupId: $groupId")
         Log.d("SocketDebug", "Socket connected: ${socketManager.isConnected()}")
-        socketManager.subscribeToGroup(groupId)
-        Log.d("SocketDebug", "Subscription command sent")
+
+        // Get the current user ID from the current group data
+        val userId = _currentGroup.value?.members?.firstOrNull() // Or get from preferences
+
+        socketManager.subscribeToGroup(groupId, userId)
+        Log.d("SocketDebug", "Subscription command sent with userId: $userId")
     }
 
     /**
      * Unsubscribe from group socket channel (for external use)
      */
     fun unsubscribeFromGroup(groupId: String) {
-        socketManager.unsubscribeFromGroup(groupId)
+        val userId = _currentGroup.value?.members?.firstOrNull()
+        socketManager.unsubscribeFromGroup(groupId, userId)
     }
 
 

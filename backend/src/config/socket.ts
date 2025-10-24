@@ -59,8 +59,6 @@ export const initializeSocket = (server: HTTPServer): SocketIOServer => {
       try {
         console.log(`User ${data.userId} requesting to join room`);
         
-        // Join the socket room (will be handled by matching service)
-        // The actual room assignment is done via REST API
         socket.emit('join_room_ack', {
           success: true,
           message: 'Join room request received',
@@ -96,7 +94,7 @@ export const initializeSocket = (server: HTTPServer): SocketIOServer => {
      */
     socket.on('subscribe_to_room', (roomId: string) => {
       socket.join(`room_${roomId}`);
-      console.log(`User ${userId} subscribed to room ${roomId}`);
+      console.log(`✅ User ${userId} subscribed to room_${roomId}`);
     });
 
     /**
@@ -104,23 +102,27 @@ export const initializeSocket = (server: HTTPServer): SocketIOServer => {
      */
     socket.on('unsubscribe_from_room', (roomId: string) => {
       socket.leave(`room_${roomId}`);
-      console.log(`User ${userId} unsubscribed from room ${roomId}`);
+      console.log(`User ${userId} unsubscribed from room_${roomId}`);
     });
 
     /**
      * Join a group (for voting updates)
+     * CRITICAL: This is what Android calls when entering voting screen
      */
     socket.on('subscribe_to_group', (groupId: string) => {
-      socket.join(`group_${groupId}`);
-      console.log(`User ${userId} subscribed to group ${groupId}`);
+      const groupChannel = `group_${groupId}`;
+      socket.join(groupChannel);
+      console.log(`🔔 User ${userId} subscribed to group: ${groupChannel}`);
+      console.log(`   Socket ${socket.id} joined channel: ${groupChannel}`);
     });
 
     /**
      * Unsubscribe from group updates
      */
     socket.on('unsubscribe_from_group', (groupId: string) => {
-      socket.leave(`group_${groupId}`);
-      console.log(`User ${userId} unsubscribed from group ${groupId}`);
+      const groupChannel = `group_${groupId}`;
+      socket.leave(groupChannel);
+      console.log(`🔕 User ${userId} unsubscribed from group: ${groupChannel}`);
     });
 
     // ==================== DISCONNECT ====================
@@ -190,6 +192,7 @@ export class SocketEmitter {
   /**
    * Server emits: vote_update
    * Sent when someone votes in the group
+   * CRITICAL: Must emit to group_${groupId} channel
    */
   emitVoteUpdate(groupId: string, data: {
     restaurantId: string;
@@ -198,21 +201,29 @@ export class SocketEmitter {
     membersVoted: number;
     totalMembers: number;
   }) {
-    this.io.to(`group_${groupId}`).emit('vote_update', data);
-    console.log(`📤 Emitted vote_update for group ${groupId}`);
+    const groupChannel = `group_${groupId}`;
+    console.log(`📡 Emitting vote_update to channel: ${groupChannel}`);
+    console.log(`   Data:`, data);
+    this.io.to(groupChannel).emit('vote_update', data);
+    console.log(`✅ vote_update emitted successfully`);
   }
 
   /**
    * Server emits: restaurant_selected
    * Sent when a restaurant is selected by majority vote
+   * CRITICAL: Must emit to group_${groupId} channel
    */
   emitRestaurantSelected(groupId: string, data: {
     restaurantId: string;
     restaurantName: string;
     votes: Record<string, number>;
   }) {
-    this.io.to(`group_${groupId}`).emit('restaurant_selected', data);
-    console.log(`📤 Emitted restaurant_selected for group ${groupId}`);
+    const groupChannel = `group_${groupId}`;
+    console.log(`🎉 Emitting restaurant_selected to channel: ${groupChannel}`);
+    console.log(`   Restaurant: ${data.restaurantName}`);
+    console.log(`   Data:`, data);
+    this.io.to(groupChannel).emit('restaurant_selected', data);
+    console.log(`✅ restaurant_selected emitted successfully`);
   }
 
   /**

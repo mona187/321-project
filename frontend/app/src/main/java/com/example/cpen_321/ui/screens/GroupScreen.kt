@@ -353,10 +353,10 @@ fun GroupScreen(
                 // Close Group button at bottom
                 Button(
                     onClick = {
-                        viewModel.leaveGroup {
-                            navController.navigate("home") {
-                                popUpTo("home") { inclusive = true }
-                            }
+                        // Just navigate back to home
+                        // DON'T call leaveGroup() - the group should persist
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = true }
                         }
                     },
                     modifier = Modifier
@@ -364,22 +364,50 @@ fun GroupScreen(
                         .height(60.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFFD54F)
-                    ),
-                    enabled = !isLoading
+                    )
                 ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = Color.Black,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text(
-                            text = "Close Group",
-                            color = Color.Black,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Text(
+                        text = "Back to Home",
+                        color = Color.Black,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+// OPTIONAL: Add a separate "Leave Group" button if you want users to be able to leave
+// Only show this BEFORE restaurant is selected
+                if (currentGroup?.restaurantSelected == false) {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.leaveGroup {
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive = true }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.Red
+                        ),
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.Red,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Leave Group",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 

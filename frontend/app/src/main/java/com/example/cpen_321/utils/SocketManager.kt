@@ -186,6 +186,42 @@ class SocketManager private constructor() {
         Log.d(TAG, "Unsubscribed from group: $groupId")
     }
 
+
+    /**
+     * Subscribe to group with optional userId
+     */
+    fun subscribeToGroup(groupId: String, userId: String?) {
+        if (userId != null) {
+            // Send as JSON object with both groupId and userId
+            val data = JSONObject().apply {
+                put("groupId", groupId)
+                put("userId", userId)
+            }
+            socket?.emit("subscribe_to_group", data)
+            Log.d(TAG, "Subscribed to group: $groupId with userId: $userId")
+        } else {
+            // Fallback: send just groupId as string
+            socket?.emit("subscribe_to_group", groupId)
+            Log.d(TAG, "Subscribed to group: $groupId (no userId)")
+        }
+    }
+
+    /**
+     * Unsubscribe from group with optional userId
+     */
+    fun unsubscribeFromGroup(groupId: String, userId: String?) {
+        if (userId != null) {
+            val data = JSONObject().apply {
+                put("groupId", groupId)
+                put("userId", userId)
+            }
+            socket?.emit("unsubscribe_from_group", data)
+        } else {
+            socket?.emit("unsubscribe_from_group", groupId)
+        }
+        Log.d(TAG, "Unsubscribed from group: $groupId")
+    }
+
     /**
      * Subscribe to vote updates (server → client)
      */

@@ -16,6 +16,7 @@ export class GroupService {
     }
 
     return {
+      groupId: group._id.toString(), // ← ADD THIS LINE
       roomId: group.roomId,
       completionTime: group.completionTime.getTime(),
       numMembers: group.members.length,
@@ -24,7 +25,7 @@ export class GroupService {
       restaurant: group.restaurant || undefined,
       status: this.getGroupStatusString(group),
     };
-  }
+}
 
   /**
    * Get group status string
