@@ -8,8 +8,195 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 export class AuthController {
   /**
+   * POST /api/auth/signup
+   * Sign up with Google (create new account)
+   */
+  async signUp(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { idToken } = req.body as GoogleAuthRequest;
+
+      if (!idToken) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Google ID token is required'
+        });
+        return;
+      }
+
+      // Verify Google token
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.sub || !payload.email) {
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid Google token'
+        });
+        return;
+      }
+
+      const { sub: googleId, email, name, picture } = payload;
+
+      // Check if user already exists
+      const existingUser = await User.findOne({ googleId });
+      if (existingUser) {
+        res.status(409).json({
+          error: 'Conflict',
+          message: 'Account already exists. Please sign in instead.'
+        });
+        return;
+      }
+
+      // Create new user
+      const user = await User.create({
+        googleId,
+        email,
+        name: name || 'User',
+        profilePicture: picture || '',
+        status: UserStatus.ONLINE,
+        preference: [],
+        credibilityScore: 100,
+        budget: 0,
+        radiusKm: 5,
+      });
+
+      console.log(`✅ New user created: ${user._id}`);
+
+      // Generate JWT
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        res.status(500).json({
+          error: 'Server Error',
+          message: 'JWT configuration error'
+        });
+        return;
+      }
+
+      const token = jwt.sign(
+        {
+          userId: user._id.toString(),
+          email: user.email,
+          googleId: user.googleId,
+        },
+        jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      // Prepare response
+      const response: AuthResponse = {
+        token,
+        user: {
+          userId: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          profilePicture: user.profilePicture,
+          credibilityScore: user.credibilityScore,
+        },
+      };
+
+      res.status(201).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/signin
+   * Sign in with Google (existing account)
+   */
+  async signIn(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { idToken } = req.body as GoogleAuthRequest;
+
+      if (!idToken) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Google ID token is required'
+        });
+        return;
+      }
+
+      // Verify Google token
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.sub || !payload.email) {
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid Google token'
+        });
+        return;
+      }
+
+      const { sub: googleId, picture } = payload;
+
+      // Find existing user
+      const user = await User.findOne({ googleId });
+      if (!user) {
+        res.status(404).json({
+          error: 'Not Found',
+          message: 'Account not found. Please sign up first.'
+        });
+        return;
+      }
+
+      // Update last login status
+      user.status = UserStatus.ONLINE;
+      if (picture) {
+        user.profilePicture = picture;
+      }
+      await user.save();
+      console.log(`✅ User logged in: ${user._id}`);
+
+      // Generate JWT
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        res.status(500).json({
+          error: 'Server Error',
+          message: 'JWT configuration error'
+        });
+        return;
+      }
+
+      const token = jwt.sign(
+        {
+          userId: user._id.toString(),
+          email: user.email,
+          googleId: user.googleId,
+        },
+        jwtSecret,
+        { expiresIn: '7d' }
+      );
+
+      // Prepare response
+      const response: AuthResponse = {
+        token,
+        user: {
+          userId: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          profilePicture: user.profilePicture,
+          credibilityScore: user.credibilityScore,
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /api/auth/google
-   * Exchange Google ID token for JWT
+   * Exchange Google ID token for JWT (legacy - find or create)
    */
   async googleAuth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
