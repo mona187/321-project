@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -123,16 +124,54 @@ fun AuthScreen(
                     )
                 }
 
-                // Show error message if any
-                errorMessage?.let { message ->
+                // Error dialog will be shown separately
+            }
+        }
+    }
+
+    // Error Alert Dialog
+    errorMessage?.let { message ->
+        Dialog(onDismissRequest = { viewModel.clearError() }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Authentication Error",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
+                    )
+                    
                     Spacer(modifier = Modifier.height(16.dp))
+                    
                     Text(
                         text = message,
-                        color = Color.Red,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        color = Color.Black
                     )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Button(
+                        onClick = { viewModel.clearError() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF5722)
+                        )
+                    ) {
+                        Text(
+                            text = "OK",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
         }
