@@ -1,5 +1,7 @@
 package com.example.cpen_321.ui.viewmodels
 
+import android.os.Build
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.cpen_321.data.model.Room
@@ -15,6 +17,8 @@ import com.example.cpen_321.utils.JsonUtils.getStringSafe
 import com.example.cpen_321.utils.JsonUtils.toStringList
 import com.example.cpen_321.utils.SocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +35,9 @@ class MatchViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val socketManager: SocketManager
 ) : ViewModel() {
+
+    // FIXED: Add timer job for countdown
+    private var timerJob: Job? = null
 
     // Current room
     private val _currentRoom = MutableStateFlow<Room?>(null)
@@ -64,8 +71,43 @@ class MatchViewModel @Inject constructor(
     private val _roomExpired = MutableStateFlow(false)
     val roomExpired: StateFlow<Boolean> = _roomExpired.asStateFlow()
 
+    companion object {
+        private const val TAG = "MatchViewModel"
+    }
+
     init {
         setupSocketListeners()
+    }
+
+    /**
+     * FIXED: Start a client-side timer that counts down every second
+     */
+    private fun startTimer(completionTimeMillis: Long) {
+        // Cancel any existing timer
+        timerJob?.cancel()
+
+        timerJob = viewModelScope.launch {
+            while (true) {
+                val currentTime = System.currentTimeMillis()
+                val remaining = completionTimeMillis - currentTime
+
+                if (remaining <= 0) {
+                    _timeRemaining.value = 0
+                    Log.d(TAG, "Timer expired")
+                    break
+                }
+
+                _timeRemaining.value = remaining
+
+                // Log every 10 seconds to avoid spam
+                if (remaining % 10000 < 1000) {
+                    Log.d(TAG, "Timer: ${remaining / 1000}s remaining")
+                }
+
+                // Wait 1 second before next update
+                delay(1000)
+            }
+        }
     }
 
     /**
@@ -118,15 +160,17 @@ class MatchViewModel @Inject constructor(
 
                     // Subscribe to room updates via socket
                     socketManager.subscribeToRoom(roomId)
+                    Log.d(TAG, "Subscribed to room: $roomId")
 
                     // Load room members
                     loadRoomMembers(room.members)
 
-                    // Calculate time remaining
-                    _timeRemaining.value = room.completionTime - System.currentTimeMillis()
+                    // FIXED: Start the client-side countdown timer
+                    startTimer(room.getCompletionTimeMillis())
                 }
                 is ApiResult.Error -> {
                     _errorMessage.value = result.message
+                    Log.e(TAG, "Failed to join matching: ${result.message}")
                 }
                 is ApiResult.Loading -> {
                     // Already handled
@@ -150,6 +194,10 @@ class MatchViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     // Unsubscribe from room updates
                     socketManager.unsubscribeFromRoom(roomId)
+                    Log.d(TAG, "Unsubscribed from room: $roomId")
+
+                    // FIXED: Stop the timer
+                    timerJob?.cancel()
 
                     // Clear state
                     _currentRoom.value = null
@@ -160,6 +208,7 @@ class MatchViewModel @Inject constructor(
                 }
                 is ApiResult.Error -> {
                     _errorMessage.value = result.message
+                    Log.e(TAG, "Failed to leave room: ${result.message}")
                 }
                 is ApiResult.Loading -> {
                     // Ignore
@@ -178,8 +227,19 @@ class MatchViewModel @Inject constructor(
             when (val result = matchRepository.getRoomStatus(roomId)) {
                 is ApiResult.Success -> {
                     val status = result.data
-                    _timeRemaining.value = status.completionTime - System.currentTimeMillis()
-                    _groupReady.value = status.groupReady
+
+                    // FIXED: Don't manually set time, let timer handle it
+                    // Just update the timer if needed
+                    val completionTime = status.getCompletionTimeMillis()
+                    if (_timeRemaining.value == 0L || timerJob == null || timerJob?.isActive == false) {
+                        startTimer(completionTime)
+                    }
+
+                    // CRITICAL: Don't override groupReady if it's already true
+                    // Once the group is ready (from socket), it stays ready
+                    if (!_groupReady.value && status.groupReady) {
+                        _groupReady.value = true
+                    }
 
                     // Load members if needed
                     if (_roomMembers.value.isEmpty()) {
@@ -206,8 +266,10 @@ class MatchViewModel @Inject constructor(
             when (val result = userRepository.getUserProfiles(memberIds)) {
                 is ApiResult.Success -> {
                     _roomMembers.value = result.data
+                    Log.d(TAG, "Loaded ${result.data.size} room members")
                 }
                 is ApiResult.Error -> {
+                    Log.e(TAG, "Failed to load members: ${result.message}")
                     // Don't show error for member loading
                 }
                 is ApiResult.Loading -> {
@@ -227,21 +289,49 @@ class MatchViewModel @Inject constructor(
             val expiresAt = data.getStringSafe("expiresAt")
             val status = data.getStringSafe("status")
 
+            Log.d(TAG, "Room update - Members: ${members.size}, Status: $status")
+
             // Update members
             loadRoomMembers(members)
 
-            // Update time remaining
+            // FIXED: Restart timer with updated expiration time
             try {
-                val expiresAtMillis = java.time.Instant.parse(expiresAt).toEpochMilli()
-                _timeRemaining.value = expiresAtMillis - System.currentTimeMillis()
+                // Parse ISO 8601 date string to milliseconds (compatible with API 24+)
+                val expiresAtMillis = parseIso8601ToMillis(expiresAt)
+                if (expiresAtMillis != null) {
+                    startTimer(expiresAtMillis)
+                }
             } catch (e: Exception) {
-                // Ignore parsing errors
+                Log.e(TAG, "Failed to parse expiration time", e)
             }
 
             // Update room status
             if (status == "matched") {
                 _groupReady.value = true
             }
+        }
+    }
+
+    /**
+     * Parse ISO 8601 date string to milliseconds
+     * Compatible with API 24+
+     */
+    private fun parseIso8601ToMillis(dateString: String?): Long? {
+        if (dateString.isNullOrEmpty()) return null
+
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Use Java 8 Time API if available (API 26+)
+                java.time.Instant.parse(dateString).toEpochMilli()
+            } else {
+                // Fallback for API 24-25: Use SimpleDateFormat
+                val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
+                format.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                format.parse(dateString)?.time
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing date: $dateString", e)
+            null
         }
     }
 
@@ -253,8 +343,13 @@ class MatchViewModel @Inject constructor(
             val groupId = data.getStringSafe("groupId")
             val ready = data.getBooleanSafe("ready", false)
 
+            Log.d(TAG, "Group ready: $groupId")
+
             _groupReady.value = ready
             _groupId.value = groupId
+
+            // FIXED: Stop timer when group is ready
+            timerJob?.cancel()
         }
     }
 
@@ -263,8 +358,13 @@ class MatchViewModel @Inject constructor(
      */
     private fun handleRoomExpired(data: JSONObject) {
         viewModelScope.launch {
+            Log.d(TAG, "Room expired")
+
             _roomExpired.value = true
             _errorMessage.value = data.getStringSafe("reason", "Room expired")
+
+            // FIXED: Stop timer when room expires
+            timerJob?.cancel()
         }
     }
 
@@ -273,6 +373,9 @@ class MatchViewModel @Inject constructor(
      */
     private fun handleMemberJoined(data: JSONObject) {
         viewModelScope.launch {
+            val userName = data.getStringSafe("userName")
+            Log.d(TAG, "Member joined: $userName")
+
             // Reload room members
             _currentRoom.value?.let { room ->
                 getRoomStatus(room.roomId)
@@ -286,6 +389,9 @@ class MatchViewModel @Inject constructor(
     private fun handleMemberLeft(data: JSONObject) {
         viewModelScope.launch {
             val userId = data.getStringSafe("userId")
+            val userName = data.getStringSafe("userName")
+
+            Log.d(TAG, "Member left: $userName")
 
             // Remove member from list
             _roomMembers.value = _roomMembers.value.filter { it.userId != userId }
@@ -308,11 +414,17 @@ class MatchViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+
+        // FIXED: Stop timer
+        timerJob?.cancel()
+
         // Clean up socket listeners
         socketManager.off("room_update")
         socketManager.off("group_ready")
         socketManager.off("room_expired")
         socketManager.off("member_joined")
         socketManager.off("member_left")
+
+        Log.d(TAG, "ViewModel cleared")
     }
 }

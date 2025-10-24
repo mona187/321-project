@@ -2,6 +2,7 @@ package com.example.cpen_321.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.cpen_321.data.local.TokenManager
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.AuthUser
 import com.example.cpen_321.data.repository.AuthRepository
@@ -19,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val socketManager: SocketManager
+    private val socketManager: SocketManager,
+    private val tokenManager: TokenManager  // ✅ ADDED: Inject TokenManager
 ) : ViewModel() {
 
     // Authentication state
@@ -63,10 +65,11 @@ class AuthViewModel @Inject constructor(
                 _currentUser.value = result.data
                 _authState.value = AuthState.Authenticated
 
-                // Connect to socket if not connected
+                // ✅ FIXED: Connect to socket with JWT token, not userId
                 if (!socketManager.isConnected()) {
-                    authRepository.getCurrentUserId()?.let {
-                        socketManager.connect(it)
+                    val token = tokenManager.getToken()  // Get the JWT token
+                    if (token != null) {
+                        socketManager.connect(token)  // Pass the token, not userId!
                     }
                 }
             }
@@ -107,7 +110,7 @@ class AuthViewModel @Inject constructor(
                     _currentUser.value = result.data.user
                     _authState.value = AuthState.Authenticated
 
-                    // Connect to socket with token
+                    // ✅ CORRECT: Connect to socket with token
                     socketManager.connect(result.data.token)
 
                     _errorMessage.value = null

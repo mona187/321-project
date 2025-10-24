@@ -44,6 +44,10 @@ class SocketManager private constructor() {
         }
 
         try {
+            // Debug: Log token info (first 20 chars only for security)
+            Log.d(TAG, "Connecting with token: ${token.take(20)}...")
+            Log.d(TAG, "Token length: ${token.length}")
+
             val options = IO.Options().apply {
                 auth = mapOf("token" to token)
                 reconnection = true
@@ -151,42 +155,34 @@ class SocketManager private constructor() {
     // ==================== GROUP EVENTS ====================
 
     /**
-     * Subscribe to room/group
+     * Subscribe to room/group - FIXED: Send string directly
      */
     fun subscribeToRoom(roomId: String) {
-        emit("subscribe_to_room", JSONObject().apply {
-            put("roomId", roomId)
-        })
+        socket?.emit("subscribe_to_room", roomId)
         Log.d(TAG, "Subscribed to room: $roomId")
     }
 
     /**
-     * Unsubscribe from room/group
+     * Unsubscribe from room/group - FIXED: Send string directly
      */
     fun unsubscribeFromRoom(roomId: String) {
-        emit("unsubscribe_from_room", JSONObject().apply {
-            put("roomId", roomId)
-        })
+        socket?.emit("unsubscribe_from_room", roomId)
         Log.d(TAG, "Unsubscribed from room: $roomId")
     }
 
     /**
-     * Subscribe to group
+     * Subscribe to group - FIXED: Send string directly
      */
     fun subscribeToGroup(groupId: String) {
-        emit("subscribe_to_group", JSONObject().apply {
-            put("groupId", groupId)
-        })
+        socket?.emit("subscribe_to_group", groupId)
         Log.d(TAG, "Subscribed to group: $groupId")
     }
 
     /**
-     * Unsubscribe from group
+     * Unsubscribe from group - FIXED: Send string directly
      */
     fun unsubscribeFromGroup(groupId: String) {
-        emit("unsubscribe_from_group", JSONObject().apply {
-            put("groupId", groupId)
-        })
+        socket?.emit("unsubscribe_from_group", groupId)
         Log.d(TAG, "Unsubscribed from group: $groupId")
     }
 
@@ -291,5 +287,12 @@ class SocketManager private constructor() {
         isConnected = false
         val error = if (args.isNotEmpty()) args[0].toString() else "unknown error"
         Log.e(TAG, "❌ Socket connection error: $error")
+
+        // Additional debug info
+        if (args.isNotEmpty() && args[0] is Exception) {
+            val exception = args[0] as Exception
+            Log.e(TAG, "Error details: ${exception.message}")
+            exception.printStackTrace()
+        }
     }
 }

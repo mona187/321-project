@@ -205,6 +205,22 @@ class GroupViewModel @Inject constructor(
         }
     }
 
+
+    /**
+     * Subscribe to group socket channel (for external use)
+     */
+    fun subscribeToGroup(groupId: String) {
+        socketManager.subscribeToGroup(groupId)
+    }
+
+    /**
+     * Unsubscribe from group socket channel (for external use)
+     */
+    fun unsubscribeFromGroup(groupId: String) {
+        socketManager.unsubscribeFromGroup(groupId)
+    }
+
+
     /**
      * Load group members profiles
      */

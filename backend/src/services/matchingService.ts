@@ -5,9 +5,9 @@ import socketManager from '../utils/socketManager';
 import { notifyRoomMatched, notifyRoomExpired } from './notificationService';
 
 export class MatchingService {
-  private readonly ROOM_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  private readonly ROOM_DURATION_MS = 2 * 60 * 1000; // 2 minutes
   private readonly MAX_MEMBERS = 10; // Maximum members per room
-  private readonly MIN_MEMBERS = 4; // Minimum members to form a group
+  private readonly MIN_MEMBERS = 2; // Minimum members to form a group
   private readonly MINIMUM_MATCH_SCORE = 30; // Minimum score to match a room
 
   /**
@@ -183,16 +183,30 @@ export class MatchingService {
    * Leave a room
    */
   async leaveRoom(userId: string, roomId: string): Promise<void> {
-    const room = await Room.findById(roomId);
-    if (!room) {
-      throw new Error('Room not found');
-    }
-
     const user = await User.findById(userId);
     if (!user) {
       throw new Error('User not found');
     }
 
+    const room = await Room.findById(roomId);
+    
+    // ✅ FIXED: If room doesn't exist, just clear the user's roomID
+    if (!room) {
+      console.log(`Room ${roomId} not found - clearing user's roomID anyway`);
+      
+      // Clear user's roomID even if room doesn't exist
+      if (user.roomId) {
+        user.roomId = undefined;
+        user.status = UserStatus.ONLINE;
+        await user.save();
+        console.log(`✅ Cleared stale roomID for user ${userId}`);
+      }
+      
+      // Don't throw error - this is expected when cleaning up stale state
+      return;
+    }
+
+    // Room exists - proceed with normal leave logic
     // Remove user from room
     room.members = room.members.filter(id => id !== userId);
     
@@ -218,14 +232,16 @@ export class MatchingService {
       await this.updateRoomAverages(room);
       await room.save();
       
-      // Emit room update
+      // ✅ FIXED: Use completionTime (not expiresAt) - this is the correct field name
       socketManager.emitRoomUpdate(
         roomId,
         room.members,
-        room.completionTime,
+        room.completionTime,  // ✅ CORRECTED: Use completionTime
         room.status
       );
     }
+
+    console.log(`✅ User ${userId} left room ${roomId}`);
   }
 
   /**

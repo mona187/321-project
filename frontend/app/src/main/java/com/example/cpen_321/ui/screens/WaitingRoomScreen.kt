@@ -1,5 +1,6 @@
 package com.example.cpen_321.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -52,7 +53,7 @@ fun WaitingRoomScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     val maxNumberOfPeople = currentRoom?.maxMembers ?: 10
-    val minNumberOfPeople = 4
+    val minNumberOfPeople = 2
 
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showFailureDialog by remember { mutableStateOf(false) }
@@ -60,6 +61,22 @@ fun WaitingRoomScreen(
 
     // Convert milliseconds to seconds for display
     val timeRemainingSeconds = (timeRemaining / 1000).toInt()
+
+    // Debug log to verify timer updates
+    LaunchedEffect(timeRemaining) {
+        if (timeRemaining > 0) {
+            Log.d("WaitingRoom", "Timer: ${timeRemainingSeconds / 60}:${String.format("%02d", timeRemainingSeconds % 60)} (${timeRemaining}ms)")
+        }
+    }
+
+    // CRITICAL FIX: Load room data when screen opens (once per room)
+    LaunchedEffect(currentRoom?.roomId) {
+        currentRoom?.let { room ->
+            Log.d("WaitingRoom", "Loading room status for: ${room.roomId}")
+            viewModel.getRoomStatus(room.roomId)
+        }
+    }
+
 
     // Animate progress for visual feedback
     val progress by animateFloatAsState(
@@ -177,8 +194,10 @@ fun WaitingRoomScreen(
                                         modifier = Modifier.size(28.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
+
+                                    // Timer display
                                     Text(
-                                        String.format(
+                                        text = String.format(
                                             "%d:%02d",
                                             timeRemainingSeconds / 60,
                                             timeRemainingSeconds % 60
@@ -271,47 +290,51 @@ fun WaitingRoomScreen(
                                 )
 
                                 // Cuisine info if available
-                                currentRoom?.cuisine?.let { cuisine ->
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
-                                    Spacer(modifier = Modifier.height(12.dp))
+                                currentRoom?.let { room ->
+                                    room.cuisine?.let { cuisine ->
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        HorizontalDivider(color = Color.LightGray, thickness = 1.dp)
+                                        Spacer(modifier = Modifier.height(12.dp))
 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Restaurant,
-                                            contentDescription = null,
-                                            tint = Color(0xFFFFD54F),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "Cuisine: $cuisine",
-                                            fontSize = 14.sp,
-                                            color = Color.Gray
-                                        )
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Restaurant,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFFD54F),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Cuisine: $cuisine",
+                                                fontSize = 14.sp,
+                                                color = Color.Gray
+                                            )
+                                        }
                                     }
                                 }
 
                                 // Budget and radius info if available
-                                if (currentRoom?.averageBudget != null || currentRoom?.averageRadius != null) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        currentRoom!!.averageBudget?.let { budget ->
-                                            Text(
-                                                text = "Budget: $$budget",
-                                                fontSize = 12.sp,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                        currentRoom!!.averageRadius?.let { radius ->
-                                            Text(
-                                                text = "Radius: ${radius}km",
-                                                fontSize = 12.sp,
-                                                color = Color.Gray
-                                            )
+                                currentRoom?.let { room ->
+                                    if (room.averageBudget != null || room.averageRadius != null) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            room.averageBudget?.let { budget ->
+                                                Text(
+                                                    text = "Budget: $$budget",
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                            room.averageRadius?.let { radius ->
+                                                Text(
+                                                    text = "Radius: ${radius}km",
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray
+                                                )
+                                            }
                                         }
                                     }
                                 }

@@ -1,5 +1,10 @@
 package com.example.cpen_321.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.location.Location
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,7 +33,11 @@ import coil.compose.AsyncImage
 import com.example.cpen_321.data.model.Restaurant
 import com.example.cpen_321.ui.viewmodels.GroupViewModel
 import com.example.cpen_321.ui.viewmodels.RestaurantViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
+@SuppressLint("MissingPermission")
 @Composable
 fun VoteRestaurantScreen(
     navController: NavController,
@@ -35,6 +45,9 @@ fun VoteRestaurantScreen(
     groupViewModel: GroupViewModel = hiltViewModel(),
     restaurantViewModel: RestaurantViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     // Collect states
     val currentGroup by groupViewModel.currentGroup.collectAsState()
     val groupMembers by groupViewModel.groupMembers.collectAsState()
@@ -47,23 +60,74 @@ fun VoteRestaurantScreen(
     val restaurantError by restaurantViewModel.errorMessage.collectAsState()
 
     var selectedRestaurantForVote by remember { mutableStateOf<Restaurant?>(null) }
+    var userLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var locationPermissionGranted by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Location permission launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        locationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+        if (locationPermissionGranted) {
+            // Get location after permission granted
+            scope.launch {
+                try {
+                    val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+                    val location = withContext(Dispatchers.IO) {
+                        locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                            ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                    }
+                    location?.let {
+                        userLocation = Pair(it.latitude, it.longitude)
+                    }
+                } catch (e: SecurityException) {
+                    // Handle exception
+                }
+            }
+        }
+    }
+
+    // Request location permission on launch
+    LaunchedEffect(Unit) {
+        locationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
 
     // Load group status
     LaunchedEffect(Unit) {
         groupViewModel.loadGroupStatus()
     }
 
-    // Load restaurants when group is loaded
+    // Subscribe to group socket for restaurant_selected event
     LaunchedEffect(currentGroup) {
-        currentGroup?.let { group ->
-            // Get user location (you'll need to implement location permission)
-            // For now, using a default location (Vancouver)
-            val latitude = 49.2827
-            val longitude = -123.1207
-            val radius = 5000 // 5km in meters
+        currentGroup?.groupId?.let { gId ->
+            android.util.Log.d("VoteRestaurantScreen", "Subscribing to group: $gId")
+            groupViewModel.subscribeToGroup(gId)
+        }
+    }
 
-            // Get cuisines from group members if available
+    // Cleanup: Unsubscribe when leaving screen
+    DisposableEffect(Unit) {
+        onDispose {
+            currentGroup?.groupId?.let { gId ->
+                android.util.Log.d("VoteRestaurantScreen", "Unsubscribing from group: $gId")
+                groupViewModel.unsubscribeFromGroup(gId)
+            }
+        }
+    }
+
+    // Load restaurants when user location is available
+    LaunchedEffect(userLocation, currentGroup) {
+        if (userLocation != null && currentGroup != null) {
+            val (latitude, longitude) = userLocation!!
+            val radius = 5000 // 5km in meters
             val cuisines = listOf<String>() // You can derive this from group preferences
 
             restaurantViewModel.searchRestaurants(
@@ -79,12 +143,10 @@ fun VoteRestaurantScreen(
     // Navigate when restaurant is selected
     LaunchedEffect(selectedRestaurant) {
         selectedRestaurant?.let { restaurant ->
-            // Show success message and navigate
             snackbarHostState.showSnackbar("${restaurant.name} has been selected!")
-            // Navigate to group screen after short delay
-            kotlinx.coroutines.delay(2000)
+            kotlinx.coroutines.delay(1500)
             navController.navigate("group") {
-                popUpTo("vote_restaurant") { inclusive = true }
+                popUpTo(0)
             }
         }
     }
@@ -161,94 +223,145 @@ fun VoteRestaurantScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Restaurant list
-            if (isLoadingRestaurants) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+            // Location status
+            if (!locationPermissionGranted) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE)
+                    )
                 ) {
-                    CircularProgressIndicator()
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Location permission required",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Grant Permission")
+                        }
+                    }
                 }
-            } else if (restaurants.isEmpty()) {
+            } else if (userLocation == null) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No restaurants found nearby",
-                            fontSize = 16.sp,
+                            text = "Getting your location...",
+                            fontSize = 14.sp,
                             color = Color.Gray
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                // Retry loading restaurants
-                                val latitude = 49.2827
-                                val longitude = -123.1207
-                                restaurantViewModel.searchRestaurants(
-                                    latitude = latitude,
-                                    longitude = longitude,
-                                    radius = 5000
-                                )
-                            }
-                        ) {
-                            Text("Retry")
-                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(restaurants) { restaurant ->
-                        RestaurantCard(
-                            restaurant = restaurant,
-                            isSelected = selectedRestaurantForVote?.restaurantId == restaurant.restaurantId,
-                            hasVoted = userVote != null,
-                            voteCount = currentVotes[restaurant.restaurantId] ?: 0,
-                            onClick = {
-                                if (userVote == null) {
-                                    selectedRestaurantForVote = restaurant
+            }
+
+            // Restaurant list
+            if (userLocation != null) {
+                if (isLoadingRestaurants) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (restaurants.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No restaurants found nearby",
+                                fontSize = 16.sp,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    userLocation?.let { (lat, lon) ->
+                                        restaurantViewModel.searchRestaurants(
+                                            latitude = lat,
+                                            longitude = lon,
+                                            radius = 5000
+                                        )
+                                    }
+                                }
+                            ) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(restaurants) { restaurant ->
+                            RestaurantCard(
+                                restaurant = restaurant,
+                                isSelected = selectedRestaurantForVote?.restaurantId == restaurant.restaurantId,
+                                hasVoted = userVote != null,
+                                voteCount = currentVotes[restaurant.restaurantId] ?: 0,
+                                onClick = {
+                                    if (userVote == null) {
+                                        selectedRestaurantForVote = restaurant
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Vote button
+                    Button(
+                        onClick = {
+                            selectedRestaurantForVote?.let { restaurant ->
+                                val restId = restaurant.restaurantId
+                                if (restId != null) {
+                                    groupViewModel.voteForRestaurant(
+                                        restId,
+                                        restaurant
+                                    )
+                                    selectedRestaurantForVote = null
                                 }
                             }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        enabled = selectedRestaurantForVote != null && userVote == null && selectedRestaurantForVote?.restaurantId != null,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFD54F),
+                            disabledContainerColor = Color.Gray
+                        )
+                    ) {
+                        Text(
+                            text = if (userVote != null) "Already Voted" else "Submit Vote",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
                         )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Vote button
-                Button(
-                    onClick = {
-                        selectedRestaurantForVote?.let { restaurant ->
-                            // Only vote if we have a valid restaurant ID
-                            val restId = restaurant.restaurantId
-                            if (restId != null) {
-                                groupViewModel.voteForRestaurant(
-                                    restId,
-                                    restaurant
-                                )
-                                selectedRestaurantForVote = null
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    enabled = selectedRestaurantForVote != null && userVote == null && selectedRestaurantForVote?.restaurantId != null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFFD54F),
-                        disabledContainerColor = Color.Gray
-                    )
-                ) {
-                    Text(
-                        text = if (userVote != null) "Already Voted" else "Submit Vote",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
                 }
             }
         }

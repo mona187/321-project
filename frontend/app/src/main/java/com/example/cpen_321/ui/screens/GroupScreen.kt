@@ -4,18 +4,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.cpen_321.ui.viewmodels.GroupViewModel
 
 @Composable
@@ -28,6 +34,7 @@ fun GroupScreen(
     val currentGroup by viewModel.currentGroup.collectAsState()
     val groupMembers by viewModel.groupMembers.collectAsState()
     val selectedRestaurant by viewModel.selectedRestaurant.collectAsState()
+    val currentVotes by viewModel.currentVotes.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val successMessage by viewModel.successMessage.collectAsState()
@@ -129,45 +136,74 @@ fun GroupScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Restaurant info box
+                    // Restaurant info box with photo
                     val restaurant = selectedRestaurant ?: currentGroup?.restaurant
                     if (restaurant != null) {
-                        Box(
+                        Card(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFFFF9C4))
-                                .border(2.dp, Color.Black)
-                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFFFFF9C4)
+                            ),
+                            shape = RoundedCornerShape(0.dp),
+                            border = androidx.compose.foundation.BorderStroke(2.dp, Color.Black)
                         ) {
-                            Column {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                // Restaurant photo
+                                restaurant.getMainPhotoUrl()?.let { photoUrl ->
+                                    AsyncImage(
+                                        model = photoUrl,
+                                        contentDescription = restaurant.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.LightGray)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+
+                                // Restaurant name
                                 Text(
-                                    text = "Restaurant Name: ${restaurant.name}",
-                                    fontSize = 16.sp,
+                                    text = restaurant.name,
+                                    fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Location
                                 Text(
-                                    text = "Location: ${restaurant.location}",
+                                    text = "📍 ${restaurant.location}",
                                     fontSize = 16.sp,
                                     color = Color.Black
                                 )
-                                restaurant.phoneNumber?.let { phone ->
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Phone: $phone",
-                                        fontSize = 16.sp,
-                                        color = Color.Black
-                                    )
-                                }
+
+                                // Rating
                                 restaurant.rating?.let { rating ->
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Rating: ${restaurant.getRatingString()} ⭐",
-                                        fontSize = 16.sp,
-                                        color = Color.Black
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = "Rating",
+                                            tint = Color(0xFFFFC107),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = restaurant.getRatingString(),
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color.Black
+                                        )
+                                    }
                                 }
+
+                                // Price level
                                 restaurant.priceLevel?.let { _ ->
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
@@ -175,6 +211,30 @@ fun GroupScreen(
                                         fontSize = 16.sp,
                                         color = Color.Black
                                     )
+                                }
+
+                                // Phone number
+                                restaurant.phoneNumber?.let { phone ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "📞 $phone",
+                                        fontSize = 16.sp,
+                                        color = Color.Black
+                                    )
+                                }
+
+                                // Vote count if available
+                                restaurant.restaurantId?.let { restId ->
+                                    val voteCount = currentVotes[restId] ?: 0
+                                    if (voteCount > 0) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Text(
+                                            text = "🏆 Won with $voteCount vote${if (voteCount != 1) "s" else ""}",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF4CAF50)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -190,7 +250,7 @@ fun GroupScreen(
                                 .padding(16.dp)
                         ) {
                             Text(
-                                text = "Restaurant: Not selected yet",
+                                text = "Restaurant: Not selected yet\nWaiting for voting to complete...",
                                 fontSize = 16.sp,
                                 color = Color.Gray,
                                 textAlign = TextAlign.Center,
@@ -201,9 +261,9 @@ fun GroupScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                     }
 
-                    // Group members title
+                    // Group members title with count
                     Text(
-                        text = "Group Members (${groupMembers.size})",
+                        text = "Group Members (${currentGroup?.getAllMembers()?.size ?: 0})",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -211,8 +271,9 @@ fun GroupScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Members list
-                    if (groupMembers.isEmpty()) {
+                    // Members list - show all members from the group
+                    val allMembers = currentGroup?.getAllMembers() ?: emptyList()
+                    if (allMembers.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -222,7 +283,10 @@ fun GroupScreen(
                             CircularProgressIndicator()
                         }
                     } else {
-                        groupMembers.forEach { member ->
+                        allMembers.forEach { userId ->
+                            // Find member details from groupMembers list
+                            val memberDetails = groupMembers.find { it.userId == userId }
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -230,34 +294,52 @@ fun GroupScreen(
                                     .border(2.dp, Color.Black)
                                     .padding(16.dp)
                             ) {
-                                Column {
-                                    Text(
-                                        text = member.name,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Credibility Score: ${member.credibilityScore.toInt()}",
-                                        fontSize = 14.sp,
-                                        color = Color.Black
-                                    )
-                                    member.phoneNumber?.let { phone ->
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                if (memberDetails != null) {
+                                    Column {
                                         Text(
-                                            text = "Phone: $phone",
+                                            text = memberDetails.name,
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Credibility Score: ${memberDetails.credibilityScore.toInt()}",
                                             fontSize = 14.sp,
                                             color = Color.Black
                                         )
+                                        memberDetails.phoneNumber?.let { phone ->
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Phone: $phone",
+                                                fontSize = 14.sp,
+                                                color = Color.Black
+                                            )
+                                        }
+                                        if (memberDetails.hasVoted) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "✓ Voted",
+                                                fontSize = 14.sp,
+                                                color = Color(0xFF4CAF50),
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
-                                    if (member.hasVoted) {
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                } else {
+                                    // Show user ID if details not loaded yet
+                                    Column {
                                         Text(
-                                            text = "✓ Voted",
+                                            text = "User: $userId",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "Loading details...",
                                             fontSize = 14.sp,
-                                            color = Color(0xFF4CAF50),
-                                            fontWeight = FontWeight.Bold
+                                            color = Color.Gray
                                         )
                                     }
                                 }

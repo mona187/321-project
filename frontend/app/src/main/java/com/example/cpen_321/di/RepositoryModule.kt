@@ -50,13 +50,15 @@ object RepositoryModule {
 
     /**
      * Provide MatchRepository
+     * ✅ UPDATED: Now injects UserRepository to check user status before joining
      */
     @Provides
     @Singleton
     fun provideMatchRepository(
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        userRepository: UserRepository  // ✅ ADDED
     ): MatchRepository {
-        return MatchRepositoryImpl(preferencesManager)
+        return MatchRepositoryImpl(preferencesManager, userRepository)  // ✅ ADDED
     }
 
     /**

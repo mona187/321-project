@@ -167,7 +167,7 @@ fun HomeScreen(
                         // Check if user has an active group
                         if (currentGroup != null) {
                             // Navigate to active group
-                            navController.navigate("group/${currentGroup!!.groupId}")
+                            navController.navigate(NavRoutes.VIEW_GROUPS)
                         } else {
                             // Navigate to view groups screen or show message
                             navController.navigate("view_groups")
