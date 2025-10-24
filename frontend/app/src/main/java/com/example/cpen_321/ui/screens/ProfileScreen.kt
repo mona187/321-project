@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.example.cpen_321.ui.viewmodels.UserViewModel
 import com.example.cpen_321.utils.Base64ImageHelper
 import com.example.cpen_321.utils.rememberBase64ImagePainter
@@ -102,6 +103,12 @@ fun ProfileScreen(
     LaunchedEffect(Unit) {
         Log.d(TAG, "Loading user settings...")
         viewModel.loadUserSettings()
+        
+        // Test image URL accessibility
+        if (profilePictureUrl.isNotEmpty() && !profilePictureUrl.startsWith("data:image/")) {
+            Log.d(TAG, "Testing image URL accessibility: $profilePictureUrl")
+            // You can add a network test here if needed
+        }
     }
 
     // Update form fields when user settings load
@@ -116,6 +123,8 @@ fun ProfileScreen(
             if (!hasUnsavedImage) {
                 profilePictureUrl = settings.profilePicture ?: ""
                 Log.d(TAG, "Loaded profile picture from backend (${profilePictureUrl.length} chars)")
+                Log.d(TAG, "Profile picture URL: $profilePictureUrl")
+                Log.d(TAG, "Profile picture type: ${if (profilePictureUrl.startsWith("data:image/")) "Base64" else "URL"}")
             } else {
                 Log.d(TAG, "Keeping newly selected image (not overwriting with backend)")
             }
@@ -192,11 +201,31 @@ fun ProfileScreen(
                             profilePictureUrl.isNotEmpty() -> {
                                 // Check if it's a Base64 data URI or regular URL
                                 val painter = if (profilePictureUrl.startsWith("data:image/")) {
+                                    Log.d(TAG, "Using Base64 painter for profile picture")
                                     rememberBase64ImagePainter(profilePictureUrl)
                                 } else {
-                                    rememberAsyncImagePainter(profilePictureUrl)
+                                    Log.d(TAG, "Using AsyncImagePainter for profile picture URL: $profilePictureUrl")
+                                    // Add error handling and logging for AsyncImagePainter
+                                    rememberAsyncImagePainter(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(profilePictureUrl)
+                                            .crossfade(true)
+                                            .placeholder(android.R.drawable.ic_menu_gallery) // Add placeholder
+                                            .error(android.R.drawable.ic_menu_gallery) // Add error fallback
+                                            .listener(
+                                                onError = { _, result ->
+                                                    Log.e(TAG, "AsyncImagePainter error: ${result.throwable?.message}")
+                                                    Log.e(TAG, "Failed to load image from: $profilePictureUrl")
+                                                },
+                                                onSuccess = { _, _ ->
+                                                    Log.d(TAG, "AsyncImagePainter success: Image loaded from $profilePictureUrl")
+                                                }
+                                            )
+                                            .build()
+                                    )
                                 }
                                 
+                                Log.d(TAG, "Attempting to display profile picture")
                                 Image(
                                     painter = painter,
                                     contentDescription = "Profile Picture",
