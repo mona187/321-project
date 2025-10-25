@@ -170,7 +170,7 @@ fun HomeScreen(
                             navController.navigate(NavRoutes.VIEW_GROUPS)
                         } else {
                             // Navigate to view groups screen or show message
-                            navController.navigate("view_groups")
+                            navController.navigate(NavRoutes.VIEW_GROUPS)
                         }
                     },
                     modifier = Modifier

@@ -90,9 +90,20 @@ fun GroupScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
+                    Text(
+                        "You are not currently in any group.",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { navController.popBackStack() }) {
-                        Text("Go Back")
+                    Button(
+                        onClick = {
+                            navController.navigate("home") {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
+                    ) {
+                        Text("Go to Home")
                     }
                 }
             }
@@ -353,10 +364,8 @@ fun GroupScreen(
                 // Close Group button at bottom
                 Button(
                     onClick = {
-                        // Just navigate back to home
-                        // DON'T call leaveGroup() - the group should persist
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = true }
+                        navController.navigate("view_groups") {
+                            popUpTo("home") { inclusive = false }
                         }
                     },
                     modifier = Modifier
@@ -367,7 +376,7 @@ fun GroupScreen(
                     )
                 ) {
                     Text(
-                        text = "Back to Home",
+                        text = "Back to View Groups",
                         color = Color.Black,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -382,8 +391,9 @@ fun GroupScreen(
                     OutlinedButton(
                         onClick = {
                             viewModel.leaveGroup {
+                                // Navigate to home and clear entire back stack
                                 navController.navigate("home") {
-                                    popUpTo("home") { inclusive = true }
+                                    popUpTo(0) { inclusive = true }
                                 }
                             }
                         },

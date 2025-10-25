@@ -158,6 +158,24 @@ class SocketManager {
       remainingMembers,
     });
   }
+
+
+  /**
+   * Emit an event directly to a specific user (by userId)
+   */
+  public emitToUser(userId: string, event: string, payload: any): void {
+    const io = this.getIO();
+
+    // You must make sure your socket connection stores userId on handshake
+    for (const [_, socket] of io.sockets.sockets) {
+      if ((socket as any).userId === userId) {
+        socket.emit(event, payload);
+        return;
+      }
+    }
+
+    console.warn(`⚠️ emitToUser: No socket found for user ${userId}`);
+  }
 }
 
 // Export singleton instance

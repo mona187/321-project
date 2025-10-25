@@ -147,6 +147,13 @@ export class MatchingService {
       room.status
     );
 
+    socketManager.emitToUser(userId, 'room_update', {
+      roomId: room._id.toString(),
+      members: room.members,
+      expiresAt: room.completionTime,
+      status: room.status,
+    });
+
     // Emit member joined notification
     socketManager.emitMemberJoined(
       room._id.toString(),

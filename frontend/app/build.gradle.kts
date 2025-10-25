@@ -42,7 +42,7 @@ android {
         buildConfigField(
             "String",
             "GOOGLE_CLIENT_ID",
-            "\"${getLocalProperty("GOOGLE_CLIENT_ID", "419306153379-645ugegg52h4bp07ukmbplq9earqmpfq.apps.googleusercontent.com")}\""
+            "\"${getLocalProperty("GOOGLE_CLIENT_ID", "1066689966317-k0pgjdvova4h643qnsudps6hnelmvm61.apps.googleusercontent.com")}\""
         )
         buildConfigField(
             "String",
@@ -52,7 +52,7 @@ android {
         buildConfigField(
             "String",
             "IMAGE_BASE_URL",
-            "\"${getLocalProperty("IMAGE_BASE_URL", "http://10.0.2.2:3000/api/")}\""
+            "\"${getLocalProperty("IMAGE_BASE_URL", "http://10.0.2.2:3000/")}\""
         )
     }
 

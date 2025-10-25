@@ -165,16 +165,28 @@ class MatchViewModel @Inject constructor(
                     // Load room members
                     loadRoomMembers(room.members)
 
-                    // FIXED: Start the client-side countdown timer
+                    // Start the client-side countdown timer
                     startTimer(room.getCompletionTimeMillis())
+
+                    // ✅ ADD THIS: Immediately fetch latest room status
+                    // This ensures we have the most up-to-date member list
+//                    delay(500)  // Small delay to let backend process
+//                    getRoomStatus(roomId)
+                    // ✅ FIX: Immediately sync the full room state multiple times
+                    viewModelScope.launch {
+                        repeat(3) { attempt ->
+                            delay(1000L * attempt)
+                            getRoomStatus(roomId)
+                            Log.d(TAG, "Refreshed room status (attempt $attempt)")
+                        }
+                    }
+
                 }
                 is ApiResult.Error -> {
                     _errorMessage.value = result.message
                     Log.e(TAG, "Failed to join matching: ${result.message}")
                 }
-                is ApiResult.Loading -> {
-                    // Already handled
-                }
+                is ApiResult.Loading -> {}
             }
 
             _isLoading.value = false
@@ -242,7 +254,10 @@ class MatchViewModel @Inject constructor(
                     }
 
                     // Load members if needed
-                    if (_roomMembers.value.isEmpty()) {
+//                    if (_roomMembers.value.isEmpty()) {
+//                        loadRoomMembers(status.members)
+//                    }
+                    if (_roomMembers.value.isEmpty() || _roomMembers.value.size < status.members.size) {
                         loadRoomMembers(status.members)
                     }
                 }
@@ -261,20 +276,21 @@ class MatchViewModel @Inject constructor(
      */
     private fun loadRoomMembers(memberIds: List<String>) {
         viewModelScope.launch {
-            if (memberIds.isEmpty()) return@launch
+            if (memberIds.isEmpty()) {
+                _roomMembers.value = emptyList()  // ✅ Clear if empty
+                return@launch
+            }
 
             when (val result = userRepository.getUserProfiles(memberIds)) {
                 is ApiResult.Success -> {
-                    _roomMembers.value = result.data
+                    // ✅ CRITICAL: Create new list instance to trigger recomposition
+                    _roomMembers.value = result.data.toList()
                     Log.d(TAG, "Loaded ${result.data.size} room members")
                 }
                 is ApiResult.Error -> {
                     Log.e(TAG, "Failed to load members: ${result.message}")
-                    // Don't show error for member loading
                 }
-                is ApiResult.Loading -> {
-                    // Ignore
-                }
+                is ApiResult.Loading -> {}
             }
         }
     }
@@ -291,12 +307,15 @@ class MatchViewModel @Inject constructor(
 
             Log.d(TAG, "Room update - Members: ${members.size}, Status: $status")
 
-            // Update members
+            // ✅ CRITICAL: Update room with new member list
+            _currentRoom.value = _currentRoom.value?.copy(members = members)
+
+            // ✅ Force clear and reload members to trigger UI update
+            _roomMembers.value = emptyList()
             loadRoomMembers(members)
 
-            // FIXED: Restart timer with updated expiration time
+            // Restart timer with updated expiration time
             try {
-                // Parse ISO 8601 date string to milliseconds (compatible with API 24+)
                 val expiresAtMillis = parseIso8601ToMillis(expiresAt)
                 if (expiresAtMillis != null) {
                     startTimer(expiresAtMillis)
@@ -374,11 +393,18 @@ class MatchViewModel @Inject constructor(
     private fun handleMemberJoined(data: JSONObject) {
         viewModelScope.launch {
             val userName = data.getStringSafe("userName")
+            val userId = data.getStringSafe("userId")  // ← ADD THIS
             Log.d(TAG, "Member joined: $userName")
 
-            // Reload room members
+            // ✅ BETTER: Directly update members list
             _currentRoom.value?.let { room ->
+                // Option 1: Just reload status (current approach)
                 getRoomStatus(room.roomId)
+
+                // Option 2: Or manually add member (faster)
+                // val updatedRoom = room.copy(members = room.members + userId)
+                // _currentRoom.value = updatedRoom
+                // loadRoomMembers(updatedRoom.members)
             }
         }
     }
@@ -393,8 +419,13 @@ class MatchViewModel @Inject constructor(
 
             Log.d(TAG, "Member left: $userName")
 
-            // Remove member from list
-            _roomMembers.value = _roomMembers.value.filter { it.userId != userId }
+            // ✅ CRITICAL: Create new list instance
+            _roomMembers.value = _roomMembers.value.filter { it.userId != userId }.toList()
+
+            // ✅ Also update the room's member list
+            _currentRoom.value = _currentRoom.value?.copy(
+                members = _currentRoom.value?.members?.filter { it != userId } ?: emptyList()
+            )
         }
     }
 

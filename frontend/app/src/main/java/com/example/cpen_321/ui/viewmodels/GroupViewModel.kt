@@ -152,11 +152,6 @@ class GroupViewModel @Inject constructor(
     fun voteForRestaurant(restaurantId: String, restaurant: Restaurant) {
         viewModelScope.launch {
             val groupId = _currentGroup.value?.groupId
-            Log.d("VoteDebug", "=== VOTE START ===")
-            Log.d("VoteDebug", "groupId: $groupId")
-            Log.d("VoteDebug", "restaurantId: $restaurantId")
-            Log.d("VoteDebug", "restaurant: ${restaurant.name}")
-
             if (groupId == null) {
                 Log.e("VoteDebug", "ERROR: groupId is null!")
                 return@launch
@@ -169,21 +164,28 @@ class GroupViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     Log.d("VoteDebug", "✅ Vote API Success")
                     Log.d("VoteDebug", "Returned votes: ${result.data}")
+
+                    // ✅ CRITICAL: Update votes immediately
                     _currentVotes.value = result.data
                     _userVote.value = restaurantId
+
+                    // ✅ Force UI update by creating new map instance
+                    _currentVotes.value = result.data.toMap()
+
                     _successMessage.value = "Vote submitted successfully"
-                    loadGroupStatus()
+
+                    // ✅ Don't call loadGroupStatus() here - it causes race condition
+                    // The socket event will update other users
+                    // loadGroupStatus()  // ← REMOVE THIS
                 }
                 is ApiResult.Error -> {
                     Log.e("VoteDebug", "❌ Vote API Error: ${result.message}")
-                    Log.e("VoteDebug", "Error code: ${result.code}")
                     _errorMessage.value = result.message
                 }
                 is ApiResult.Loading -> {}
             }
 
             _isLoading.value = false
-            Log.d("VoteDebug", "=== VOTE END ===")
         }
     }
 
@@ -306,7 +308,10 @@ class GroupViewModel @Inject constructor(
                 }
 
                 Log.d("SocketDebug", "Setting votes: $votesMap")
-                _currentVotes.value = votesMap
+
+                // ✅ CRITICAL: Force new instance to trigger recomposition
+                _currentVotes.value = votesMap.toMap()
+
                 Log.d("SocketDebug", "Votes updated. Current: ${_currentVotes.value}")
             }
 

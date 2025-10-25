@@ -371,9 +371,14 @@ private fun GroupContent(
             // View/Vote button
             Button(
                 onClick = {
-                    // Navigate to group voting screen
                     currentGroup.groupId?.let { groupId ->
-                        navController.navigate("vote_restaurant/$groupId")
+                        if (currentGroup.restaurantSelected) {
+                            // Restaurant already selected → View Details
+                            navController.navigate("group")
+                        } else {
+                            // Restaurant not selected → Vote Now
+                            navController.navigate("vote_restaurant/$groupId")
+                        }
                     }
                 },
                 modifier = Modifier

@@ -1,6 +1,7 @@
 package com.example.cpen_321.utils
 
 import android.util.Log
+import com.example.cpen_321.BuildConfig
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
@@ -20,7 +21,7 @@ class SocketManager private constructor() {
         private const val TAG = "SocketManager"
 
         // TODO: Replace with your backend URL
-        private const val SOCKET_URL = "http://10.0.2.2:3000"
+        private const val SOCKET_URL = BuildConfig.IMAGE_BASE_URL
         // For physical device: "http://YOUR_COMPUTER_IP:3000"
         // For production: "https://your-backend-domain.com"
 

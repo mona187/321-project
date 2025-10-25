@@ -1,5 +1,6 @@
 package com.example.cpen_321.di
 
+import com.example.cpen_321.BuildConfig
 import com.example.cpen_321.data.local.TokenManager
 import com.example.cpen_321.data.network.RetrofitClient
 import com.example.cpen_321.data.network.api.AuthAPI
@@ -29,7 +30,7 @@ import javax.inject.Singleton
 object NetworkModule {
 
     // TODO: Replace with your actual backend URL
-    private const val BASE_URL = "http://10.0.2.2:3000/" // Android emulator localhost
+    private const val BASE_URL = BuildConfig.IMAGE_BASE_URL // Android emulator localhost
     // For physical device, use: "http://YOUR_COMPUTER_IP:3000/"
     // For production: "https://your-backend-domain.com/"
 

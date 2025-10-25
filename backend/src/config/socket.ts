@@ -7,6 +7,8 @@ import jwt from 'jsonwebtoken';
  * Handles real-time communication for waiting rooms and group voting
  */
 
+const userSocketMap = new Map<string, string>(); // userId -> socketId
+
 export const initializeSocket = (server: HTTPServer): SocketIOServer => {
   const io = new SocketIOServer(server, {
     cors: {
@@ -50,6 +52,14 @@ export const initializeSocket = (server: HTTPServer): SocketIOServer => {
     console.log(`🔌 User connected via socket: ${userId} (${socket.id})`);
 
     // ==================== WAITING ROOM EVENTS ====================
+    // Store the mapping
+    userSocketMap.set(userId, socket.id);
+
+    socket.on('disconnect', (reason) => {
+      console.log(`🔌 User disconnected: ${userId} (Reason: ${reason})`);
+      userSocketMap.delete(userId);
+    });
+
 
     /**
      * Client emits: join_room
@@ -256,10 +266,20 @@ export class SocketEmitter {
   /**
    * Emit to a specific user
    */
-  emitToUser(userId: string, event: string, _data: any) {
-    // This requires tracking user socket IDs
-    // For now, we'll rely on room-based emissions
-    console.log(`📤 Attempted to emit ${event} to user ${userId}`);
+  emitToUser(userId: string, event: string, data: any, attempt = 1) {
+    const socketId = userSocketMap.get(userId);
+    if (!socketId) {
+      if (attempt === 1) {
+        console.warn(`⚠️ emitToUser: No socket found for user ${userId}, retrying in 500ms...`);
+        setTimeout(() => this.emitToUser(userId, event, data, 2), 500);
+      } else {
+        console.warn(`❌ emitToUser: Failed after retry for user ${userId}`);
+      }
+      return;
+    }
+
+    this.io.to(socketId).emit(event, data);
+    console.log(`📤 Emitted ${event} directly to user ${userId} (socket ${socketId})`);
   }
 }
 
