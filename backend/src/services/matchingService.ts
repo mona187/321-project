@@ -5,7 +5,7 @@ import socketManager from '../utils/socketManager';
 import { notifyRoomMatched, notifyRoomExpired } from './notificationService';
 
 export class MatchingService {
-  private readonly ROOM_DURATION_MS = 0.2 * 60 * 1000; // 2 minutes
+  private readonly ROOM_DURATION_MS = 2 * 60 * 1000; // 2 minutes
   private readonly MAX_MEMBERS = 10; // Maximum members per room
   private readonly MIN_MEMBERS = 2; // Minimum members to form a group
   private readonly MINIMUM_MATCH_SCORE = 30; // Minimum score to match a room
