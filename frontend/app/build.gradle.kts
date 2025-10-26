@@ -32,7 +32,7 @@ android {
     defaultConfig {
         applicationId = "com.example.cpen_321"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
 
