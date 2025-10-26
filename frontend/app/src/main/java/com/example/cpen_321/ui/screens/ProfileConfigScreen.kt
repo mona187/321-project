@@ -152,6 +152,32 @@ fun ProfileConfigScreen(
                     fontSize = 20.sp
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Delete account button
+            Button(
+                onClick = {
+                    authViewModel.deleteAccount() {
+                        authViewModel.clearAuthData()
+                        navController.navigate("login") {
+                            popUpTo(0) // clear navigation stack
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF5722) // Red color for logout
+                )
+            ) {
+                Text(
+                    text = "Delete Account",
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+            }
         }
     }
 }
