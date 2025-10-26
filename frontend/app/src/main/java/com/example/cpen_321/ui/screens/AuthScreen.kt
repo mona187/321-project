@@ -148,18 +148,18 @@ fun AuthScreen(
                         fontWeight = FontWeight.Bold,
                         color = Color.Red
                     )
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Text(
                         text = message,
                         fontSize = 16.sp,
                         textAlign = TextAlign.Center,
                         color = Color.Black
                     )
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Button(
                         onClick = { viewModel.clearError() },
                         colors = ButtonDefaults.buttonColors(
@@ -263,12 +263,10 @@ private fun handleGoogleSignIn(
 
             val credentialManager = CredentialManager.create(context)
 
-            // FIXED: Configure to NOT filter by authorized accounts
-            // This allows sign-in even without a Google account already on device
             val googleIdOption = GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false) // ← KEY FIX: Allow account picker
+                .setFilterByAuthorizedAccounts(false)
                 .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
-                .setAutoSelectEnabled(false) // Don't auto-select, show account picker
+                .setAutoSelectEnabled(false)
                 .build()
 
             val request = GetCredentialRequest.Builder()
@@ -277,19 +275,16 @@ private fun handleGoogleSignIn(
 
             Log.d("AuthScreen", "📱 Requesting Google credentials...")
 
-            // Get credential from Google
             val result = credentialManager.getCredential(
                 request = request,
                 context = context
             )
 
-            // Extract ID token
             val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
             val idToken = credential.idToken
 
             Log.d("AuthScreen", "✅ Got Google ID token, ${if (isSignUp) "signing up" else "signing in"} with backend...")
 
-            // Authenticate with backend
             if (isSignUp) {
                 viewModel.signUpWithGoogle(idToken)
             } else {
@@ -298,24 +293,46 @@ private fun handleGoogleSignIn(
 
         } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
             Log.d("AuthScreen", "ℹ️ User cancelled sign-in")
-            // User cancelled, don't show error
 
         } catch (e: androidx.credentials.exceptions.NoCredentialException) {
             Log.e("AuthScreen", "❌ No Google account available")
-            snackbarHostState.showSnackbar(
-                "No Google account found. Please add a Google account in Settings → Accounts.",
-                duration = SnackbarDuration.Long
-            )
+            // Try again WITHOUT filtering - this opens account picker
+            context.lifecycleScope.launch {
+                try {
+                    val credentialManager = CredentialManager.create(context)
+                    val googleIdOption = GetGoogleIdOption.Builder()
+                        .setFilterByAuthorizedAccounts(false)
+                        .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
+                        .build()
 
-        } catch (e: androidx.credentials.exceptions.GetCredentialException) {
-            Log.e("AuthScreen", "❌ Credential error: ${e.message}", e)
-            snackbarHostState.showSnackbar(
-                "Sign-in error: ${e.message ?: "Please try again"}",
-                duration = SnackbarDuration.Long
-            )
+                    val request = GetCredentialRequest.Builder()
+                        .addCredentialOption(googleIdOption)
+                        .build()
+
+                    val result = credentialManager.getCredential(
+                        request = request,
+                        context = context
+                    )
+
+                    val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
+                    val idToken = credential.idToken
+
+                    if (isSignUp) {
+                        viewModel.signUpWithGoogle(idToken)
+                    } else {
+                        viewModel.signInWithGoogle(idToken)
+                    }
+                } catch (retryException: Exception) {
+                    Log.e("AuthScreen", "❌ Retry failed: ${retryException.message}")
+                    snackbarHostState.showSnackbar(
+                        "Please add a Google account: Settings → Accounts → Add Account → Google",
+                        duration = SnackbarDuration.Long
+                    )
+                }
+            }
 
         } catch (e: Exception) {
-            Log.e("AuthScreen", "❌ Unexpected error: ${e.message}", e)
+            Log.e("AuthScreen", "❌ Sign-in error: ${e.message}", e)
             snackbarHostState.showSnackbar(
                 "Sign-in failed: ${e.message ?: "Unknown error"}",
                 duration = SnackbarDuration.Long

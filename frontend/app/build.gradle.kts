@@ -29,6 +29,20 @@ android {
     namespace = "com.example.cpen_321"
     compileSdk = 36
 
+    // 👇 ADD SIGNING CONFIGS HERE 👇
+    signingConfigs {
+        create("release") {
+            val keystorePath = getLocalProperty("RELEASE_KEYSTORE_PATH", "")
+            if (keystorePath.isNotEmpty()) {
+                // Use rootProject.file() to handle paths correctly
+                storeFile = rootProject.file(keystorePath)
+                storePassword = getLocalProperty("RELEASE_KEYSTORE_PASSWORD", "")
+                keyAlias = getLocalProperty("RELEASE_KEY_ALIAS", "")
+                keyPassword = getLocalProperty("RELEASE_KEY_PASSWORD", "")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.example.cpen_321"
         minSdk = 24
@@ -47,17 +61,19 @@ android {
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${getLocalProperty("API_BASE_URL", "http://10.0.2.2:3000/api/")}\""
+            "\"${getLocalProperty("API_BASE_URL", "http://3.135.231.73:3000/")}\""
         )
         buildConfigField(
             "String",
             "IMAGE_BASE_URL",
-            "\"${getLocalProperty("IMAGE_BASE_URL", "http://10.0.2.2:3000/")}\""
+            "\"${getLocalProperty("IMAGE_BASE_URL", "http://3.135.231.73:3000/")}\""
         )
     }
 
     buildTypes {
         release {
+            // 👇 ADD THIS LINE 👇
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -91,10 +107,6 @@ dependencies {
     implementation("androidx.datastore:datastore-core:1.1.1")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.google.dagger:hilt-android:2.57.2")
-    implementation("androidx.credentials:credentials:1.2.2")
-    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
-    implementation(libs.androidx.espresso.core)
-    implementation(libs.googleid)
     kapt("com.google.dagger:hilt-compiler:2.57.2")
 
     // Retrofit & OkHttp
@@ -110,6 +122,16 @@ dependencies {
     // Security
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // Google Sign-In & Credentials
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation("androidx.credentials:credentials:1.2.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
+
+    // AndroidX & Compose
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -118,6 +140,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // Testing
+    implementation(libs.androidx.espresso.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -125,13 +150,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
-
-    // Google Sign-In (Credential Manager)
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
-    implementation("androidx.credentials:credentials:1.2.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.2.0")
 }
 
 kapt {
