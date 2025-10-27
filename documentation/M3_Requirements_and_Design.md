@@ -1,5 +1,3 @@
-
-
 ## **Part I – Refined Project Requirements and Complete Design**
 
 ### **1\. Change History**
@@ -286,6 +284,525 @@ Other Use Cases
 ![][image2]
 
 *(List backend interfaces in Java-style signatures and frontend ↔ backend in REST-style)*
+
+**Backend Interfaces**
+
+# Component Interfaces Documentation
+
+## Backend Component Interactions (Java-style Method Signatures)
+
+---
+
+## **1\. Authentication Service Interface**
+
+**Purpose:** Handles Google OAuth verification, JWT token management, and user authentication lifecycle.
+
+### **Methods:**
+
+GoogleData verifyGoogleToken(String idToken)
+
+* **Parameters:** `idToken` \- Google OAuth ID token from client  
+* **Returns:** GoogleData object containing googleId, email, name, picture  
+* **Description:** Verifies Google ID token with Google Auth Library and extracts user information for authentication.
+
+User findOrCreateUser(GoogleData googleData)
+
+* **Parameters:** `googleData` \- User information from Google authentication  
+* **Returns:** User document from database  
+* **Description:** Finds existing user by googleId or creates new user account; converts Google profile picture URL to Base64 format for storage.
+
+String generateToken(User user)
+
+* **Parameters:** `user` \- User document containing userId, email, googleId  
+* **Returns:** JWT token string (valid for 7 days)  
+* **Description:** Generates signed JWT token for authenticated user sessions using JWT\_SECRET.
+
+TokenPayload verifyToken(String token)
+
+* **Parameters:** `token` \- JWT authentication token  
+* **Returns:** TokenPayload containing userId, email, googleId  
+* **Description:** Validates JWT token signature and expiration; throws error if invalid.
+
+void logoutUser(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** void  
+* **Description:** Sets user status to OFFLINE in database.
+
+void updateFCMToken(String userId, String fcmToken)
+
+* **Parameters:** `userId` \- User's unique identifier, `fcmToken` \- Firebase Cloud Messaging device token  
+* **Returns:** void  
+* **Description:** Updates user's FCM token for push notifications.
+
+void deleteAccount(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** void  
+* **Description:** Deletes user account from system; throws error if user is in active room or group.
+
+---
+
+## **2\. User Service Interface**
+
+**Purpose:** Manages user profiles, preferences, and settings.
+
+### **Methods:**
+
+List\<UserProfile\> getUserProfiles(List\<String\> userIds)
+
+* **Parameters:** `userIds` \- List of user unique identifiers  
+* **Returns:** List of UserProfile objects containing userId, name, bio, profilePicture, contactNumber  
+* **Description:** Batch retrieves user profiles for displaying group member information.
+
+UserSettings getUserSettings(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** UserSettings object with all user data including preferences, credibilityScore, budget, radiusKm, status, roomID, groupID  
+* **Description:** Retrieves complete user settings for profile/settings screens.
+
+UserProfile createUserProfile(String userId, ProfileData data)
+
+* **Parameters:** `userId` \- User's unique identifier, `data` \- Profile fields (name, bio, profilePicture, contactNumber)  
+* **Returns:** Updated UserProfile object  
+* **Description:** Creates or updates user profile information during onboarding.
+
+UserSettings updateUserSettings(String userId, SettingsData data)
+
+* **Parameters:** `userId` \- User's unique identifier, `data` \- Settings fields (name, bio, preference, profilePicture, contactNumber, budget, radiusKm)  
+* **Returns:** Updated UserSettings object  
+* **Description:** Updates user preferences and matching constraints; converts Google profile picture URLs to Base64.
+
+UserProfile updateUserProfile(String userId, ProfileData data)
+
+* **Parameters:** `userId` \- User's unique identifier, `data` \- Profile fields to update  
+* **Returns:** Updated UserProfile object  
+* **Description:** Updates user profile with new information; converts Google profile pictures to Base64.
+
+DeleteResult deleteUser(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** DeleteResult object with `deleted: true`  
+* **Description:** Deletes user account; throws error if user in active room/group.
+
+---
+
+## **3\. Matching Service Interface**
+
+**Purpose:** Handles room creation, matching algorithm, and group formation.
+
+**Constants:**
+
+* `ROOM_DURATION_MS = 2 minutes`  
+* `MAX_MEMBERS = 10`  
+* `MIN_MEMBERS = 2`  
+* `MINIMUM_MATCH_SCORE = 30`  
+* `VOTING_TIME = 30 minutes`
+
+### **Methods:**
+
+JoinMatchingResult joinMatching(String userId, MatchingCriteria criteria)
+
+* **Parameters:** `userId` \- User's unique identifier, `criteria` \- Object containing cuisine\[\], budget, radiusKm  
+* **Returns:** JoinMatchingResult object with roomId and room data  
+* **Description:** Finds compatible room using scoring algorithm (cuisine: 50pts, budget: 30pts, radius: 20pts) or creates new room; automatically forms group when room reaches 10 members; emits real-time updates via Socket.IO.
+
+void leaveRoom(String userId, String roomId)
+
+* **Parameters:** `userId` \- User's unique identifier, `roomId` \- Room's unique identifier  
+* **Returns:** void  
+* **Description:** Removes user from waiting room; deletes room if empty, otherwise updates room averages and notifies remaining members via Socket.IO.
+
+RoomStatus getRoomStatus(String roomId)
+
+* **Parameters:** `roomId` \- Room's unique identifier  
+* **Returns:** RoomStatus object with roomID, completionTime, members\[\], groupReady, status  
+* **Description:** Retrieves current room state for countdown timer and member list display.
+
+List\<String\> getRoomUsers(String roomId)
+
+* **Parameters:** `roomId` \- Room's unique identifier  
+* **Returns:** List of user IDs in the room  
+* **Description:** Gets list of users currently in waiting room.
+
+void checkExpiredRooms()
+
+* **Parameters:** None  
+* **Returns:** void  
+* **Description:** Background task that checks for expired rooms; forms group if \>= 2 members, otherwise expires room and notifies users.
+
+void createGroupFromRoom(String roomId)
+
+* **Parameters:** `roomId` \- Room's unique identifier  
+* **Returns:** void  
+* **Description:** Internal method that converts full/expired room into group, updates user statuses, and sends notifications.
+
+---
+
+## **4\. Group Service Interface**
+
+**Purpose:** Manages groups, restaurant voting, and group lifecycle.
+
+### **Methods:**
+
+GroupStatus getGroupStatus(String groupId)
+
+* **Parameters:** `groupId` \- Group's unique identifier  
+* **Returns:** GroupStatus object with groupId, roomId, completionTime, numMembers, users\[\], restaurantSelected, restaurant, status  
+* **Description:** Retrieves current group state including voting progress and selected restaurant.
+
+VoteResult voteForRestaurant(String userId, String groupId, String restaurantId, Restaurant restaurant)
+
+* **Parameters:** `userId` \- User's unique identifier, `groupId` \- Group's unique identifier, `restaurantId` \- Restaurant's unique identifier, `restaurant` \- Optional restaurant details  
+* **Returns:** VoteResult object with message and Current\_votes map  
+* **Description:** Records user's vote; automatically selects restaurant when all members vote; emits real-time vote updates via Socket.IO; sends push notifications when restaurant selected.
+
+void leaveGroup(String userId, String groupId)
+
+* **Parameters:** `userId` \- User's unique identifier, `groupId` \- Group's unique identifier  
+* **Returns:** void  
+* **Description:** Removes user from group; deletes group if empty; auto-selects restaurant if remaining members all voted; notifies remaining members via Socket.IO.
+
+Group getGroupByUserId(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** Group object or null if not in group  
+* **Description:** Finds active group that user is currently part of.
+
+void closeGroup(String groupId)
+
+* **Parameters:** `groupId` \- Group's unique identifier  
+* **Returns:** void  
+* **Description:** Closes/disbands group and updates all member statuses to ONLINE; used after restaurant visit or manual closure.
+
+void checkExpiredGroups()
+
+* **Parameters:** None  
+* **Returns:** void  
+* **Description:** Background task that checks for expired groups; auto-selects restaurant with most votes or disbands if no votes; sends notifications.
+
+---
+
+## **5\. Restaurant Service Interface**
+
+**Purpose:** Integrates with Google Places API for restaurant search and recommendations.
+
+### **Methods:**
+
+List\<Restaurant\> searchRestaurants(double latitude, double longitude, int radius, List\<String\> cuisineTypes, int priceLevel)
+
+* **Parameters:** `latitude` \- Location latitude, `longitude` \- Location longitude, `radius` \- Search radius in meters (default 5000), `cuisineTypes` \- Optional cuisine keywords, `priceLevel` \- Optional price filter (1-4)  
+* **Returns:** List of Restaurant objects  
+* **Description:** Searches Google Places API for restaurants matching criteria; falls back to mock data if no API key configured.
+
+Restaurant getRestaurantDetails(String placeId)
+
+* **Parameters:** `placeId` \- Google Places API place\_id  
+* **Returns:** Restaurant object with detailed information  
+* **Description:** Fetches detailed restaurant information including photos, hours, contact from Google Places API.
+
+List\<Restaurant\> getRecommendationsForGroup(String groupId, List\<UserPreferences\> userPreferences)
+
+* **Parameters:** `groupId` \- Group's unique identifier, `userPreferences` \- Array of individual user preferences  
+* **Returns:** List of recommended Restaurant objects  
+* **Description:** Calculates average location, combines cuisine preferences, averages budget/radius; searches for restaurants matching aggregated preferences.
+
+---
+
+## **6\. Credibility Service Interface**
+
+**Purpose:** Manages user credibility scores based on participation and behavior.
+
+**Score Changes:**
+
+* `NO_SHOW: -15`  
+* `LATE_CANCEL: -10`  
+* `LEFT_GROUP_EARLY: -5`  
+* `COMPLETED_MEETUP: +5`  
+* `POSITIVE_REVIEW: +3`  
+* `NEGATIVE_REVIEW: -8`
+
+### **Methods:**
+
+CredibilityChange updateCredibilityScore(String userId, CredibilityAction action, String groupId, String roomId, String notes)
+
+* **Parameters:** `userId` \- User's unique identifier, `action` \- Type of action (enum), `groupId` \- Optional group context, `roomId` \- Optional room context, `notes` \- Optional description  
+* **Returns:** CredibilityChange object with previousScore, newScore, scoreChange  
+* **Description:** Updates user's credibility score (clamped 0-100) and logs the change with timestamp.
+
+void recordCompletedMeetup(String userId, String groupId)
+
+* **Parameters:** `userId` \- User's unique identifier, `groupId` \- Group's unique identifier  
+* **Returns:** void  
+* **Description:** Records successful meetup attendance (+5 credibility).
+
+void recordNoShow(String userId, String groupId)
+
+* **Parameters:** `userId` \- User's unique identifier, `groupId` \- Group's unique identifier  
+* **Returns:** void  
+* **Description:** Records user no-show at restaurant (-15 credibility).
+
+void recordLeftGroupEarly(String userId, String groupId)
+
+* **Parameters:** `userId` \- User's unique identifier, `groupId` \- Group's unique identifier  
+* **Returns:** void  
+* **Description:** Records user leaving group before restaurant selected (-5 credibility).
+
+void recordLateCancellation(String userId, String roomId)
+
+* **Parameters:** `userId` \- User's unique identifier, `roomId` \- Room's unique identifier  
+* **Returns:** void  
+* **Description:** Records late room cancellation (-10 credibility).
+
+List\<CredibilityLog\> getUserCredibilityLogs(String userId, int limit)
+
+* **Parameters:** `userId` \- User's unique identifier, `limit` \- Maximum logs to return (default 20\)  
+* **Returns:** List of CredibilityLog objects  
+* **Description:** Retrieves credibility change history for transparency.
+
+CredibilityStats getUserCredibilityStats(String userId)
+
+* **Parameters:** `userId` \- User's unique identifier  
+* **Returns:** CredibilityStats object with currentScore, totalLogs, positiveActions, negativeActions, recentTrend  
+* **Description:** Calculates statistics and trend (improving/stable/declining) based on recent 10 actions.
+
+boolean isCredibilityAcceptable(double score, double minimumRequired)
+
+* **Parameters:** `score` \- User's current score, `minimumRequired` \- Minimum threshold (default 50\)  
+* **Returns:** Boolean indicating if score meets requirement  
+* **Description:** Checks if user meets minimum credibility for matching.
+
+void restoreCredibilityScore(String userId, int amount, String notes)
+
+* **Parameters:** `userId` \- User's unique identifier, `amount` \- Points to restore, `notes` \- Reason for restoration  
+* **Returns:** void  
+* **Description:** Manually restores credibility (admin function or appeal system).
+
+---
+
+## **7\. Notification Service Interface**
+
+**Purpose:** Sends Firebase Cloud Messaging push notifications to users.
+
+### **Methods:**
+
+void sendNotificationToUser(String userId, NotificationPayload notification)
+
+* **Parameters:** `userId` \- User's unique identifier, `notification` \- Object with title, body, data  
+* **Returns:** void  
+* **Description:** Sends push notification to single user via FCM token; logs warning if no token registered.
+
+void sendNotificationToUsers(List\<String\> userIds, NotificationPayload notification)
+
+* **Parameters:** `userIds` \- List of user identifiers, `notification` \- Notification payload  
+* **Returns:** void  
+* **Description:** Sends multicast notification to multiple users efficiently.
+
+void notifyRoomMembers(List\<String\> memberIds, NotificationPayload notification)
+
+* **Parameters:** `memberIds` \- Room member user IDs, `notification` \- Notification payload  
+* **Returns:** void  
+* **Description:** Sends notification to all members of a waiting room.
+
+void notifyGroupMembers(List\<String\> memberIds, NotificationPayload notification)
+
+* **Parameters:** `memberIds` \- Group member user IDs, `notification` \- Notification payload  
+* **Returns:** void  
+* **Description:** Sends notification to all members of a group.
+
+void notifyRoomMatched(String userId, String roomId, String groupId)
+
+* **Parameters:** `userId` \- User's unique identifier, `roomId` \- Room ID, `groupId` \- New group ID  
+* **Returns:** void  
+* **Description:** Notifies user that room is full and group is ready for voting.
+
+void notifyRoomExpired(String userId, String roomId)
+
+* **Parameters:** `userId` \- User's unique identifier, `roomId` \- Room ID  
+* **Returns:** void  
+* **Description:** Notifies user that waiting room expired without enough members.
+
+void notifyRestaurantSelected(List\<String\> memberIds, String restaurantName, String groupId)
+
+* **Parameters:** `memberIds` \- Group member user IDs, `restaurantName` \- Selected restaurant name, `groupId` \- Group ID  
+* **Returns:** void  
+* **Description:** Notifies all group members when restaurant voting is complete.
+
+---
+
+## **8\. Socket Manager Interface**
+
+**Purpose:** Manages real-time Socket.IO communication for rooms and groups.
+
+### **Methods:**
+
+void emitRoomUpdate(String roomId, List\<String\> members, Date expiresAt, String status)
+
+* **Parameters:** `roomId` \- Room's unique identifier, `members` \- List of user IDs, `expiresAt` \- Expiration timestamp, `status` \- 'waiting'|'matched'|'expired'  
+* **Returns:** void  
+* **Description:** Broadcasts updated room state to all connected members in room channel.
+
+void emitGroupReady(String roomId, String groupId, List\<String\> members)
+
+* **Parameters:** `roomId` \- Room's unique identifier, `groupId` \- New group ID, `members` \- List of user IDs  
+* **Returns:** void  
+* **Description:** Notifies all room members that group formation is complete and voting begins.
+
+void emitRoomExpired(String roomId, String reason)
+
+* **Parameters:** `roomId` \- Room's unique identifier, `reason` \- Expiration reason message  
+* **Returns:** void  
+* **Description:** Notifies room members that room expired without forming group.
+
+void emitVoteUpdate(String groupId, String restaurantId, Map\<String, Integer\> votes, int membersVoted, int totalMembers)
+
+* **Parameters:** `groupId` \- Group's unique identifier, `restaurantId` \- Restaurant ID, `votes` \- Vote count map, `membersVoted` \- Number who voted, `totalMembers` \- Total group size  
+* **Returns:** void  
+* **Description:** Broadcasts real-time voting progress to all group members in group channel.
+
+void emitRestaurantSelected(String groupId, String restaurantId, String restaurantName, Map\<String, Integer\> votes)
+
+* **Parameters:** `groupId` \- Group's unique identifier, `restaurantId` \- Restaurant ID, `restaurantName` \- Restaurant name, `votes` \- Final vote counts  
+* **Returns:** void  
+* **Description:** Notifies all group members that restaurant has been selected by majority vote.
+
+void emitMemberJoined(String roomId, String userId, String userName, int currentMembers, int maxMembers)
+
+* **Parameters:** `roomId` \- Room's unique identifier, `userId` \- New member ID, `userName` \- New member name, `currentMembers` \- Current count, `maxMembers` \- Maximum capacity  
+* **Returns:** void  
+* **Description:** Notifies room members when new user joins waiting room.
+
+void emitMemberLeft(String roomId, String userId, String userName, int remainingMembers)
+
+* **Parameters:** `roomId` \- Room's unique identifier, `userId` \- Departing user ID, `userName` \- Departing user name, `remainingMembers` \- Remaining member count  
+* **Returns:** void  
+* **Description:** Notifies room/group members when user leaves.
+
+void emitToUser(String userId, String event, Object payload)
+
+* **Parameters:** `userId` \- Target user's unique identifier, `event` \- Event name, `payload` \- Event data  
+* **Returns:** void  
+* **Description:** Sends event directly to specific user's socket connection.
+
+---
+
+## **9\. Database Model Interfaces (Mongoose)**
+
+### **User Model**
+
+User create(UserData userData)
+
+User findById(String userId)
+
+User findOne(Query query)
+
+User findByIdAndUpdate(String userId, UpdateData updates)
+
+boolean findByIdAndDelete(String userId)
+
+List\<User\> find(Query query)
+
+List\<User\> findByIds(List\<String\> userIds)
+
+### **Room Model**
+
+Room create(RoomData roomData)
+
+Room findById(String roomId)
+
+Room findOne(Query query)
+
+Room findByIdAndUpdate(String roomId, UpdateData updates)
+
+boolean findByIdAndDelete(String roomId)
+
+List\<Room\> find(Query query)
+
+List\<Room\> findActiveRooms()
+
+Room findByUserId(String userId)
+
+### **Group Model**
+
+Group create(GroupData groupData)
+
+Group findById(String groupId)
+
+Group findOne(Query query)
+
+Group findByIdAndUpdate(String groupId, UpdateData updates)
+
+boolean findByIdAndDelete(String groupId)
+
+List\<Group\> find(Query query)
+
+Group findByUserId(String userId)
+
+List\<Group\> findActiveGroups()
+
+void addVote(String userId, String restaurantId)
+
+void removeVote(String userId)
+
+int getVoteCount(String restaurantId)
+
+String getWinningRestaurant()
+
+boolean hasAllVoted()
+
+void removeMember(String userId)
+
+### **CredibilityLog Model**
+
+CredibilityLog create(LogData logData)
+
+List\<CredibilityLog\> findByUserId(String userId, int limit)
+
+List\<CredibilityLog\> getRecentLogs(int days)
+
+---
+
+## **10\. External API Interfaces**
+
+### **Google Auth Library**
+
+TokenInfo verifyIdToken(String idToken)
+
+* **Parameters:** `idToken` \- Google ID token from client  
+* **Returns:** TokenInfo with userId (sub), email, name, picture  
+* **Description:** Validates Google OAuth token against Google's servers.
+
+### **Google Places API (HTTP/REST)**
+
+GET https://maps.googleapis.com/maps/api/place/nearbysearch/json
+
+Query Parameters: location, radius, type, keyword, key
+
+Returns: { results: Restaurant\[\] }
+
+* **Description:** Searches for restaurants near specified location.
+
+GET https://maps.googleapis.com/maps/api/place/details/json
+
+Query Parameters: place\_id, fields, key
+
+Returns: { result: Restaurant }
+
+* **Description:** Retrieves detailed restaurant information.
+
+### **Firebase Cloud Messaging**
+
+String send(Message message)
+
+* **Parameters:** `message` \- FCM message object with token, notification, data  
+* **Returns:** Message ID string  
+* **Description:** Sends push notification to user's device.
+
+BatchResponse sendEachForMulticast(MulticastMessage message)
+
+* **Parameters:** `message` \- FCM multicast message with tokens\[\], notification, data  
+* **Returns:** BatchResponse with success/failure counts  
+* **Description:** Sends notification to multiple devices efficiently.
 
 **Frontend \<-\> Backend Interfaces**
 
