@@ -160,7 +160,7 @@ fun ProfileConfigScreen(
                 onClick = {
                     authViewModel.deleteAccount() {
                         authViewModel.clearAuthData()
-                        navController.navigate("login") {
+                        navController.navigate(NavRoutes.SPLASH_SCREEN) {
                             popUpTo(0) // clear navigation stack
                         }
                     }
