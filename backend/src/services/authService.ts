@@ -209,9 +209,9 @@ export class AuthService {
     }
 
     // Check if user is in a room or group
-    // if (user.roomId || user.groupId) {
-    //   throw new AppError('Cannot delete account while in a room or group', 400);
-    // }
+    if (user.roomId || user.groupId) {
+      throw new AppError('Cannot delete account while in a room or group', 400);
+    }
 
     await User.findByIdAndDelete(userId);
   }
