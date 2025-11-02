@@ -93,6 +93,18 @@ afterEach(async () => {
   
   // Clear socket mock calls
   jest.clearAllMocks();
+
+  // TO AVOID CONFLICT BETWEEN TESTS - Reset test users to clean state
+  for (const testUser of testUsers) {
+    await User.findByIdAndUpdate(testUser._id, {
+      roomId: null,
+      groupId: null,
+      status: UserStatus.ONLINE,
+      budget: 50,
+      radiusKm: 5,
+      preference: []
+    });
+  }
 });
 
 describe('POST /api/matching/join - No Mocking', () => {

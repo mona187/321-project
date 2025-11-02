@@ -54,4 +54,7 @@ module.exports = {
   
   // Verbose output
   verbose: true,
+
+  maxWorkers: 1,  // Run all tests sequentially (one at a time) to prevent test conflicts
+
 };
