@@ -12,6 +12,8 @@
     "test:coverage": "jest --coverage",
     "test:no-mocks": "jest tests/no-mocks",
     "test:with-mocks": "jest tests/with-mocks",
+    "test:coverage:no-mocks": "jest tests/no-mocks --coverage",
+    "test:coverage:with-mocks": "jest tests/with-mocks --coverage",
     "test:verbose": "jest --verbose",
     "test:silent": "jest --silent"
   },
