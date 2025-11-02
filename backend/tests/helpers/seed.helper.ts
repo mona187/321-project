@@ -1,6 +1,7 @@
 // tests/helpers/seed.helper.ts
 import User from '../../src/models/User';
 import { UserStatus } from '../../src/models/User';
+import Group from '../../src/models/Group';
 import mongoose from 'mongoose';
 
 /**
@@ -159,10 +160,13 @@ export async function seedTestUsers(): Promise<TestUser[]> {
 export async function cleanTestData(): Promise<void> {
   console.log('🧹 Cleaning test data...');
 
+  // Delete all test groups first (before users)
+  const groupResult = await Group.deleteMany({ roomId: /^test-room-/ });
+  
   // Delete all test users (emails matching pattern)
-  const result = await User.deleteMany({ email: /testuser.*@example\.com/ });
+  const userResult = await User.deleteMany({ email: /testuser.*@example\.com/ });
 
-  console.log(`✅ Test data cleaned (${result.deletedCount} users removed)`);
+  console.log(`✅ Test data cleaned (${userResult.deletedCount} users, ${groupResult.deletedCount} groups removed)`);
 }
 
 /**
@@ -238,4 +242,86 @@ export async function seedDeletableUser(): Promise<TestUser> {
   const user = await User.create(userData);
   
   return convertToTestUser(user);
+}
+
+/**
+ * Group test helpers
+ */
+export interface TestGroup {
+  _id: string;
+  roomId: string;
+  completionTime: Date;
+  maxMembers: number;
+  members: string[];
+  restaurantSelected: boolean;
+  restaurant?: any;
+}
+
+/**
+ * Create a test group with members
+ */
+export async function seedTestGroup(
+  roomId: string,
+  members: string[],
+  options?: {
+    restaurantSelected?: boolean;
+    restaurant?: any;
+    completionTime?: Date;
+  }
+): Promise<TestGroup> {
+  const completionTime = options?.completionTime || new Date(Date.now() + 3600000); // 1 hour from now
+  
+  const groupData: any = {
+    roomId,
+    completionTime,
+    maxMembers: 4,
+    members,
+    restaurantSelected: options?.restaurantSelected || false,
+    votes: new Map(),
+    restaurantVotes: new Map(),
+  };
+
+  if (options?.restaurant) {
+    groupData.restaurant = options.restaurant;
+  }
+
+  const group = await Group.create(groupData);
+  
+  return {
+    _id: group._id.toString(),
+    roomId: group.roomId,
+    completionTime: group.completionTime,
+    maxMembers: group.maxMembers,
+    members: group.members,
+    restaurantSelected: group.restaurantSelected,
+    restaurant: group.restaurant,
+  };
+}
+
+/**
+ * Clean all test groups
+ */
+export async function cleanTestGroups(): Promise<void> {
+  await Group.deleteMany({ roomId: /^test-room-/ });
+}
+
+/**
+ * Get a group by ID
+ */
+export async function getTestGroupById(groupId: string): Promise<TestGroup | null> {
+  const group = await Group.findById(groupId);
+  
+  if (!group) {
+    return null;
+  }
+
+  return {
+    _id: group._id.toString(),
+    roomId: group.roomId,
+    completionTime: group.completionTime,
+    maxMembers: group.maxMembers,
+    members: group.members,
+    restaurantSelected: group.restaurantSelected,
+    restaurant: group.restaurant,
+  };
 }
