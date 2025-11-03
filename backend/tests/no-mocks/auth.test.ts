@@ -6,7 +6,6 @@ import {
   seedTestUsers, 
   cleanTestData, 
   TestUser,
-  getTestUserById
 } from '../helpers/seed.helper';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { UserStatus } from '../../src/models/User';
