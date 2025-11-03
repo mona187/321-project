@@ -1,44 +1,16 @@
 // tests/no-mocks/matching.test.ts
 
 // ============================================
-// MOCK DEPENDENCIES FIRST (before any imports)
+// MOCK NOTIFICATIONS ONLY
 // ============================================
 
-// Mock the socketManager singleton
-jest.mock('../../src/utils/socketManager', () => ({
-  __esModule: true,
-  default: {
-    initialize: jest.fn(),
-    getIO: jest.fn(),
-    getEmitter: jest.fn(),
-    emitRoomUpdate: jest.fn(),
-    emitToUser: jest.fn(),
-    emitMemberJoined: jest.fn(),
-    emitMemberLeft: jest.fn(),
-    emitGroupReady: jest.fn(),
-    emitRoomExpired: jest.fn(),
-  },
-  socketManager: {
-    initialize: jest.fn(),
-    getIO: jest.fn(),
-    getEmitter: jest.fn(),
-    emitRoomUpdate: jest.fn(),
-    emitToUser: jest.fn(),
-    emitMemberJoined: jest.fn(),
-    emitMemberLeft: jest.fn(),
-    emitGroupReady: jest.fn(),
-    emitRoomExpired: jest.fn(),
-  }
-}));
-
-// Mock notification service
 jest.mock('../../src/services/notificationService', () => ({
   notifyRoomMatched: jest.fn().mockResolvedValue(undefined),
   notifyRoomExpired: jest.fn().mockResolvedValue(undefined)
 }));
 
 // ============================================
-// NOW IMPORT EVERYTHING
+// IMPORTS
 // ============================================
 
 import request from 'supertest';
@@ -49,6 +21,7 @@ import {
   createTestRoomWithMembers, 
   cleanMatchingTestData,
 } from '../helpers/matching.helper';
+import { initializeTestSocket, closeTestSocket } from '../helpers/socket.helper';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import mongoose from 'mongoose';
 import Room from '../../src/models/Room';
@@ -58,7 +31,7 @@ import socketManager from '../../src/utils/socketManager';
 /**
  * Matching Routes Tests - No Mocking
  * Tests matching endpoints with actual database interactions
- * (Socket infrastructure is mocked as it's external to business logic)
+ * Uses real Socket.IO server with spies to verify emissions
  */
 
 let testUsers: TestUser[];
@@ -66,7 +39,13 @@ let testUsers: TestUser[];
 beforeAll(async () => {
   console.log('\n🚀 Starting Matching Tests (No Mocking)...\n');
   
+  // Initialize real Socket.IO server
+  await initializeTestSocket();
+  
+  // Connect to database
   await connectDatabase();
+  
+  // Seed test users
   testUsers = await seedTestUsers();
   
   console.log('\n✅ Test setup complete. Ready to run tests.\n');
@@ -79,11 +58,14 @@ afterAll(async () => {
   await cleanTestData();
   await disconnectDatabase();
   
+  // Close socket server
+  await closeTestSocket();
+  
   console.log('✅ Cleanup complete.\n');
 });
 
-afterEach(async () => {
-  // Clean up rooms and groups after each test
+beforeEach(async () => {
+  // Clean up rooms before each test
   await Room.deleteMany({});
   await User.updateMany({}, { 
     roomId: null,
@@ -91,10 +73,7 @@ afterEach(async () => {
     status: UserStatus.ONLINE 
   });
   
-  // Clear socket mock calls
-  jest.clearAllMocks();
-
-  // TO AVOID CONFLICT BETWEEN TESTS - Reset test users to clean state
+  // Reset test users to clean state
   for (const testUser of testUsers) {
     await User.findByIdAndUpdate(testUser._id, {
       roomId: null,
@@ -107,10 +86,22 @@ afterEach(async () => {
   }
 });
 
+afterEach(async () => {
+  await Room.deleteMany({});
+  await User.updateMany({}, { 
+    roomId: null,
+    groupId: null,
+    status: UserStatus.ONLINE 
+  });
+  
+  // Restore all spies
+  jest.restoreAllMocks();
+});
+
 describe('POST /api/matching/join - No Mocking', () => {
   /**
    * Interface: POST /api/matching/join
-   * Mocking: Socket infrastructure only
+   * Mocking: Notifications only (Socket.IO is real with spies)
    */
 
   test('should create new room when no matching rooms exist', async () => {
@@ -130,9 +121,14 @@ describe('POST /api/matching/join - No Mocking', () => {
      *   - No good match found
      *   - Create new room with user as first member
      *   - Update user status to IN_WAITING_ROOM
-     *   - Emit socket events (mocked infrastructure)
+     *   - Emit socket events (real emissions with spy verification)
      *   - Return roomId and room details
      */
+
+    // Spy on socket manager methods
+    const emitRoomUpdateSpy = jest.spyOn(socketManager, 'emitRoomUpdate');
+    const emitToUserSpy = jest.spyOn(socketManager, 'emitToUser');
+    const emitMemberJoinedSpy = jest.spyOn(socketManager, 'emitMemberJoined');
 
     const token = generateTestToken(
       testUsers[0]._id,
@@ -168,15 +164,23 @@ describe('POST /api/matching/join - No Mocking', () => {
     const user = await User.findById(testUsers[0]._id);
     expect(user?.roomId).toBe(response.body.Body.roomId);
     expect(user?.status).toBe(UserStatus.IN_WAITING_ROOM);
-    
-    // Verify socket events were called (testing integration with socket layer)
-    expect(socketManager.emitRoomUpdate).toHaveBeenCalled();
-    expect(socketManager.emitToUser).toHaveBeenCalledWith(
+
+    // Verify socket events were emitted
+    expect(emitRoomUpdateSpy).toHaveBeenCalled();
+    expect(emitRoomUpdateSpy).toHaveBeenCalledWith(
+      response.body.Body.roomId,
+      expect.arrayContaining([testUsers[0]._id]),
+      expect.any(Date),
+      expect.any(String)
+    );
+
+    expect(emitToUserSpy).toHaveBeenCalledWith(
       testUsers[0]._id,
       'room_update',
       expect.any(Object)
     );
-    expect(socketManager.emitMemberJoined).toHaveBeenCalled();
+
+    expect(emitMemberJoinedSpy).toHaveBeenCalled();
   });
 
   test('should join existing room with matching preferences', async () => {
@@ -192,6 +196,10 @@ describe('POST /api/matching/join - No Mocking', () => {
      *   - Emit socket events
      *   - Return existing roomId
      */
+
+    // Spy on socket manager methods
+    const emitRoomUpdateSpy = jest.spyOn(socketManager, 'emitRoomUpdate');
+    const emitMemberJoinedSpy = jest.spyOn(socketManager, 'emitMemberJoined');
 
     // Create existing room with user1
     const { room: existingRoom } = await createTestRoomWithMembers(1, 'italian');
@@ -221,10 +229,10 @@ describe('POST /api/matching/join - No Mocking', () => {
     const room = await Room.findById(existingRoom._id);
     expect(room?.members).toHaveLength(2);
     expect(room?.members).toContain(testUsers[1]._id);
-    
+
     // Verify socket events were called
-    expect(socketManager.emitRoomUpdate).toHaveBeenCalled();
-    expect(socketManager.emitMemberJoined).toHaveBeenCalled();
+    expect(emitRoomUpdateSpy).toHaveBeenCalled();
+    expect(emitMemberJoinedSpy).toHaveBeenCalled();
   });
 
   test('should return 401 without authentication', async () => {
@@ -318,7 +326,7 @@ describe('POST /api/matching/join - No Mocking', () => {
 describe('POST /api/matching/join/:roomId - No Mocking', () => {
   /**
    * Interface: POST /api/matching/join/:roomId
-   * Mocking: Socket infrastructure only
+   * Mocking: Notifications only
    */
 
   test('should return 501 Not Implemented', async () => {
@@ -367,7 +375,7 @@ describe('POST /api/matching/join/:roomId - No Mocking', () => {
 describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
   /**
    * Interface: PUT /api/matching/leave/:roomId
-   * Mocking: Socket infrastructure only
+   * Mocking: Notifications only
    */
 
   test('should successfully leave room', async () => {
@@ -389,6 +397,9 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
      *   - Emit socket events
      *   - If room empty, delete it from database
      */
+
+    // Spy on socket manager
+    const emitMemberLeftSpy = jest.spyOn(socketManager, 'emitMemberLeft');
 
     // Create room with 2 users
     const { room, memberIds } = await createTestRoomWithMembers(2);
@@ -418,9 +429,9 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
     const updatedUser = await User.findById(userId);
     expect(updatedUser?.roomId).toBeNull();
     expect(updatedUser?.status).toBe(UserStatus.ONLINE);
-    
+
     // Verify socket event was emitted
-    expect(socketManager.emitMemberLeft).toHaveBeenCalled();
+    expect(emitMemberLeftSpy).toHaveBeenCalled();
   });
 
   test('should delete room when last member leaves', async () => {
@@ -454,7 +465,7 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
     // Verify room was deleted from database
     const deletedRoom = await Room.findById(room._id);
     expect(deletedRoom).toBeNull();
-    
+
     // Verify user status updated
     const updatedUser = await User.findById(userId);
     expect(updatedUser?.roomId).toBeNull();
@@ -519,7 +530,7 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
 describe('GET /api/matching/status/:roomId - No Mocking', () => {
   /**
    * Interface: GET /api/matching/status/:roomId
-   * Mocking: Socket infrastructure only
+   * Mocking: Notifications only
    */
 
   test('should return room status for valid roomId', async () => {
@@ -614,7 +625,7 @@ describe('GET /api/matching/status/:roomId - No Mocking', () => {
 describe('GET /api/matching/users/:roomId - No Mocking', () => {
   /**
    * Interface: GET /api/matching/users/:roomId
-   * Mocking: Socket infrastructure only
+   * Mocking: Notifications only
    */
 
   test('should return list of users in room', async () => {
