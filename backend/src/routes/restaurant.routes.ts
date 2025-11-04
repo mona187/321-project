@@ -12,17 +12,21 @@ const router = Router();
 router.get('/search', optionalAuth, restaurantController.searchRestaurants.bind(restaurantController));
 
 /**
- * @route   GET /api/restaurant/:restaurantId
- * @desc    Get restaurant details by ID
- * @access  Public (optional auth)
- */
-router.get('/:restaurantId', optionalAuth, restaurantController.getRestaurantDetails.bind(restaurantController));
-
-/**
  * @route   POST /api/restaurant/recommendations/:groupId
  * @desc    Get restaurant recommendations for a group
  * @access  Private
+ * 
+ * NOTE: This route must come BEFORE /:restaurantId to avoid route conflicts
  */
 router.post('/recommendations/:groupId', authMiddleware, restaurantController.getGroupRecommendations.bind(restaurantController));
+
+/**
+ * @route   GET /api/restaurant/:restaurantId
+ * @desc    Get restaurant details by ID
+ * @access  Public (optional auth)
+ * 
+ * NOTE: This catch-all route must come LAST to avoid matching /recommendations/:groupId
+ */
+router.get('/:restaurantId', optionalAuth, restaurantController.getRestaurantDetails.bind(restaurantController));
 
 export default router;

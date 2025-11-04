@@ -395,17 +395,17 @@ describe('POST /api/restaurant/recommendations/:groupId - No Mocking', () => {
 
   test('should return 400 when userPreferences is missing', async () => {
     /**
-     * Input: POST /api/restaurant/recommendations/:groupId without userPreferences in body
+     * Input: GET /api/restaurant/recommendations/:groupId without userPreferences in query
      * Expected Status Code: 400
      * Expected Output:
      *   {
      *     Status: 400,
-     *     Message: { error: 'User preferences array is required' },
+     *     Message: { error: 'User preferences are required' },
      *     Body: null
      *   }
      * Expected Behavior:
      *   - Auth succeeds
-     *   - Validate request body
+     *   - Validate query parameter
      *   - userPreferences is missing
      *   - Return 400 immediately
      */

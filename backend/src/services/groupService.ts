@@ -117,12 +117,16 @@ export class GroupService {
         await group.save();
 
         // Emit restaurant selected
-        socketManager.emitRestaurantSelected(
-          groupId,
-          winningRestaurantId,
-          group.restaurant?.name || 'Selected Restaurant',
-          currentVotes
-        );
+        try {
+          socketManager.emitRestaurantSelected(
+            groupId,
+            winningRestaurantId,
+            group.restaurant?.name || 'Selected Restaurant',
+            currentVotes
+          );
+        } catch (error) {
+          console.error('Failed to emit restaurant selected:', error);
+        }
 
         // // Send notifications
         // await notifyRestaurantSelected(
