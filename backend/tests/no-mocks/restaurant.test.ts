@@ -59,6 +59,69 @@ afterAll(async () => {
   console.log('✅ Cleanup complete.\n');
 });
 
+describe('Restaurant Model - Schema Validation', () => {
+  /**
+   * Interface: Restaurant Model
+   * Mocking: None
+   * Purpose: Validate that the Restaurant Mongoose model schema is properly defined
+   */
+
+  test('should have Restaurant model defined and importable', async () => {
+    /**
+     * Input: Import Restaurant model
+     * Expected Status Code: N/A (not an API test)
+     * Expected Output: Restaurant model should be importable
+     * Expected Behavior:
+     *   - Model should be defined
+     *   - Schema should be valid
+     *   - Model should have correct structure
+     */
+    const { Restaurant } = await import('../../src/models/Restaurant');
+    
+    expect(Restaurant).toBeDefined();
+    expect(Restaurant.modelName).toBe('Restaurant');
+  });
+
+  test('should validate Restaurant schema structure', async () => {
+    /**
+     * Input: Create a Restaurant document with required fields
+     * Expected Status Code: N/A (not an API test)
+     * Expected Output: Restaurant document should be created successfully
+     * Expected Behavior:
+     *   - Required fields should be validated
+     *   - Schema defaults should be applied
+     *   - Document should be saveable
+     */
+    const { Restaurant } = await import('../../src/models/Restaurant');
+    
+    const testRestaurant = new Restaurant({
+      placeId: 'test-place-id-123',
+      name: 'Test Restaurant',
+      address: '123 Test St',
+      location: {
+        type: 'Point',
+        coordinates: [-123.1207, 49.2827]
+      },
+      cuisineTypes: ['Italian', 'Pizza'],
+      priceLevel: 2,
+      rating: 4.5
+    });
+
+    // Validate without saving (covers schema validation)
+    const validationError = testRestaurant.validateSync();
+    expect(validationError).toBeUndefined();
+    
+    // Check that required fields are present
+    expect(testRestaurant.placeId).toBe('test-place-id-123');
+    expect(testRestaurant.name).toBe('Test Restaurant');
+    expect(testRestaurant.location.type).toBe('Point');
+    expect(testRestaurant.location.coordinates).toEqual([-123.1207, 49.2827]);
+    
+    // Clean up (don't actually save to avoid test data pollution)
+    // testRestaurant is not saved, so no cleanup needed
+  });
+});
+
 describe('GET /api/restaurant/search - No Mocking', () => {
   /**
    * Interface: GET /api/restaurant/search

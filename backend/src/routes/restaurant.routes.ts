@@ -24,8 +24,6 @@ router.post('/recommendations/:groupId', authMiddleware, restaurantController.ge
  * @route   GET /api/restaurant/:restaurantId
  * @desc    Get restaurant details by ID
  * @access  Public (optional auth)
- * 
- * NOTE: This catch-all route must come LAST to avoid matching /recommendations/:groupId
  */
 router.get('/:restaurantId', optionalAuth, restaurantController.getRestaurantDetails.bind(restaurantController));
 

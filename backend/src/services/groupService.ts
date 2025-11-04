@@ -230,7 +230,6 @@ export class GroupService {
           //   group.restaurant.name,
           //   groupId
           // );
-          // 🔥 FIX: Wrap socket emission in try-catch
           try {
             socketManager.emitRestaurantSelected(
               groupId,
