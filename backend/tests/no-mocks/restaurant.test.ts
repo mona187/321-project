@@ -8,6 +8,7 @@ import {
   TestUser,
   seedTestGroup
 } from '../helpers/seed.helper';
+import { initializeTestSocket, closeTestSocket } from '../helpers/socket.helper';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
 /**
@@ -20,6 +21,9 @@ let testGroup: any;
 
 beforeAll(async () => {
   console.log('\n🚀 Starting Restaurant Tests (No Mocking)...\n');
+  
+  // Initialize real Socket.IO server (for consistency, even though restaurant routes don't use it)
+  await initializeTestSocket();
   
   // Connect to test database
   await connectDatabase();
@@ -48,6 +52,9 @@ afterAll(async () => {
   
   // Close database connection
   await disconnectDatabase();
+  
+  // Close Socket.IO server
+  await closeTestSocket();
   
   console.log('✅ Cleanup complete.\n');
 });

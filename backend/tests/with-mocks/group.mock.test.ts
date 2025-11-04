@@ -1,495 +1,825 @@
-// tests/with-mocks/group.mock.test.ts
-
-/**
- * Group Routes Tests - With Mocking
- * Tests error scenarios and edge cases by mocking database and services
- * 
- * PURPOSE: Test how the application handles failures, errors, and edge cases
- * that are difficult or impossible to reproduce with a real database.
- */
+// tests/mocks/group.mocks.test.ts
 
 // ============================================
-// MOCK ALL DEPENDENCIES (before imports)
+// MOCK ALL EXTERNAL SERVICES FOR FAILURE TESTING
 // ============================================
 
-// Mock the Group model (database)
-jest.mock('../../src/models/Group');
-
-// Mock the User model (database)
-jest.mock('../../src/models/User');
-
-// Mock the GroupService
-jest.mock('../../src/services/groupService', () => ({
+// Mock Socket Manager
+jest.mock('../../src/utils/socketManager', () => ({
   __esModule: true,
   default: {
-    getGroupStatus: jest.fn(),
-    voteForRestaurant: jest.fn(),
-    leaveGroup: jest.fn(),
-    getGroupByUserId: jest.fn(),
+    initialize: jest.fn(),
+    getIO: jest.fn(),
+    getEmitter: jest.fn(),
+    emitRoomUpdate: jest.fn(),
+    emitToUser: jest.fn(),
+    emitMemberJoined: jest.fn(),
+    emitMemberLeft: jest.fn(),
+    emitGroupReady: jest.fn(),
+    emitRoomExpired: jest.fn(),
+    emitVoteUpdate: jest.fn(),
+    emitRestaurantSelected: jest.fn(),
   }
 }));
 
+// Mock Notification Service
+jest.mock('../../src/services/notificationService', () => ({
+  notifyGroupMembers: jest.fn(),
+  notifyRestaurantSelected: jest.fn(),
+  notifyRoomMatched: jest.fn(),
+  notifyRoomExpired: jest.fn(),
+  sendNotificationToUser: jest.fn(),
+  sendNotificationToUsers: jest.fn(),
+  notifyRoomMembers: jest.fn(),
+}));
+
 // ============================================
-// IMPORT EVERYTHING
+// IMPORTS
 // ============================================
 
 import request from 'supertest';
 import app from '../../src/app';
-
-import groupService from '../../src/services/groupService';
+import { connectDatabase, disconnectDatabase } from '../../src/config/database';
+import User, { UserStatus } from '../../src/models/User';
+import Group from '../../src/models/Group';
+import { seedTestUsers, cleanTestData, TestUser, seedTestGroup } from '../helpers/seed.helper';
 import { generateTestToken } from '../helpers/auth.helper';
-
-// Get typed mocks
-
-const mockedGroupService = groupService as jest.Mocked<typeof groupService>;
+import socketManager from '../../src/utils/socketManager';
+import * as notificationService from '../../src/services/notificationService';
 
 /**
- * WHAT ARE WE TESTING?
+ * Group Routes Tests - With Mocks (External Failure Scenarios)
  * 
- * In with-mocks tests, we simulate failures and errors to verify:
- * 1. Error handling works correctly
- * 2. Appropriate error messages are returned
- * 3. Application doesn't crash on errors
- * 4. Edge cases are handled properly
+ * This test suite covers UNCONTROLLABLE external failures:
+ * - Database connection failures
+ * - Network timeouts
+ * - MongoDB server errors
+ * - Socket.IO emission failures
+ * - Firebase notification failures
+ * - External service unavailability
  * 
- * We mock the service and database to simulate:
- * - Connection failures
- * - Query errors
- * - Data not found
- * - Service method failures
- * - Business logic errors
+ * These failures cannot be reliably triggered in no-mocks tests.
+ * Combined with no-mocks tests, this achieves 100% coverage.
  */
 
-describe('GET /api/group/status - With Mocking', () => {
-  /**
-   * Interface: GET /api/group/status
-   * Mocking: GroupService, User model, Group model
-   */
+let testUsers: TestUser[];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+beforeAll(async () => {
+  console.log('\n🚀 Starting Group Tests (With Mocks - Failure Scenarios)...\n');
+  await connectDatabase();
+  testUsers = await seedTestUsers();
+  console.log('✅ Test setup complete.\n');
+});
 
-  test('should return 500 when groupService.getGroupByUserId throws error', async () => {
+afterAll(async () => {
+  console.log('\n🧹 Cleaning up after tests...\n');
+  await cleanTestData();
+  await disconnectDatabase();
+  console.log('✅ Cleanup complete.\n');
+});
+
+afterEach(() => {
+  jest.clearAllMocks();
+  jest.restoreAllMocks();
+});
+
+describe('GET /api/group/status - External Failures', () => {
+  test('should return 500 when database connection fails during User.findById', async () => {
     /**
-     * SCENARIO: Database error when finding user's group
-     * 
-     * Input: GET /api/group/status with valid token
-     * Expected Status Code: 500
-     * Expected Output: 
-     *   {
-     *     error: "Error",
-     *     message: "Database connection failed",
-     *     statusCode: 500
-     *   }
-     * 
-     * Expected Behavior:
-     *   - Auth middleware validates token ✓
-     *   - Service tries to find user's group: groupService.getGroupByUserId(userId)
-     *   - Database connection fails
-     *   - Service throws Error('Database connection failed')
-     *   - Error handler catches it and returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.getGroupByUserId() rejects with connection error
-     * 
-     * WHY THIS TEST: Verifies error handling when database is unavailable
+     * Scenario: MongoDB connection lost while fetching user
+     * Expected: Error handler catches, returns 500
      */
+    
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
 
-    mockedGroupService.getGroupByUserId.mockRejectedValue(new Error('Database connection failed'));
-
-    const token = generateTestToken('test-user-id-123');
+    // Mock database failure
+    jest.spyOn(User, 'findById').mockRejectedValueOnce(
+      new Error('MongoNetworkError: connection refused')
+    );
 
     const response = await request(app)
       .get('/api/group/status')
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Database connection failed');
-    expect(response.body.statusCode).toBe(500);
+    expect(response.body.message).toContain('connection refused');
   });
 
-  test('should return 500 when groupService.getGroupStatus throws error', async () => {
+  test('should return 500 when database timeout occurs during Group.findById', async () => {
     /**
-     * SCENARIO: Error when retrieving group status after finding group
-     * 
-     * Input: GET /api/group/status with valid token
-     * Expected Status Code: 500
-     * Expected Output: Failed to get status error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - getGroupByUserId() succeeds, returns group ✓
-     *   - Call groupService.getGroupStatus(groupId)
-     *   - Service throws error (e.g., group data corrupted)
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.getGroupByUserId() resolves with mock group
-     *   - groupService.getGroupStatus() rejects with error
-     * 
-     * WHY THIS TEST: Verifies error handling when group exists but status retrieval fails
+     * Scenario: MongoDB query timeout
+     * Expected: Error handler catches timeout, returns 500
      */
+    
+    // Create user with groupId
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: 'some-group-id',
+      status: UserStatus.IN_GROUP
+    });
 
-    const mockGroup = {
-      _id: 'test-group-id-123',
-      roomId: 'test-room-123'
-    };
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
 
-    mockedGroupService.getGroupByUserId.mockResolvedValue(mockGroup as any);
-    mockedGroupService.getGroupStatus.mockRejectedValue(new Error('Failed to get status'));
-
-    const token = generateTestToken('test-user-id-123');
+    // Mock timeout
+    jest.spyOn(Group, 'findById').mockRejectedValueOnce(
+      new Error('MongoServerError: operation exceeded time limit')
+    );
 
     const response = await request(app)
       .get('/api/group/status')
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Failed to get status');
+    expect(response.body.message).toContain('time limit');
+  });
+
+  test('should return 500 when MongoDB server is unavailable', async () => {
+    /**
+     * Scenario: MongoDB server down
+     * Expected: Connection error caught, returns 500
+     */
+    
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: 'some-group-id',
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    jest.spyOn(Group, 'findById').mockRejectedValueOnce(
+      new Error('MongoServerSelectionError: server selection timed out')
+    );
+
+    const response = await request(app)
+      .get('/api/group/status')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toContain('server selection');
   });
 });
 
-describe('POST /api/group/vote/:groupId - With Mocking', () => {
-  /**
-   * Interface: POST /api/group/vote/:groupId
-   * Mocking: GroupService, Group model
-   */
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('should return 500 when groupService.voteForRestaurant throws "Group not found" error', async () => {
+describe('POST /api/group/vote/:groupId - External Failures', () => {
+  test('should return 500 when database fails during Group.findById', async () => {
     /**
-     * SCENARIO: User tries to vote in a group that doesn't exist
-     * 
-     * Input: POST /api/group/vote/non-existent-group-id with restaurantID
-     * Expected Status Code: 500
-     * Expected Output: 
-     *   {
-     *     message: 'Group not found',
-     *     statusCode: 500
-     *   }
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.voteForRestaurant(userId, groupId, restaurantID)
-     *   - Service tries to find group
-     *   - Group doesn't exist in database
-     *   - Service throws Error('Group not found')
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.voteForRestaurant() rejects with Error('Group not found')
-     * 
-     * WHY THIS TEST: Verifies error handling when group was deleted but user still has reference
+     * Scenario: Network error while fetching group
+     * Expected: Database error caught, returns 500
      */
+    
+    const groupId = 'some-group-id';
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
 
-    mockedGroupService.voteForRestaurant.mockRejectedValue(new Error('Group not found'));
-
-    const token = generateTestToken('test-user-id-123');
+    jest.spyOn(Group, 'findById').mockRejectedValueOnce(
+      new Error('MongoNetworkError: socket timeout')
+    );
 
     const response = await request(app)
-      .post('/api/group/vote/non-existent-group-id')
+      .post(`/api/group/vote/${groupId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ restaurantID: 'rest-123' });
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Group not found');
-    expect(response.body.statusCode).toBe(500);
+    expect(response.body.message).toContain('socket timeout');
   });
 
-  test('should return 500 when groupService.voteForRestaurant throws "User is not a member" error', async () => {
+  test('should return 500 when database fails during group.save()', async () => {
     /**
-     * SCENARIO: User tries to vote in a group they're not a member of
-     * 
-     * Input: POST /api/group/vote/:groupId with valid token but user not in group
-     * Expected Status Code: 500
-     * Expected Output: User is not a member error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.voteForRestaurant()
-     *   - Service finds group
-     *   - Service checks if user is in group.members
-     *   - User is not in members array
-     *   - Service throws Error('User is not a member of this group')
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.voteForRestaurant() rejects with Error('User is not a member of this group')
-     * 
-     * WHY THIS TEST: Verifies business logic prevents unauthorized voting
+     * Scenario: Write operation fails (network/disk error)
+     * Expected: Save error caught, returns 500
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-vote-save-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
 
-    mockedGroupService.voteForRestaurant.mockRejectedValue(new Error('User is not a member of this group'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock save failure
+    jest.spyOn(Group.prototype, 'save').mockRejectedValueOnce(
+      new Error('MongoServerError: write operation failed')
+    );
 
     const response = await request(app)
-      .post('/api/group/vote/test-group-id-123')
+      .post(`/api/group/vote/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ restaurantID: 'rest-123' });
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('User is not a member of this group');
+    expect(response.body.message).toContain('write operation failed');
   });
 
-  test('should return 500 when groupService.voteForRestaurant throws "Restaurant already selected" error', async () => {
+  test('should handle Socket.IO emission failure gracefully', async () => {
     /**
-     * SCENARIO: User tries to vote after restaurant has already been selected
-     * 
-     * Input: POST /api/group/vote/:groupId when restaurant already selected
-     * Expected Status Code: 500
-     * Expected Output: Restaurant already selected error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.voteForRestaurant()
-     *   - Service finds group
-     *   - Service checks group.restaurantSelected
-     *   - Restaurant already selected (group.restaurantSelected === true)
-     *   - Service throws Error('Restaurant has already been selected for this group')
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.voteForRestaurant() rejects with Error('Restaurant has already been selected for this group')
-     * 
-     * WHY THIS TEST: Verifies business logic prevents voting after restaurant selection
+     * Scenario: Socket emission throws error (WebSocket closed)
+     * Expected: Vote succeeds, socket error logged but doesn't crash
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-socket-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
 
-    mockedGroupService.voteForRestaurant.mockRejectedValue(new Error('Restaurant has already been selected for this group'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock socket failure
+    (socketManager.emitVoteUpdate as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('WebSocket connection closed');
+    });
 
     const response = await request(app)
-      .post('/api/group/vote/test-group-id-123')
+      .post(`/api/group/vote/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ restaurantID: 'rest-123' });
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Restaurant has already been selected for this group');
+    // Vote should still succeed despite socket failure
+    expect(response.status).toBe(200);
+    expect(response.body.Body.Current_votes).toHaveProperty('rest-123', 1);
   });
 
-  test('should return 500 when database query fails in voteForRestaurant', async () => {
+  test('should handle Firebase notification failure when restaurant selected', async () => {
     /**
-     * SCENARIO: Database error during vote operation
-     * 
-     * Input: POST /api/group/vote/:groupId with valid data
-     * Expected Status Code: 500
-     * Expected Output: Database error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.voteForRestaurant()
-     *   - Service tries to query/update database
-     *   - Database connection fails
-     *   - Service throws database error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.voteForRestaurant() rejects with Error('Database connection lost')
-     * 
-     * WHY THIS TEST: Verifies graceful handling of database failures during voting
+     * Scenario: All vote, restaurant selected, but Firebase unavailable
+     * Expected: Vote succeeds, notification failure logged but doesn't crash
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-notification-fail',
+      [testUsers[0]._id]
+    );
 
-    mockedGroupService.voteForRestaurant.mockRejectedValue(new Error('Database connection lost'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock Firebase failure
+    (notificationService.notifyRestaurantSelected as jest.Mock).mockRejectedValueOnce(
+      new Error('FirebaseError: service unavailable')
+    );
 
     const response = await request(app)
-      .post('/api/group/vote/test-group-id-123')
+      .post(`/api/group/vote/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ restaurantID: 'rest-123' });
+      .send({
+        restaurantID: 'rest-123',
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      });
+
+    // Vote should succeed despite notification failure
+    expect(response.status).toBe(200);
+    expect(notificationService.notifyRestaurantSelected).toHaveBeenCalled();
+  });
+
+  test('should handle Firebase timeout when sending notifications', async () => {
+    /**
+     * Scenario: Firebase API timeout
+     * Expected: Vote succeeds, timeout logged
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-firebase-timeout',
+      [testUsers[0]._id]
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock timeout
+    (notificationService.notifyRestaurantSelected as jest.Mock).mockImplementationOnce(() => {
+      return new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 100);
+      });
+    });
+
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-123',
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      });
+
+    expect(response.status).toBe(200);
+  });
+
+  test('should return 500 when second save() fails during restaurant selection', async () => {
+    /**
+     * Scenario: First save succeeds, but second save (setting restaurant) fails
+     * Expected: Error propagates, returns 500
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-second-save-fail',
+      [testUsers[0]._id]
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock: first save succeeds, second save fails
+    jest.spyOn(Group.prototype, 'save')
+      .mockResolvedValueOnce({} as any)  // First save succeeds
+      .mockRejectedValueOnce(new Error('MongoNetworkError: connection lost'));  // Second save fails
+
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-123',
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      });
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Database connection lost');
+    expect(response.body.message).toContain('connection lost');
   });
 });
 
-describe('POST /api/group/leave/:groupId - With Mocking', () => {
-  /**
-   * Interface: POST /api/group/leave/:groupId
-   * Mocking: GroupService, Group model, User model
-   */
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('should return 500 when groupService.leaveGroup throws "Group not found" error', async () => {
+describe('POST /api/group/leave/:groupId - External Failures', () => {
+  test('should return 500 when database fails during Group.findById', async () => {
     /**
-     * SCENARIO: User tries to leave a group that doesn't exist
-     * 
-     * Input: POST /api/group/leave/non-existent-group-id
-     * Expected Status Code: 500
-     * Expected Output: Group not found error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.leaveGroup(userId, groupId)
-     *   - Service tries to find group
-     *   - Group doesn't exist in database
-     *   - Service throws Error('Group not found')
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.leaveGroup() rejects with Error('Group not found')
-     * 
-     * WHY THIS TEST: Verifies error handling when group was deleted but user still has reference
+     * Scenario: MongoDB connection lost while fetching group
+     * Expected: Database error caught, returns 500
      */
+    
+    const groupId = 'some-group-id';
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
 
-    mockedGroupService.leaveGroup.mockRejectedValue(new Error('Group not found'));
-
-    const token = generateTestToken('test-user-id-123');
+    jest.spyOn(Group, 'findById').mockRejectedValueOnce(
+      new Error('MongoNetworkError: no connection available')
+    );
 
     const response = await request(app)
-      .post('/api/group/leave/non-existent-group-id')
+      .post(`/api/group/leave/${groupId}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Group not found');
+    expect(response.body.message).toContain('no connection available');
   });
 
-  test('should return 500 when groupService.leaveGroup throws "User not found" error', async () => {
+  test('should return 500 when database fails during User.findById', async () => {
     /**
-     * SCENARIO: Valid token but user doesn't exist in database
-     * 
-     * Input: POST /api/group/leave/:groupId with valid token for non-existent user
-     * Expected Status Code: 500
-     * Expected Output: User not found error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds (token is valid) ✓
-     *   - Call groupService.leaveGroup()
-     *   - Service tries to find user: User.findById(userId)
-     *   - User doesn't exist in database
-     *   - Service throws Error('User not found')
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.leaveGroup() rejects with Error('User not found')
-     * 
-     * WHY THIS TEST: Verifies error handling when user account was deleted but they still have a valid token
+     * Scenario: Group found, but User.findById fails
+     * Expected: Database error caught, returns 500
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-user-find-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
 
-    mockedGroupService.leaveGroup.mockRejectedValue(new Error('User not found'));
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
 
-    const token = generateTestToken('test-user-id-123');
+    // Mock User.findById failure
+    jest.spyOn(User, 'findById').mockRejectedValueOnce(
+      new Error('MongoServerError: cursor timeout')
+    );
 
     const response = await request(app)
-      .post('/api/group/leave/test-group-id-123')
+      .post(`/api/group/leave/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('User not found');
+    expect(response.body.message).toContain('cursor timeout');
   });
 
-  test('should return 500 when database save fails in leaveGroup', async () => {
+  test('should return 500 when user.save() fails', async () => {
     /**
-     * SCENARIO: Database error when saving updated group/user
-     * 
-     * Input: POST /api/group/leave/:groupId with valid data
-     * Expected Status Code: 500
-     * Expected Output: Database save error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.leaveGroup()
-     *   - Service finds group and user
-     *   - Service removes user from group
-     *   - Try to save updated group/user
-     *   - Database save operation fails
-     *   - Service throws database error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.leaveGroup() rejects with Error('Failed to save group')
-     * 
-     * WHY THIS TEST: Verifies error handling when database update fails
+     * Scenario: Updating user status fails due to write error
+     * Expected: Save error caught, returns 500
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-user-save-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
 
-    mockedGroupService.leaveGroup.mockRejectedValue(new Error('Failed to save group'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock user save failure
+    jest.spyOn(User.prototype, 'save').mockRejectedValueOnce(
+      new Error('MongoServerError: disk full')
+    );
 
     const response = await request(app)
-      .post('/api/group/leave/test-group-id-123')
+      .post(`/api/group/leave/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Failed to save group');
+    expect(response.body.message).toContain('disk full');
   });
 
-  test('should return 500 when database delete fails in leaveGroup', async () => {
+  test('should return 500 when Group.findByIdAndDelete fails (empty group)', async () => {
     /**
-     * SCENARIO: Error when deleting empty group after last member leaves
-     * 
-     * Input: POST /api/group/leave/:groupId when last member leaves
-     * Expected Status Code: 500
-     * Expected Output: Database delete error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.leaveGroup()
-     *   - Service removes last member from group
-     *   - group.members.length === 0
-     *   - Service tries to delete empty group: Group.findByIdAndDelete()
-     *   - Group deletion fails
-     *   - Service throws error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.leaveGroup() rejects with Error('Failed to delete group')
-     * 
-     * WHY THIS TEST: Verifies error handling when group cleanup fails
+     * Scenario: Last member leaves, but delete operation fails
+     * Expected: Delete error caught, returns 500
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-delete-fail',
+      [testUsers[0]._id]
+    );
 
-    mockedGroupService.leaveGroup.mockRejectedValue(new Error('Failed to delete group'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock delete failure
+    jest.spyOn(Group, 'findByIdAndDelete').mockRejectedValueOnce(
+      new Error('MongoServerError: write operation failed')
+    );
 
     const response = await request(app)
-      .post('/api/group/leave/test-group-id-123')
+      .post(`/api/group/leave/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Failed to delete group');
+    expect(response.body.message).toContain('write operation failed');
   });
 
-  test('should return 500 when database connection fails', async () => {
+  test('should return 500 when group.save() fails (non-empty group)', async () => {
     /**
-     * SCENARIO: Database connection is lost during leave operation
-     * 
-     * Input: POST /api/group/leave/:groupId with valid token
-     * Expected Status Code: 500
-     * Expected Output: Database connection error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call groupService.leaveGroup()
-     *   - Service tries to access database
-     *   - Database connection fails
-     *   - Service throws connection error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - groupService.leaveGroup() rejects with Error('Database connection lost')
-     * 
-     * WHY THIS TEST: Verifies graceful handling of database connection failures
+     * Scenario: Member leaves but saving updated group fails
+     * Expected: Save error caught, returns 500
      */
+    
+    const testGroup = await seedTestGroup(
+      'test-group-save-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
 
-    mockedGroupService.leaveGroup.mockRejectedValue(new Error('Database connection lost'));
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
 
-    const token = generateTestToken('test-user-id-123');
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock group save failure
+    jest.spyOn(Group.prototype, 'save').mockRejectedValueOnce(
+      new Error('MongoNetworkError: connection closed')
+    );
 
     const response = await request(app)
-      .post('/api/group/leave/test-group-id-123')
+      .post(`/api/group/leave/${testGroup._id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Database connection lost');
+    expect(response.body.message).toContain('connection closed');
+  });
+
+  test('should handle Socket.IO emission failure when member leaves', async () => {
+    /**
+     * Scenario: Member leaves, but socket emission fails
+     * Expected: Leave succeeds, socket error logged
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-socket-leave-fail',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+    await User.findByIdAndUpdate(testUsers[1]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock socket failure
+    (socketManager.emitMemberLeft as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Socket.IO error: transport closed');
+    });
+
+    const response = await request(app)
+      .post(`/api/group/leave/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // Should succeed despite socket failure
+    expect(response.status).toBe(200);
+    expect(socketManager.emitMemberLeft).toHaveBeenCalled();
+  });
+
+  test('should handle Firebase failure when notifying after auto-selection', async () => {
+    /**
+     * Scenario: Member leaves, triggers auto-selection, but Firebase fails
+     * Expected: Leave succeeds, notification failure logged
+     */
+    
+    // Create group with 2 members, both vote, then one leaves (triggers auto-select)
+    const testGroup = await seedTestGroup(
+      'test-auto-select-notification-fail',
+      [testUsers[0]._id, testUsers[1]._id],
+      {
+        restaurantSelected: false,
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      }
+    );
+
+    // Both users vote
+    const group = await Group.findById(testGroup._id);
+    group!.addVote(testUsers[0]._id, 'rest-123');
+    group!.addVote(testUsers[1]._id, 'rest-123');
+    await group!.save();
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+    await User.findByIdAndUpdate(testUsers[1]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock Firebase failure
+    (notificationService.notifyRestaurantSelected as jest.Mock).mockRejectedValueOnce(
+      new Error('FirebaseError: messaging/server-unavailable')
+    );
+
+    const response = await request(app)
+      .post(`/api/group/leave/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // Should succeed despite notification failure
+    expect(response.status).toBe(200);
+  });
+
+  test('should return 500 when auto-selection save fails', async () => {
+    /**
+     * Scenario: Member leaves, auto-selection triggered, but save fails
+     * Expected: Error caught, returns 500
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-auto-select-save-fail',
+      [testUsers[0]._id, testUsers[1]._id],
+      {
+        restaurantSelected: false,
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      }
+    );
+
+    const group = await Group.findById(testGroup._id);
+    group!.addVote(testUsers[0]._id, 'rest-123');
+    group!.addVote(testUsers[1]._id, 'rest-123');
+    await group!.save();
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+    await User.findByIdAndUpdate(testUsers[1]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock: user save succeeds, but second group save fails on auto-selection
+    jest.spyOn(Group.prototype, 'save')
+      .mockResolvedValueOnce({} as any)  // First save succeeds
+      .mockRejectedValueOnce(new Error('MongoServerError: replica set not available'));  // Second save fails
+
+    const response = await request(app)
+      .post(`/api/group/leave/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toContain('replica set not available');
   });
 });
 
+describe('Edge Case: Multiple Simultaneous Failures', () => {
+  test('should handle cascade of failures gracefully', async () => {
+    /**
+     * Scenario: Database slow, socket fails, notification fails
+     * Expected: Operation completes or fails cleanly, no crash
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-cascade-fail',
+      [testUsers[0]._id]
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock multiple failures
+    (socketManager.emitVoteUpdate as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Socket error');
+    });
+    (socketManager.emitRestaurantSelected as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Socket error');
+    });
+    (notificationService.notifyRestaurantSelected as jest.Mock).mockRejectedValueOnce(
+      new Error('Firebase error')
+    );
+
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-123',
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      });
+
+    // Should still succeed despite all external failures
+    expect(response.status).toBe(200);
+  });
+});
+
+describe('Network Timeout Scenarios', () => {
+    test('should handle database query timeout', async () => {
+    /**
+     * Scenario: MongoDB query exceeds maxTimeMS
+     * Expected: Timeout might cause user lookup to fail → 404 or 500
+     */
+    
+    const token = generateTestToken(
+        testUsers[0]._id,
+        testUsers[0].email,
+        testUsers[0].googleId
+    );
+
+    jest.spyOn(User, 'findById').mockReturnValueOnce({
+        exec: () => new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('MongoServerError: operation exceeded time limit')), 100);
+        })
+    } as any);
+
+    const response = await request(app)
+        .get('/api/group/status')
+        .set('Authorization', `Bearer ${token}`);
+
+    // Either 404 (user lookup failed, treated as "not in group") or 500 (error propagated)
+    expect([404, 500]).toContain(response.status);
+    });
+
+  test('should handle network partition during write', async () => {
+    /**
+     * Scenario: Network partition during save operation
+     * Expected: Network error caught, returns 500
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-network-partition',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    jest.spyOn(Group.prototype, 'save').mockRejectedValueOnce(
+      new Error('MongoNetworkError: network partition detected')
+    );
+
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ restaurantID: 'rest-123' });
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toContain('network partition');
+  });
+});

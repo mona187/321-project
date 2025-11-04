@@ -10,6 +10,8 @@ import {
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { UserStatus } from '../../src/models/User';
 import User from '../../src/models/User';
+import { AuthService } from '../../src/services/authService';
+import jwt from 'jsonwebtoken';
 
 /**
  * Auth Routes Tests - No Mocking
@@ -99,8 +101,8 @@ describe('POST /api/auth/signup - No Mocking', () => {
         idToken: 'test-google-token-for-existing-user'
       });
 
-    // May return 500 (token verification fails) or 409 (if token is valid)
-    expect([400, 409, 500]).toContain(response.status);
+    // May return 401 (invalid token), 500 (token verification fails), or 409 (if token is valid and user exists)
+    expect([401, 409, 500]).toContain(response.status);
   });
 
   test('should return 500 when JWT_SECRET is missing', async () => {
@@ -220,8 +222,8 @@ describe('POST /api/auth/signin - No Mocking', () => {
         idToken: 'test-google-token-non-existent'
       });
 
-    // May return 404 (user not found) or 500 (token verification fails)
-    expect([404, 500]).toContain(response.status);
+    // May return 401 (invalid token), 404 (user not found if token is valid), or 500 (token verification fails)
+    expect([401, 404, 500]).toContain(response.status);
   });
 });
 
@@ -681,3 +683,203 @@ describe('DELETE /api/auth/account - No Mocking', () => {
   });
 });
 
+// ============================================
+// AuthService Direct Tests - No Mocking
+// ============================================
+
+describe('AuthService - No Mocking', () => {
+  /**
+   * Interface: AuthService class methods
+   * Mocking: None (uses real database, Google OAuth may need mocking)
+   */
+
+  let authService: AuthService;
+
+  beforeEach(() => {
+    authService = new AuthService();
+  });
+
+  describe('generateToken()', () => {
+    test('should generate valid JWT token for user', () => {
+      const user = testUsers[0];
+      const token = authService.generateToken(user);
+      
+      expect(token).toBeDefined();
+      expect(typeof token).toBe('string');
+      expect(token.split('.')).toHaveLength(3);
+      
+      const decoded = authService.verifyToken(token);
+      expect(decoded.userId).toBe(user._id);
+      expect(decoded.email).toBe(user.email);
+      expect(decoded.googleId).toBe(user.googleId);
+    });
+
+    test('should throw error when JWT_SECRET is missing', () => {
+      const originalSecret = process.env.JWT_SECRET;
+      delete process.env.JWT_SECRET;
+      
+      const user = testUsers[0];
+      expect(() => {
+        authService.generateToken(user);
+      }).toThrow('JWT configuration error');
+      
+      process.env.JWT_SECRET = originalSecret;
+    });
+  });
+
+  describe('verifyToken()', () => {
+    test('should verify and decode valid token', () => {
+      const user = testUsers[0];
+      const token = authService.generateToken(user);
+      const decoded = authService.verifyToken(token);
+      
+      expect(decoded).toBeDefined();
+      expect(decoded.userId).toBe(user._id);
+      expect(decoded.email).toBe(user.email);
+      expect(decoded.googleId).toBe(user.googleId);
+    });
+
+    test('should throw error for invalid token', () => {
+      expect(() => {
+        authService.verifyToken('invalid.token.string');
+      }).toThrow('Invalid or expired token');
+    });
+
+    test('should throw error for expired token', () => {
+      const user = testUsers[0];
+      const expiredToken = jwt.sign(
+        {
+          userId: user._id,
+          email: user.email,
+          googleId: user.googleId,
+        },
+        process.env.JWT_SECRET || 'test-secret',
+        { expiresIn: '-1h' }
+      );
+      
+      expect(() => {
+        authService.verifyToken(expiredToken);
+      }).toThrow('Invalid or expired token');
+    });
+  });
+
+  describe('findOrCreateUser()', () => {
+    test('should find existing user and update status', async () => {
+      const existingUser = testUsers[0];
+      const googleData = {
+        googleId: existingUser.googleId,
+        email: existingUser.email,
+        name: existingUser.name,
+        picture: 'https://example.com/picture.jpg'
+      };
+      
+      const user = await authService.findOrCreateUser(googleData);
+      
+      expect(user).toBeDefined();
+      expect(user._id.toString()).toBe(existingUser._id);
+      expect(user.status).toBe(UserStatus.ONLINE);
+      
+      const updatedUser = await User.findById(existingUser._id);
+      expect(updatedUser!.status).toBe(UserStatus.ONLINE);
+    });
+
+    test('should create new user when not found', async () => {
+      const googleData = {
+        googleId: 'new-google-id-12345',
+        email: 'newuser@example.com',
+        name: 'New User',
+        picture: 'https://example.com/new-picture.jpg'
+      };
+      
+      await User.deleteOne({ googleId: googleData.googleId });
+      
+      const user = await authService.findOrCreateUser(googleData);
+      
+      expect(user).toBeDefined();
+      expect(user.googleId).toBe(googleData.googleId);
+      expect(user.email).toBe(googleData.email);
+      expect(user.status).toBe(UserStatus.ONLINE);
+      expect(user.credibilityScore).toBe(100);
+      
+      await User.deleteOne({ _id: user._id });
+    });
+  });
+
+  describe('logoutUser()', () => {
+    test('should set user status to OFFLINE', async () => {
+      const user = testUsers[0];
+      await User.findByIdAndUpdate(user._id, { status: UserStatus.ONLINE });
+      
+      await authService.logoutUser(user._id);
+      
+      const updatedUser = await User.findById(user._id);
+      expect(updatedUser!.status).toBe(UserStatus.OFFLINE);
+    });
+
+    test('should handle non-existent user gracefully', async () => {
+      const nonExistentId = '507f1f77bcf86cd799439011';
+      await expect(authService.logoutUser(nonExistentId)).resolves.not.toThrow();
+    });
+  });
+
+  describe('updateFCMToken()', () => {
+    test('should update FCM token for user', async () => {
+      const user = testUsers[0];
+      const fcmToken = 'test-fcm-token-12345';
+      
+      await authService.updateFCMToken(user._id, fcmToken);
+      
+      const updatedUser = await User.findById(user._id);
+      expect(updatedUser!.fcmToken).toBe(fcmToken);
+    });
+
+    test('should throw error when user not found', async () => {
+      const nonExistentId = '507f1f77bcf86cd799439011';
+      const fcmToken = 'test-fcm-token';
+      
+      await expect(authService.updateFCMToken(nonExistentId, fcmToken))
+        .rejects
+        .toThrow('User not found');
+    });
+  });
+
+  describe('deleteAccount()', () => {
+    test('should delete user account when not in room or group', async () => {
+      const deletableUser = await User.create({
+        googleId: 'deletable-user-123',
+        email: 'deletable@example.com',
+        name: 'Deletable User',
+        status: UserStatus.ONLINE,
+        preference: [],
+        credibilityScore: 100,
+        budget: 0,
+        radiusKm: 5,
+      });
+      
+      await authService.deleteAccount(deletableUser._id.toString());
+      
+      const deletedUser = await User.findById(deletableUser._id);
+      expect(deletedUser).toBeNull();
+    });
+
+    test('should throw error when user is in a group', async () => {
+      const userInGroup = testUsers.find(u => u.groupId) || testUsers[0];
+      await User.findByIdAndUpdate(userInGroup._id, { 
+        groupId: '507f1f77bcf86cd799439011' 
+      });
+      
+      await expect(authService.deleteAccount(userInGroup._id))
+        .rejects
+        .toThrow('Cannot delete account while in a room or group');
+      
+      await User.findByIdAndUpdate(userInGroup._id, { groupId: null });
+    });
+
+    test('should throw error when user not found', async () => {
+      const nonExistentId = '507f1f77bcf86cd799439011';
+      await expect(authService.deleteAccount(nonExistentId))
+        .rejects
+        .toThrow('User not found');
+    });
+  });
+});

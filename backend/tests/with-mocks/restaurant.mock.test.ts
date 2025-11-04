@@ -2,76 +2,101 @@
 
 /**
  * Restaurant Routes Tests - With Mocking
- * Tests error scenarios and edge cases by mocking services and database
+ * Tests error scenarios by mocking external dependencies (Google Places API via axios)
  * 
- * PURPOSE: Test how the application handles failures, errors, and edge cases
- * that are difficult or impossible to reproduce with a real database.
+ * PURPOSE: Test how the application handles Google Places API failures and errors
+ * that are difficult to reproduce with a real API.
  */
 
 // ============================================
-// MOCK ALL DEPENDENCIES (before imports)
+// MOCK ALL EXTERNAL DEPENDENCIES (before imports)
 // ============================================
 
-// Mock the RestaurantService
-jest.mock('../../src/services/restaurantService', () => ({
-  __esModule: true,
-  default: {
-    searchRestaurants: jest.fn(),
-    getRestaurantDetails: jest.fn(),
-    getRecommendationsForGroup: jest.fn(),
-  }
-}));
-
-// Mock the Group model (for recommendations endpoint)
-jest.mock('../../src/models/Group');
-
-// Mock the User model (for recommendations endpoint)
-jest.mock('../../src/models/User');
-
-// Mock axios for external API calls
+// Mock axios for Google Places API calls
 jest.mock('axios');
 
+// Set API key BEFORE importing app (which imports the service)
+// This ensures the service reads the env var when it's instantiated
+process.env.GOOGLE_PLACES_API_KEY = 'test-api-key';
+
 // ============================================
-// IMPORT EVERYTHING
+// IMPORTS AFTER MOCK
 // ============================================
 
 import request from 'supertest';
+import axios from 'axios';
 import app from '../../src/app';
-import restaurantService from '../../src/services/restaurantService';
 import { generateTestToken } from '../helpers/auth.helper';
 
-// Get typed mocks
-const mockedRestaurantService = restaurantService as jest.Mocked<typeof restaurantService>;
+// Get typed mock
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 /**
  * WHAT ARE WE TESTING?
  * 
- * In with-mocks tests, we simulate failures and errors to verify:
- * 1. Error handling works correctly
- * 2. Appropriate error messages are returned
- * 3. Application doesn't crash on errors
- * 4. Edge cases are handled properly
+ * In with-mocks tests, we simulate Google Places API failures to verify:
+ * 1. Service correctly handles API errors (returns mock data on network failures)
+ * 2. Service correctly throws AppError for specific API status codes
+ * 3. Controller correctly handles errors from service
+ * 4. Application doesn't crash on external API failures
  * 
- * We mock the service and external APIs to simulate:
- * - External API failures (Google Places API)
- * - Database connection errors
- * - Service method failures
- * - Data not found scenarios
+ * We mock axios to simulate:
+ * - Network failures (ECONNREFUSED, ETIMEDOUT, etc.)
+ * - API error status codes (OVER_QUERY_LIMIT, REQUEST_DENIED, etc.)
+ * - Missing API responses
+ * - Invalid API responses
  */
 
-describe('GET /api/restaurant/search - With Mocking', () => {
+describe('GET /api/restaurant/search - With Mocking (Google Places API)', () => {
   /**
    * Interface: GET /api/restaurant/search
-   * Mocking: RestaurantService
+   * Mocking: axios (Google Places API)
    */
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should return 500 when restaurantService.searchRestaurants throws error', async () => {
+  test('should return mock data when Google Places API network fails', async () => {
     /**
-     * SCENARIO: External API failure when searching restaurants
+     * SCENARIO: Network failure when calling Google Places API
+     * 
+     * Input: GET /api/restaurant/search?latitude=40.7128&longitude=-74.0060
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
+     * 
+     * Expected Behavior:
+     *   - Validate latitude/longitude ✓
+     *   - Service calls Google Places API via axios
+     *   - axios.get() throws network error
+     *   - Service catches error and returns mock data (fallback)
+     *   - Controller returns 200 with mock data
+     * 
+     * Mock Behavior:
+     *   - axios.get() rejects with Error('Network Error')
+     * 
+     * WHY THIS TEST: Verifies service correctly falls back to mock data on network failures
+     */
+
+    mockedAxios.get.mockRejectedValue(new Error('Network Error'));
+
+    const response = await request(app)
+      .get('/api/restaurant/search')
+      .query({
+        latitude: '40.7128',
+        longitude: '-74.0060'
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toBeInstanceOf(Array);
+    expect(response.body.Body.length).toBeGreaterThan(0);
+    // Verify it's mock data (has expected mock restaurant names)
+    expect(response.body.Body.some((r: any) => r.name === 'Sushi Paradise' || r.name === 'Italian Bistro')).toBe(true);
+  });
+
+  test('should return 500 when Google Places API returns error status', async () => {
+    /**
+     * SCENARIO: Google Places API returns error status code
      * 
      * Input: GET /api/restaurant/search?latitude=40.7128&longitude=-74.0060
      * Expected Status Code: 500
@@ -79,18 +104,23 @@ describe('GET /api/restaurant/search - With Mocking', () => {
      * 
      * Expected Behavior:
      *   - Validate latitude/longitude ✓
-     *   - Call restaurantService.searchRestaurants()
-     *   - External API (Google Places) fails
-     *   - Service throws error
+     *   - Service calls Google Places API via axios
+     *   - API returns status: 'OVER_QUERY_LIMIT' (not OK or ZERO_RESULTS)
+     *   - Service throws AppError with 500
      *   - Error handler returns 500
      * 
      * Mock Behavior:
-     *   - restaurantService.searchRestaurants() rejects with Error('API request failed')
+     *   - axios.get() resolves with { data: { status: 'OVER_QUERY_LIMIT' } }
      * 
-     * WHY THIS TEST: Verifies error handling when external restaurant API fails
+     * WHY THIS TEST: Verifies service correctly throws AppError for API error statuses
      */
 
-    mockedRestaurantService.searchRestaurants.mockRejectedValue(new Error('API request failed'));
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        status: 'OVER_QUERY_LIMIT',
+        error_message: 'You have exceeded your daily request quota'
+      }
+    } as any);
 
     const response = await request(app)
       .get('/api/restaurant/search')
@@ -100,31 +130,33 @@ describe('GET /api/restaurant/search - With Mocking', () => {
       });
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('API request failed');
+    expect(response.body.message).toContain('Google Places API error');
+    expect(response.body.message).toContain('OVER_QUERY_LIMIT');
   });
 
-  test('should return 500 when database connection fails', async () => {
+  test('should return mock data when Google Places API times out', async () => {
     /**
-     * SCENARIO: Database error during restaurant search
+     * SCENARIO: Google Places API request times out
      * 
-     * Input: GET /api/restaurant/search with valid coordinates
-     * Expected Status Code: 500
-     * Expected Output: Database error
+     * Input: GET /api/restaurant/search?latitude=40.7128&longitude=-74.0060
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
      * 
      * Expected Behavior:
-     *   - Validate query parameters ✓
-     *   - Call restaurantService.searchRestaurants()
-     *   - Service tries to access database (if caching/preferences)
-     *   - Database connection fails
-     *   - Error handler returns 500
+     *   - Service calls Google Places API via axios
+     *   - axios.get() throws timeout error
+     *   - Service catches error and returns mock data (fallback)
+     *   - Controller returns 200 with mock data
      * 
      * Mock Behavior:
-     *   - restaurantService.searchRestaurants() rejects with Error('Database connection lost')
+     *   - axios.get() rejects with Error('ETIMEDOUT')
      * 
-     * WHY THIS TEST: Verifies error handling when database fails during search
+     * WHY THIS TEST: Verifies service correctly handles timeout errors
      */
 
-    mockedRestaurantService.searchRestaurants.mockRejectedValue(new Error('Database connection lost'));
+    const timeoutError: any = new Error('ETIMEDOUT');
+    timeoutError.code = 'ETIMEDOUT';
+    mockedAxios.get.mockRejectedValue(timeoutError);
 
     const response = await request(app)
       .get('/api/restaurant/search')
@@ -133,152 +165,239 @@ describe('GET /api/restaurant/search - With Mocking', () => {
         longitude: '-74.0060'
       });
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Database connection lost');
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toBeInstanceOf(Array);
+    expect(response.body.Body.length).toBeGreaterThan(0);
+  });
+
+  test('should return mock data when Google Places API connection refused', async () => {
+    /**
+     * SCENARIO: Google Places API connection refused
+     * 
+     * Input: GET /api/restaurant/search?latitude=40.7128&longitude=-74.0060
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
+     * 
+     * Expected Behavior:
+     *   - Service calls Google Places API via axios
+     *   - axios.get() throws ECONNREFUSED error
+     *   - Service catches error and returns mock data (fallback)
+     * 
+     * Mock Behavior:
+     *   - axios.get() rejects with Error('connect ECONNREFUSED')
+     * 
+     * WHY THIS TEST: Verifies service correctly handles connection refused errors
+     */
+
+    const connError: any = new Error('connect ECONNREFUSED');
+    connError.code = 'ECONNREFUSED';
+    mockedAxios.get.mockRejectedValue(connError);
+
+    const response = await request(app)
+      .get('/api/restaurant/search')
+      .query({
+        latitude: '40.7128',
+        longitude: '-74.0060'
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toBeInstanceOf(Array);
   });
 });
 
-describe('GET /api/restaurant/:restaurantId - With Mocking', () => {
+describe('GET /api/restaurant/:restaurantId - With Mocking (Google Places API)', () => {
   /**
    * Interface: GET /api/restaurant/:restaurantId
-   * Mocking: RestaurantService
+   * Mocking: axios (Google Places API)
    */
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should return 500 when restaurantService.getRestaurantDetails throws error', async () => {
+  test('should return 404 when Google Places API returns NOT_FOUND', async () => {
     /**
-     * SCENARIO: External API failure when fetching restaurant details
+     * SCENARIO: Google Places API returns NOT_FOUND for restaurant
      * 
-     * Input: GET /api/restaurant/ChIJN1t_tDeuEmsRUsoyG83frY4
-     * Expected Status Code: 500
+     * Input: GET /api/restaurant/invalid-place-id
+     * Expected Status Code: 404
      * Expected Output: Error message
      * 
      * Expected Behavior:
      *   - Extract restaurantId from params ✓
-     *   - Call restaurantService.getRestaurantDetails(restaurantId)
-     *   - External API (Google Places) fails
-     *   - Service throws error
-     *   - Error handler returns 500
+     *   - Service calls Google Places API via axios
+     *   - API returns status: 'NOT_FOUND'
+     *   - Service throws AppError with 404
+     *   - Error handler returns 404
      * 
      * Mock Behavior:
-     *   - restaurantService.getRestaurantDetails() rejects with Error('Restaurant not found')
+     *   - axios.get() resolves with { data: { status: 'NOT_FOUND' } }
      * 
-     * WHY THIS TEST: Verifies error handling when restaurant details API fails
+     * WHY THIS TEST: Verifies service correctly throws 404 for not found restaurants
      */
 
-    mockedRestaurantService.getRestaurantDetails.mockRejectedValue(new Error('Restaurant not found'));
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        status: 'NOT_FOUND',
+        error_message: 'Restaurant not found'
+      }
+    } as any);
+
+    const response = await request(app)
+      .get('/api/restaurant/invalid-place-id');
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toContain('Restaurant not found');
+  });
+
+  test('should return mock data when Google Places API network fails', async () => {
+    /**
+     * SCENARIO: Network failure when fetching restaurant details
+     * 
+     * Input: GET /api/restaurant/ChIJN1t_tDeuEmsRUsoyG83frY4
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
+     * 
+     * Expected Behavior:
+     *   - Service calls Google Places API via axios
+     *   - axios.get() throws network error
+     *   - Service catches error and returns mock data (fallback)
+     *   - Controller returns 200 with mock data
+     * 
+     * Mock Behavior:
+     *   - axios.get() rejects with Error('Network Error')
+     * 
+     * WHY THIS TEST: Verifies service correctly falls back to mock data on network failures
+     */
+
+    mockedAxios.get.mockRejectedValue(new Error('Network Error'));
 
     const response = await request(app)
       .get('/api/restaurant/ChIJN1t_tDeuEmsRUsoyG83frY4');
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Restaurant not found');
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toHaveProperty('restaurantId', 'ChIJN1t_tDeuEmsRUsoyG83frY4');
+    expect(response.body.Body).toHaveProperty('name');
   });
 
-  test('should return 500 when external API times out', async () => {
+  test('should return mock data when Google Places API times out', async () => {
     /**
-     * SCENARIO: External API timeout when fetching restaurant details
+     * SCENARIO: Google Places API request times out
      * 
-     * Input: GET /api/restaurant/:restaurantId
-     * Expected Status Code: 500
-     * Expected Output: Timeout error
+     * Input: GET /api/restaurant/test-place-id
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
      * 
      * Expected Behavior:
-     *   - Call restaurantService.getRestaurantDetails()
-     *   - External API request times out
-     *   - Service throws timeout error
-     *   - Error handler returns 500
+     *   - Service calls Google Places API via axios
+     *   - axios.get() throws timeout error
+     *   - Service catches error and returns mock data (fallback)
      * 
      * Mock Behavior:
-     *   - restaurantService.getRestaurantDetails() rejects with Error('Request timeout')
+     *   - axios.get() rejects with Error('ETIMEDOUT')
      * 
-     * WHY THIS TEST: Verifies error handling when external API is slow/unresponsive
+     * WHY THIS TEST: Verifies service correctly handles timeout errors
      */
 
-    mockedRestaurantService.getRestaurantDetails.mockRejectedValue(new Error('Request timeout'));
+    const timeoutError: any = new Error('ETIMEDOUT');
+    timeoutError.code = 'ETIMEDOUT';
+    mockedAxios.get.mockRejectedValue(timeoutError);
 
     const response = await request(app)
-      .get('/api/restaurant/test-restaurant-id');
+      .get('/api/restaurant/test-place-id');
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Request timeout');
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toHaveProperty('restaurantId', 'test-place-id');
   });
 });
 
-describe('POST /api/restaurant/recommendations/:groupId - With Mocking', () => {
+describe('POST /api/restaurant/recommendations/:groupId - With Mocking (Google Places API)', () => {
   /**
    * Interface: POST /api/restaurant/recommendations/:groupId
-   * Mocking: RestaurantService, Group model
+   * Mocking: axios (Google Places API - called internally by getRecommendationsForGroup -> searchRestaurants)
    */
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('should return 500 when restaurantService.getRecommendationsForGroup throws error', async () => {
+  test('should return mock data when Google Places API fails during recommendations', async () => {
     /**
-     * SCENARIO: Error when generating restaurant recommendations for group
+     * SCENARIO: Google Places API fails when generating recommendations
      * 
      * Input: POST /api/restaurant/recommendations/:groupId with userPreferences
+     * Expected Status Code: 200
+     * Expected Output: Mock restaurant data (fallback)
+     * 
+     * Expected Behavior:
+     *   - Auth succeeds ✓
+     *   - Validate userPreferences array ✓
+     *   - Service calls getRecommendationsForGroup()
+     *   - Which calls searchRestaurants() internally
+     *   - searchRestaurants() calls Google Places API via axios
+     *   - axios.get() throws error
+     *   - Service catches error and returns mock data (fallback)
+     *   - Controller returns 200 with mock data
+     * 
+     * Mock Behavior:
+     *   - axios.get() rejects with Error('API Unavailable')
+     * 
+     * WHY THIS TEST: Verifies service correctly handles API failures during recommendations
+     */
+
+    mockedAxios.get.mockRejectedValue(new Error('API Unavailable'));
+
+    const token = generateTestToken('test-user-id-123');
+
+    const response = await request(app)
+      .post('/api/restaurant/recommendations/test-group-id-123')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        userPreferences: [
+          {
+            cuisineTypes: ['italian'],
+            budget: 50,
+            location: { coordinates: [-123.1207, 49.2827] },
+            radiusKm: 5
+          }
+        ]
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toBeInstanceOf(Array);
+    expect(response.body.Body.length).toBeGreaterThan(0);
+  });
+
+  test('should return 500 when Google Places API returns error status during recommendations', async () => {
+    /**
+     * SCENARIO: Google Places API returns error status when generating recommendations
+     * 
+     * Input: POST /api/restaurant/recommendations/:groupId
      * Expected Status Code: 500
      * Expected Output: Error message
      * 
      * Expected Behavior:
      *   - Auth succeeds ✓
-     *   - Validate userPreferences array ✓
-     *   - Call restaurantService.getRecommendationsForGroup()
-     *   - Service fails (e.g., group not found, API error)
-     *   - Service throws error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - restaurantService.getRecommendationsForGroup() rejects with Error('Group not found')
-     * 
-     * WHY THIS TEST: Verifies error handling when recommendation generation fails
-     */
-
-    mockedRestaurantService.getRecommendationsForGroup.mockRejectedValue(new Error('Group not found'));
-
-    const token = generateTestToken('test-user-id-123');
-
-    const response = await request(app)
-      .post('/api/restaurant/recommendations/test-group-id-123')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        userPreferences: ['italian', 'pizza']
-      });
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Group not found');
-  });
-
-  test('should return 500 when external API fails during recommendations', async () => {
-    /**
-     * SCENARIO: External API failure when generating recommendations
-     * 
-     * Input: POST /api/restaurant/recommendations/:groupId
-     * Expected Status Code: 500
-     * Expected Output: API error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
      *   - Validate input ✓
-     *   - Call restaurantService.getRecommendationsForGroup()
-     *   - Service tries to fetch restaurants from external API
-     *   - External API fails
-     *   - Service throws error
+     *   - Service calls getRecommendationsForGroup()
+     *   - Which calls searchRestaurants() internally
+     *   - searchRestaurants() calls Google Places API via axios
+     *   - API returns status: 'REQUEST_DENIED'
+     *   - Service throws AppError with 500
      *   - Error handler returns 500
      * 
      * Mock Behavior:
-     *   - restaurantService.getRecommendationsForGroup() rejects with Error('API request failed')
+     *   - axios.get() resolves with { data: { status: 'REQUEST_DENIED' } }
      * 
-     * WHY THIS TEST: Verifies error handling when external restaurant API fails during recommendations
+     * WHY THIS TEST: Verifies service correctly throws AppError for API error statuses during recommendations
      */
 
-    mockedRestaurantService.getRecommendationsForGroup.mockRejectedValue(new Error('API request failed'));
+    mockedAxios.get.mockResolvedValue({
+      data: {
+        status: 'REQUEST_DENIED',
+        error_message: 'This API project is not authorized'
+      }
+    } as any);
 
     const token = generateTestToken('test-user-id-123');
 
@@ -286,48 +405,18 @@ describe('POST /api/restaurant/recommendations/:groupId - With Mocking', () => {
       .post('/api/restaurant/recommendations/test-group-id-123')
       .set('Authorization', `Bearer ${token}`)
       .send({
-        userPreferences: ['italian']
+        userPreferences: [
+          {
+            cuisineTypes: ['italian'],
+            budget: 50,
+            location: { coordinates: [-123.1207, 49.2827] },
+            radiusKm: 5
+          }
+        ]
       });
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('API request failed');
-  });
-
-  test('should return 500 when database connection fails', async () => {
-    /**
-     * SCENARIO: Database error when fetching group data for recommendations
-     * 
-     * Input: POST /api/restaurant/recommendations/:groupId
-     * Expected Status Code: 500
-     * Expected Output: Database error
-     * 
-     * Expected Behavior:
-     *   - Auth succeeds ✓
-     *   - Call restaurantService.getRecommendationsForGroup()
-     *   - Service tries to fetch group data from database
-     *   - Database connection fails
-     *   - Service throws error
-     *   - Error handler returns 500
-     * 
-     * Mock Behavior:
-     *   - restaurantService.getRecommendationsForGroup() rejects with Error('Database connection lost')
-     * 
-     * WHY THIS TEST: Verifies error handling when database fails during recommendations
-     */
-
-    mockedRestaurantService.getRecommendationsForGroup.mockRejectedValue(new Error('Database connection lost'));
-
-    const token = generateTestToken('test-user-id-123');
-
-    const response = await request(app)
-      .post('/api/restaurant/recommendations/test-group-id-123')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        userPreferences: ['italian']
-      });
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Database connection lost');
+    expect(response.body.message).toContain('Google Places API error');
+    expect(response.body.message).toContain('REQUEST_DENIED');
   });
 });
-
