@@ -14,6 +14,8 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.lang.IllegalArgumentException
 
 /**
  * Helper object for image encoding with compression
@@ -71,15 +73,18 @@ object Base64ImageHelper {
             )
 
             Result.success(result)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             android.util.Log.e("Base64ImageHelper", "Failed to encode image", e)
+            Result.failure(e)
+        } catch (e: IllegalArgumentException) {
+            android.util.Log.e("Base64ImageHelper", "Invalid image data", e)
             Result.failure(e)
         } finally {
             // Clean up bitmaps AFTER everything is done
             try {
                 originalBitmap?.recycle()
                 compressedBitmap?.recycle()
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
                 android.util.Log.w("Base64ImageHelper", "Error recycling bitmaps", e)
             }
         }
@@ -134,8 +139,11 @@ object Base64ImageHelper {
             } else {
                 Result.success(bitmap)
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             android.util.Log.e("Base64ImageHelper", "Failed to decode Base64", e)
+            Result.failure(e)
+        } catch (e: IllegalArgumentException) {
+            android.util.Log.e("Base64ImageHelper", "Invalid Base64 data", e)
             Result.failure(e)
         }
     }

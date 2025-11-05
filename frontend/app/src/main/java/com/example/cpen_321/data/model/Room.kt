@@ -40,7 +40,7 @@ data class Room(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)?.time ?: 0L
-        } catch (e: Exception) {
+        } catch (e: java.text.ParseException) {
             // If parsing fails, try to parse as Long (backwards compatibility)
             try {
                 completionTime.toLong()
@@ -58,7 +58,7 @@ data class Room(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)
-        } catch (e: Exception) {
+        } catch (e: java.text.ParseException) {
             null
         }
     }
@@ -105,7 +105,7 @@ data class RoomStatusResponse(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)?.time ?: 0L
-        } catch (e: Exception) {
+        } catch (e: java.text.ParseException) {
             // If parsing fails, try to parse as Long (backwards compatibility)
             try {
                 completionTime.toLong()

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -312,7 +313,7 @@ class AuthViewModel @Inject constructor(
                         // Should not happen
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 // Log error but don't show to user as this is a background sync
                 android.util.Log.w("AuthViewModel", "Failed to sync profile picture: ${e.message}")
             }

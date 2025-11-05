@@ -6,6 +6,7 @@ import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONObject
+import java.io.IOException
 import java.net.URISyntaxException
 
 /**
@@ -69,7 +70,7 @@ class SocketManager private constructor() {
             Log.d(TAG, "Initiating socket connection...")
         } catch (e: URISyntaxException) {
             Log.e(TAG, "Invalid socket URL", e)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             Log.e(TAG, "Socket connection error", e)
         }
     }

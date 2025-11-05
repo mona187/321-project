@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialException
 import androidx.credentials.GetCredentialRequest
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
@@ -322,7 +323,7 @@ private fun handleGoogleSignIn(
                     } else {
                         viewModel.signInWithGoogle(idToken)
                     }
-                } catch (retryException: Exception) {
+                } catch (retryException: GetCredentialException) {
                     Log.e("AuthScreen", "❌ Retry failed: ${retryException.message}")
                     snackbarHostState.showSnackbar(
                         "Please add a Google account: Settings → Accounts → Add Account → Google",
@@ -331,7 +332,13 @@ private fun handleGoogleSignIn(
                 }
             }
 
-        } catch (e: Exception) {
+        } catch (e: GetCredentialException) {
+            Log.e("AuthScreen", "❌ Sign-in error: ${e.message}", e)
+            snackbarHostState.showSnackbar(
+                "Sign-in failed: ${e.message ?: "Unknown error"}",
+                duration = SnackbarDuration.Long
+            )
+        } catch (e: RuntimeException) {
             Log.e("AuthScreen", "❌ Sign-in error: ${e.message}", e)
             snackbarHostState.showSnackbar(
                 "Sign-in failed: ${e.message ?: "Unknown error"}",

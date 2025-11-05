@@ -11,6 +11,7 @@ import com.example.cpen_321.data.network.dto.LeaveRoomRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Implementation of MatchRepository
@@ -106,7 +107,7 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 Log.e(TAG, "Error joining matching", e)
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
@@ -145,7 +146,7 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 Log.e(TAG, "Error leaving room", e)
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
@@ -173,7 +174,7 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -200,7 +201,7 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null

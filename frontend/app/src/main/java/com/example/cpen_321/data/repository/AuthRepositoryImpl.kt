@@ -10,6 +10,7 @@ import com.example.cpen_321.data.network.dto.FcmTokenRequest
 import com.example.cpen_321.data.network.dto.GoogleAuthRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Implementation of AuthRepository
@@ -55,7 +56,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -98,7 +99,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -135,7 +136,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -158,7 +159,7 @@ class AuthRepositoryImpl(
                     clearAuthData()
                     ApiResult.Success("Logged out locally")
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 // Even if network fails, clear local data
                 clearAuthData()
                 ApiResult.Success("Logged out locally")
@@ -184,7 +185,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -209,7 +210,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -234,7 +235,7 @@ class AuthRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null

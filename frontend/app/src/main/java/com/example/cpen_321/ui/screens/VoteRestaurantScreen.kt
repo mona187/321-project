@@ -172,7 +172,9 @@ fun VoteRestaurantScreen(
 
                 android.util.Log.d("VoteRestaurantScreen", "✅ Navigation command executed!")
 
-            } catch (e: Exception) {
+            } catch (e: IllegalStateException) {
+                android.util.Log.e("VoteRestaurantScreen", "❌ Navigation error: ${e.message}", e)
+            } catch (e: IllegalArgumentException) {
                 android.util.Log.e("VoteRestaurantScreen", "❌ Navigation error: ${e.message}", e)
             }
         } ?: run {

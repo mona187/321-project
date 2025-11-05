@@ -320,7 +320,9 @@ class MatchViewModel @Inject constructor(
                 if (expiresAtMillis != null) {
                     startTimer(expiresAtMillis)
                 }
-            } catch (e: Exception) {
+            } catch (e: java.text.ParseException) {
+                Log.e(TAG, "Failed to parse expiration time", e)
+            } catch (e: java.time.format.DateTimeParseException) {
                 Log.e(TAG, "Failed to parse expiration time", e)
             }
 
@@ -348,7 +350,10 @@ class MatchViewModel @Inject constructor(
                 format.timeZone = java.util.TimeZone.getTimeZone("UTC")
                 format.parse(dateString)?.time
             }
-        } catch (e: Exception) {
+        } catch (e: java.text.ParseException) {
+            Log.e(TAG, "Error parsing date: $dateString", e)
+            null
+        } catch (e: java.time.format.DateTimeParseException) {
             Log.e(TAG, "Error parsing date: $dateString", e)
             null
         }

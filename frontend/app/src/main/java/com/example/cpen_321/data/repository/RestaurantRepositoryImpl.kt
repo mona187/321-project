@@ -8,6 +8,7 @@ import com.example.cpen_321.data.network.dto.LocationDto
 import com.example.cpen_321.data.network.dto.UserPreferenceDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Implementation of RestaurantRepository
@@ -49,7 +50,7 @@ class RestaurantRepositoryImpl : RestaurantRepository {
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -76,7 +77,7 @@ class RestaurantRepositoryImpl : RestaurantRepository {
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -122,7 +123,7 @@ class RestaurantRepositoryImpl : RestaurantRepository {
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null

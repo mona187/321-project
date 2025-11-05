@@ -58,7 +58,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         try {
             groupViewModel.loadGroupStatus()
-        } catch (e: Exception) {
+        } catch (e: java.io.IOException) {
             // No active group, that's fine
         }
     }

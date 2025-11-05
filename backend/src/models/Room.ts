@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import mongoose, { Schema, Model, HydratedDocument } from 'mongoose';
 
 // Room status enum
 export enum RoomStatus {
@@ -7,62 +7,50 @@ export enum RoomStatus {
   EXPIRED = 'expired'
 }
 
-// Base Room interface
+// Base Room interface (schema shape)
 export interface IRoom {
-  completionTime: Date; // When the room expires or completes
-  maxMembers: number; // Maximum number of members (e.g., 4)
-  members: string[]; // Array of user IDs
+  completionTime: Date;
+  maxMembers: number;
+  members: string[];
   status: RoomStatus;
-  cuisine?: string; // Cuisine preference for this room
-  averageBudget?: number; // Average budget of members
-  averageRadius?: number; // Average radius of members
-  createdAt: Date;
-  updatedAt: Date;
+  cuisine: string | null;
+  averageBudget: number | null;
+  averageRadius: number | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-// Instance methods interface
+// Instance methods on Room documents
 export interface IRoomMethods {
   isFull(): boolean;
   isExpired(): boolean;
   addMember(userId: string): void;
   removeMember(userId: string): void;
-  getTimeRemaining(): number; // Returns milliseconds remaining
+  getTimeRemaining(): number;
 }
 
-// Document interface
-export interface IRoomDocument extends Document, IRoom, IRoomMethods {
-  roomId: string; // Virtual property
-}
+// Document type = Schema + Methods + Mongoose doc
+export type IRoomDocument = HydratedDocument<IRoom, IRoomMethods>;
 
-// Static methods interface
+// Static methods (Mongoose model)
 export interface IRoomModel extends Model<IRoom, {}, IRoomMethods> {
   findActiveRooms(): Promise<IRoomDocument[]>;
   findByUserId(userId: string): Promise<IRoomDocument | null>;
 }
 
-// Schema definition
+// Schema
 const RoomSchema = new Schema<IRoom, IRoomModel, IRoomMethods>(
   {
-    completionTime: {
-      type: Date,
-      required: true,
-      index: true
-    },
-    maxMembers: {
-      type: Number,
-      required: true,
-      default: 4,
-      min: 2,
-      max: 10
-    },
+    completionTime: { type: Date, required: true, index: true },
+    maxMembers: { type: Number, required: true, default: 4, min: 2, max: 10 },
     members: {
       type: [String],
       default: [],
       validate: {
-        validator: function(this: IRoom, v: string[]) {
+        validator(this: IRoomDocument, v: string[]) {
           return v.length <= this.maxMembers;
         },
-        message: 'Members cannot exceed maxMembers limit'
+        message: 'Members cannot exceed maxMembers'
       }
     },
     status: {
@@ -70,103 +58,63 @@ const RoomSchema = new Schema<IRoom, IRoomModel, IRoomMethods>(
       enum: Object.values(RoomStatus),
       default: RoomStatus.WAITING
     },
-    cuisine: {
-      type: String,
-      default: null
-    },
-    averageBudget: {
-      type: Number,
-      min: 0,
-      default: null
-    },
-    averageRadius: {
-      type: Number,
-      min: 0,
-      default: null
-    }
+    cuisine: { type: String, default: null },
+    averageBudget: { type: Number, default: null },
+    averageRadius: { type: Number, default: null }
   },
   {
     timestamps: true,
-    collection: 'rooms'
+    collection: 'rooms',
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 
-// // Indexes
-// RoomSchema.index({ status: 1 });
-// RoomSchema.index({ completionTime: 1 });
-// RoomSchema.index({ members: 1 });
-
-// Virtual for roomId
-RoomSchema.virtual('roomId').get(function() {
+// Virtual: roomId
+RoomSchema.virtual('roomId').get(function (this: IRoomDocument) {
   return this._id.toString();
 });
 
-// Configure JSON serialization
+// JSON transform (_id → roomId)
 RoomSchema.set('toJSON', {
   virtuals: true,
-  transform: function(_doc, ret) {
+  transform(_doc, ret: any) {
     const roomId = ret._id.toString();
-    const { _id, __v, ...rest } = ret;
-    return { roomId, ...rest };
+    delete ret._id;
+    delete ret.__v;
+    return { roomId, ...ret };
   }
 });
 
-RoomSchema.set('toObject', { 
-  virtuals: true 
-});
-
-// Instance method: Check if room is full
-RoomSchema.methods.isFull = function(): boolean {
-  return this.members.length >= this.maxMembers;
+// Methods
+RoomSchema.methods.isFull = function () { return this.members.length >= this.maxMembers; };
+RoomSchema.methods.isExpired = function () { return new Date() > this.completionTime; };
+RoomSchema.methods.addMember = function (userId: string) {
+  if (!this.isFull() && !this.members.includes(userId)) this.members.push(userId);
 };
-
-// Instance method: Check if room is expired
-RoomSchema.methods.isExpired = function(): boolean {
-  return new Date() > this.completionTime;
-};
-
-// Instance method: Add member
-RoomSchema.methods.addMember = function(userId: string): void {
-  if (!this.members.includes(userId) && !this.isFull()) {
-    this.members.push(userId);
-  }
-};
-
-// Instance method: Remove member
-RoomSchema.methods.removeMember = function(userId: string): void {
+RoomSchema.methods.removeMember = function (userId: string) {
   this.members = this.members.filter(id => id !== userId);
 };
-
-// Instance method: Get time remaining
-RoomSchema.methods.getTimeRemaining = function(): number {
+RoomSchema.methods.getTimeRemaining = function () {
   return Math.max(0, this.completionTime.getTime() - Date.now());
 };
 
-// Static method: Find active rooms
-RoomSchema.statics.findActiveRooms = async function(): Promise<IRoomDocument[]> {
-  return this.find({
-    status: RoomStatus.WAITING,
-    completionTime: { $gt: new Date() }
-  });
+// Statics
+RoomSchema.statics.findActiveRooms = function () {
+  return this.find({ status: RoomStatus.WAITING, completionTime: { $gt: new Date() } });
+};
+RoomSchema.statics.findByUserId = function (userId: string) {
+  return this.findOne({ members: userId, status: RoomStatus.WAITING });
 };
 
-// Static method: Find room by user ID
-RoomSchema.statics.findByUserId = async function(userId: string): Promise<IRoomDocument | null> {
-  return this.findOne({
-    members: userId,
-    status: RoomStatus.WAITING
-  });
-};
-
-// Pre-save hook: Auto-expire rooms
-RoomSchema.pre('save', function(next) {
+// Auto-expire rooms
+RoomSchema.pre('save', function (this: IRoomDocument, next) {
   if (this.isExpired() && this.status === RoomStatus.WAITING) {
     this.status = RoomStatus.EXPIRED;
   }
   next();
 });
 
-// Create model
+// Model
 const Room = mongoose.model<IRoom, IRoomModel>('Room', RoomSchema);
-
 export default Room;

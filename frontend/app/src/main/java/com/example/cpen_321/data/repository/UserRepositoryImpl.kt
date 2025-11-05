@@ -9,6 +9,7 @@ import com.example.cpen_321.data.network.dto.UpdateProfileRequest
 import com.example.cpen_321.data.network.dto.UpdateSettingsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Implementation of UserRepository
@@ -38,7 +39,7 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -72,7 +73,7 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -111,7 +112,7 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -163,7 +164,7 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -190,7 +191,7 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null

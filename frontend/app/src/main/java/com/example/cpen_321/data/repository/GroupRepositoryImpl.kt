@@ -9,6 +9,7 @@ import com.example.cpen_321.data.network.dto.LeaveGroupRequest
 import com.example.cpen_321.data.network.dto.VoteRestaurantRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /**
  * Implementation of GroupRepository
@@ -44,7 +45,7 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -80,7 +81,7 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
@@ -106,7 +107,7 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 ApiResult.Error(
                     message = e.localizedMessage ?: "Network error occurred",
                     code = null
