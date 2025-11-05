@@ -20,7 +20,7 @@ params = {
 
 def test_restaurant_match_response_time():
 	# Make GET request to the restaurant search API
-	r = requests.get(url=url, params=params)
+	r = requests.get(url=url, params=params,timeout=6)
 	assert r.elapsed.total_seconds() <= 5, f"Response time exceeded: {r.elapsed.total_seconds()} seconds"
 	return r.status_code == 200
 

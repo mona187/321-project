@@ -39,7 +39,7 @@ def verify_unauth_quick(ext, fake_googleidtoken):
     url = "http://3.135.231.73:3000/api/"
     extendedURL = url + ext
     """ assert this returns 401 unauthorized """
-    r = requests.post(extendedURL, json={"idToken": fake_googleidtoken})
+    r = requests.post(extendedURL, json={"idToken": fake_googleidtoken}, timeout=5)
     assert r.status_code == 401
     """ assert this returns in under 2s """
 
