@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -21,7 +22,6 @@ jobs:
           source: "."
           target: "/home/ubuntu/feastfriends/backend"
 
-
       - name: Rebuild and Deploy on EC2
         uses: appleboy/ssh-action@master
         with:
@@ -31,16 +31,17 @@ jobs:
           script: |
             cd /home/ubuntu/feastfriends/backend
 
+            # Write .env file safely
             cat > .env << 'EOF'
             PORT=${{ secrets.PROD_PORT }}
             MONGODB_URI=${{ secrets.PROD_DB_URI }}
-            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
             JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
             GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
             GOOGLE_PLACES_API_KEY=${{ secrets.PROD_GOOGLE_PLACES_API_KEY }}
             EOF
 
             chmod 600 .env
+
 
             docker-compose --env-file .env down
             docker-compose --env-file .env up --build -d
