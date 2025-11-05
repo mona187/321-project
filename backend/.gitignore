@@ -29,5 +29,42 @@ Thumbs.db
 firebase-adminsdk.json
 serviceAccountKey.json
 
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+#Coverage reports
+coverage/ 
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Firebase
+firebase-adminsdk.json
 serviceAccountKey.json
-config/cpen-321-group-project-cb708-firebase-adminsdk-fbsvc-eb2e3116e5.json.idea/
+
+
+config/cpen-321-group-project-cb708-firebase-adminsdk-fbsvc-eb2e3116e5.json
+
+#coverage
+coverage/
