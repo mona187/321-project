@@ -81,6 +81,7 @@ export interface RoomStatusResponse {
 }
 
 export interface GroupStatusResponse {
+  groupId: string;
   roomId: string;
   completionTime: number;
   numMembers: number;
@@ -127,12 +128,12 @@ export interface VoteRestaurantResponse {
 /**
  * Standard API Response Format
  */
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   Status: number;
   Message: {
     error?: string;
     text?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   Body: T | null;
 }
@@ -208,12 +209,34 @@ export interface RestaurantSearchParams {
 }
 
 /**
+ * Google Places API Types
+ */
+export interface GooglePlacePhoto {
+  photo_reference: string;
+  width?: number;
+  height?: number;
+}
+
+export interface GooglePlace {
+  name?: string;
+  formatted_address?: string;
+  vicinity?: string;
+  place_id?: string;
+  price_level?: number;
+  rating?: number;
+  photos?: GooglePlacePhoto[];
+  formatted_phone_number?: string;
+  website?: string;
+  url?: string;
+}
+
+/**
  * Notification Types
  */
 export interface NotificationPayload {
   title: string;
   body: string;
-  data?: Record<string, any>;
+  data?: Record<string, string>;
 }
 
 export interface SendNotificationRequest {

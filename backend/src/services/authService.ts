@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import User, { UserStatus } from '../models/User';
+import User, { UserStatus, IUserDocument } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
 import axios from 'axios';
 
@@ -81,7 +81,7 @@ export class AuthService {
     email: string;
     name: string;
     picture?: string;
-  }): Promise<any> {
+  }): Promise<IUserDocument> {
     let user = await User.findOne({ googleId: googleData.googleId });
 
     // Convert Google profile picture to Base64 if present
@@ -119,13 +119,13 @@ export class AuthService {
       console.log(`✅ User logged in: ${user._id}`);
     }
 
-    return user;
+    return user as unknown as IUserDocument;
   }
 
   /**
    * Generate JWT token
    */
-  generateToken(user: any): string {
+  generateToken(user: IUserDocument): string {
     const jwtSecret = process.env.JWT_SECRET;
     
     if (!jwtSecret) {
@@ -134,7 +134,7 @@ export class AuthService {
 
     const token = jwt.sign(
       {
-        userId: user._id.toString(),
+        userId: (user._id as { toString: () => string }).toString(),
         email: user.email,
         googleId: user.googleId,
       },

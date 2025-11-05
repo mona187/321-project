@@ -1,7 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import jwt from 'jsonwebtoken';
-import User, { UserStatus } from '../models/User';
+import User, { UserStatus, IUserDocument } from '../models/User';
 import { AuthRequest, GoogleAuthRequest, AuthResponse } from '../types';
 import { AuthService } from '../services/authService';
 
@@ -41,31 +40,14 @@ export class AuthController {
       // Create new user using AuthService (includes profile picture conversion)
       const user = await authService.findOrCreateUser(googleData);
 
-      // Generate JWT
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret) {
-        res.status(500).json({
-          error: 'Server Error',
-          message: 'JWT configuration error'
-        });
-        return;
-      }
-
-      const token = jwt.sign(
-        {
-          userId: user._id.toString(),
-          email: user.email,
-          googleId: user.googleId,
-        },
-        jwtSecret,
-        { expiresIn: '7d' }
-      );
+      // Generate JWT using AuthService
+      const token = authService.generateToken(user);
 
       // Prepare response
       const response: AuthResponse = {
         token,
         user: {
-          userId: user._id.toString(),
+          userId: (user._id as { toString: () => string }).toString(),
           name: user.name,
           email: user.email,
           profilePicture: user.profilePicture,
@@ -111,31 +93,14 @@ export class AuthController {
       // Update user using AuthService (includes profile picture conversion)
       const updatedUser = await authService.findOrCreateUser(googleData);
 
-      // Generate JWT
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret) {
-        res.status(500).json({
-          error: 'Server Error',
-          message: 'JWT configuration error'
-        });
-        return;
-      }
-
-      const token = jwt.sign(
-        {
-          userId: updatedUser._id.toString(),
-          email: updatedUser.email,
-          googleId: updatedUser.googleId,
-        },
-        jwtSecret,
-        { expiresIn: '7d' }
-      );
+      // Generate JWT using AuthService
+      const token = authService.generateToken(updatedUser);
 
       // Prepare response
       const response: AuthResponse = {
         token,
         user: {
-          userId: updatedUser._id.toString(),
+          userId: (updatedUser._id as { toString: () => string }).toString(),
           name: updatedUser.name,
           email: updatedUser.email,
           profilePicture: updatedUser.profilePicture,
@@ -184,7 +149,7 @@ export class AuthController {
       const { sub: googleId, email, name, picture } = payload;
 
       // Find or create user
-      let user = await User.findOne({ googleId });
+      let user = await User.findOne({ googleId }) as unknown as IUserDocument | null;
 
       if (!user) {
         // Create new user
@@ -198,7 +163,7 @@ export class AuthController {
           credibilityScore: 100,
           budget: 0,
           radiusKm: 5,
-        });
+        }) as unknown as IUserDocument;
 
         console.log(`✅ New user created: ${user._id}`);
       } else {
@@ -208,31 +173,14 @@ export class AuthController {
         console.log(`✅ User logged in: ${user._id}`);
       }
 
-      // Generate JWT
-      const jwtSecret = process.env.JWT_SECRET;
-      if (!jwtSecret) {
-        res.status(500).json({
-          error: 'Server Error',
-          message: 'JWT configuration error'
-        });
-        return;
-      }
-
-      const token = jwt.sign(
-        {
-          userId: user._id.toString(),
-          email: user.email,
-          googleId: user.googleId,
-        },
-        jwtSecret,
-        { expiresIn: '7d' }
-      );
+      // Generate JWT using AuthService
+      const token = authService.generateToken(user);
 
       // Prepare response
       const response: AuthResponse = {
         token,
         user: {
-          userId: user._id.toString(),
+          userId: (user._id as { toString: () => string }).toString(),
           name: user.name,
           email: user.email,
           profilePicture: user.profilePicture,
@@ -289,7 +237,7 @@ export class AuthController {
         return;
       }
 
-      const user = await User.findById(req.user.userId);
+      const user = await User.findById(req.user.userId) as unknown as IUserDocument | null;
 
       if (!user) {
         res.status(404).json({
@@ -301,7 +249,7 @@ export class AuthController {
 
       res.status(200).json({
         user: {
-          userId: user._id.toString(),
+          userId: (user._id as { toString: () => string }).toString(),
           name: user.name,
           email: user.email,
           profilePicture: user.profilePicture,

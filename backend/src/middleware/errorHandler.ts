@@ -35,7 +35,7 @@ export const errorHandler = (
     // Mongoose cast error (invalid ObjectId, etc.)
     statusCode = 400;
     message = 'Invalid data format';
-  } else if (err.name === 'MongoServerError' && (err as any).code === 11000) {
+  } else if (err.name === 'MongoServerError' && (err as unknown).code === 11000) {
     // MongoDB duplicate key error
     statusCode = 409;
     message = 'Duplicate entry - resource already exists';
@@ -80,7 +80,7 @@ export const notFoundHandler = (
 
 // Async error wrapper - wraps async route handlers to catch errors
 export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
