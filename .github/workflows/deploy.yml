@@ -20,7 +20,8 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           source: "backend/"
-          target: "/home/ubuntu/feastfriends/backend"
+          target: "/home/ubuntu/feastfriends"
+          strip_components: 0
 
       - name: Rebuild and Deploy on EC2
         uses: appleboy/ssh-action@master
@@ -32,7 +33,21 @@ jobs:
             # Ensure directory exists
             mkdir -p /home/ubuntu/feastfriends/backend
             
+            # Navigate to the backend directory
             cd /home/ubuntu/feastfriends/backend
+            
+            # If the entire repo was copied (321-project), docker-compose.yml will be in backend/backend
+            # Check if we have a nested backend directory (entire repo was copied)
+            if [ -d "backend" ]; then
+              echo "Entire repo was copied - found nested backend directory"
+              if [ -f "backend/docker-compose.yml" ]; then
+                echo "docker-compose.yml found in nested backend, navigating into it..."
+                cd backend
+              else
+                echo "Checking nested backend directory..."
+                cd backend
+              fi
+            fi
             
             # Verify we're in the right directory and files exist
             echo "Current directory: $(pwd)"
