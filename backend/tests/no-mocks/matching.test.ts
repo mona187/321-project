@@ -1,16 +1,7 @@
 // tests/no-mocks/matching.test.ts
 
 // ============================================
-// MOCK NOTIFICATIONS ONLY
-// ============================================
-
-jest.mock('../../src/services/notificationService', () => ({
-  notifyRoomMatched: jest.fn().mockResolvedValue(undefined),
-  notifyRoomExpired: jest.fn().mockResolvedValue(undefined)
-}));
-
-// ============================================
-// IMPORTS
+// NO MOCKING - USING REAL SERVICES WITH SPIES
 // ============================================
 
 import request from 'supertest';
@@ -27,11 +18,19 @@ import mongoose from 'mongoose';
 import Room from '../../src/models/Room';
 import User, { UserStatus } from '../../src/models/User';
 import socketManager from '../../src/utils/socketManager';
+import * as firebase from '../../src/config/firebase';
 
 /**
- * Matching Routes Tests - No Mocking
- * Tests matching endpoints with actual database interactions
- * Uses real Socket.IO server with spies to verify emissions
+ * Matching Routes Tests - No Mocking (Controllable Scenarios)
+ * 
+ * This test suite covers CONTROLLABLE scenarios:
+ * - Real database operations
+ * - Real Socket.IO server with spies
+ * - Real notification service logic
+ * - Spies on Firebase to prevent actual API calls
+ * 
+ * Tests all success paths and user-triggered errors (404, 400, 409)
+ * Does NOT test uncontrollable failures (network, timeouts, API errors)
  */
 
 let testUsers: TestUser[];
@@ -45,7 +44,7 @@ beforeAll(async () => {
   // Connect to database
   await connectDatabase();
   
-  // Seed test users
+  // Seed test users (now includes FCM tokens)
   testUsers = await seedTestUsers();
   
   console.log('\n✅ Test setup complete. Ready to run tests.\n');
@@ -65,6 +64,14 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // Spy on Firebase to prevent actual API calls
+  jest.spyOn(firebase, 'sendPushNotification').mockResolvedValue('mock-message-id');
+  jest.spyOn(firebase, 'sendMulticastNotification').mockResolvedValue({
+    successCount: 1,
+    failureCount: 0,
+    responses: []
+  } as any);
+
   // Clean up rooms before each test
   await Room.deleteMany({});
   await User.updateMany({}, { 
@@ -73,15 +80,16 @@ beforeEach(async () => {
     status: UserStatus.ONLINE 
   });
   
-  // Reset test users to clean state
-  for (const testUser of testUsers) {
-    await User.findByIdAndUpdate(testUser._id, {
+  // Reset test users to clean state (preserve FCM tokens)
+  for (let i = 0; i < testUsers.length; i++) {
+    await User.findByIdAndUpdate(testUsers[i]._id, {
       roomId: null,
       groupId: null,
       status: UserStatus.ONLINE,
       budget: 50,
       radiusKm: 5,
-      preference: []
+      preference: [],
+      fcmToken: `mock-fcm-token-user${i + 1}`  // Restore FCM token
     });
   }
 });
@@ -101,7 +109,7 @@ afterEach(async () => {
 describe('POST /api/matching/join - No Mocking', () => {
   /**
    * Interface: POST /api/matching/join
-   * Mocking: Notifications only (Socket.IO is real with spies)
+   * Mocking: Firebase only (Socket.IO is real with spies)
    */
 
   test('should create new room when no matching rooms exist', async () => {
@@ -326,7 +334,7 @@ describe('POST /api/matching/join - No Mocking', () => {
 describe('POST /api/matching/join/:roomId - No Mocking', () => {
   /**
    * Interface: POST /api/matching/join/:roomId
-   * Mocking: Notifications only
+   * Mocking: Firebase only
    */
 
   test('should return 501 Not Implemented', async () => {
@@ -375,7 +383,7 @@ describe('POST /api/matching/join/:roomId - No Mocking', () => {
 describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
   /**
    * Interface: PUT /api/matching/leave/:roomId
-   * Mocking: Notifications only
+   * Mocking: Firebase only
    */
 
   test('should successfully leave room', async () => {
@@ -530,7 +538,7 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
 describe('GET /api/matching/status/:roomId - No Mocking', () => {
   /**
    * Interface: GET /api/matching/status/:roomId
-   * Mocking: Notifications only
+   * Mocking: Firebase only
    */
 
   test('should return room status for valid roomId', async () => {
@@ -625,7 +633,7 @@ describe('GET /api/matching/status/:roomId - No Mocking', () => {
 describe('GET /api/matching/users/:roomId - No Mocking', () => {
   /**
    * Interface: GET /api/matching/users/:roomId
-   * Mocking: Notifications only
+   * Mocking: Firebase only
    */
 
   test('should return list of users in room', async () => {

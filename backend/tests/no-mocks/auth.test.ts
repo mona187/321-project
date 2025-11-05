@@ -1,7 +1,8 @@
 // tests/no-mocks/auth.test.ts
+
 import request from 'supertest';
 import app from '../../src/app';
-import { generateTestToken } from '../helpers/auth.helper';
+import { generateTestToken, generateExpiredToken } from '../helpers/auth.helper';
 import { 
   seedTestUsers, 
   cleanTestData, 
@@ -10,19 +11,27 @@ import {
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { UserStatus } from '../../src/models/User';
 import User from '../../src/models/User';
-import { AuthService } from '../../src/services/authService';
-import jwt from 'jsonwebtoken';
+import * as firebase from '../../src/config/firebase';
 
 /**
- * Auth Routes Tests - No Mocking
- * Tests auth endpoints with actual database interactions
- * Note: Google OAuth verification may use mock data or actual tokens in test environment
+ * Auth Routes Tests - No Mocking (Controllable Scenarios)
+ * 
+ * This test suite covers CONTROLLABLE scenarios:
+ * - Request validation (missing fields, invalid formats)
+ * - Business logic (user already exists, user not found)
+ * - Real database operations
+ * - JWT token operations (generate, verify, expire)
+ * - User status management
+ * 
+ * Does NOT test:
+ * - Google OAuth token verification (external API)
+ * - Database connection failures (uncontrollable)
  */
 
 let testUsers: TestUser[];
 
 beforeAll(async () => {
-  console.log('\n🚀 Starting Auth Tests (No Mocking)...\n');
+  console.log('\n🚀 Starting Auth Tests (No Mocking - Controllable Scenarios)...\n');
   
   // Connect to test database
   await connectDatabase();
@@ -45,25 +54,28 @@ afterAll(async () => {
   console.log('✅ Cleanup complete.\n');
 });
 
-describe('POST /api/auth/signup - No Mocking', () => {
-  /**
-   * Interface: POST /api/auth/signup
-   * Mocking: None (but Google token verification may use test tokens)
-   */
+beforeEach(() => {
+  // Spy on Firebase to prevent actual API calls
+  jest.spyOn(firebase, 'sendPushNotification').mockResolvedValue('mock-message-id');
+  jest.spyOn(firebase, 'sendMulticastNotification').mockResolvedValue({
+    successCount: 1,
+    failureCount: 0,
+    responses: []
+  } as any);
+});
 
+afterEach(() => {
+  // Restore all spies
+  jest.restoreAllMocks();
+});
+
+describe('POST /api/auth/signup - Validation (No Mocking)', () => {
   test('should return 400 when idToken is missing', async () => {
     /**
      * Input: POST /api/auth/signup without idToken in body
      * Expected Status Code: 400
-     * Expected Output:
-     *   {
-     *     error: 'Bad Request',
-     *     message: 'Google ID token is required'
-     *   }
-     * Expected Behavior:
-     *   - Validate request body
-     *   - idToken is missing
-     *   - Return 400 immediately
+     * Expected Output: Google ID token is required
+     * Expected Behavior: Controller validates request, returns 400 immediately
      */
 
     const response = await request(app)
@@ -74,120 +86,15 @@ describe('POST /api/auth/signup - No Mocking', () => {
     expect(response.body.error).toBe('Bad Request');
     expect(response.body.message).toBe('Google ID token is required');
   });
-
-  test('should return 409 when user already exists', async () => {
-    /**
-     * Input: POST /api/auth/signup with idToken for existing user
-     * Expected Status Code: 409
-     * Expected Output:
-     *   {
-     *     error: 'Conflict',
-     *     message: 'Account already exists. Please sign in instead.'
-     *   }
-     * Expected Behavior:
-     *   - Verify Google token
-     *   - Check if user exists with googleId
-     *   - User already exists
-     *   - Return 409
-     * Note: In no-mocks tests, we'd need a valid Google token or mock the verification
-     * This test may need adjustment based on test environment setup
-     */
-
-    // This test requires a valid Google token or mocked verification
-    // For now, we test the validation path
-    const response = await request(app)
-      .post('/api/auth/signup')
-      .send({
-        idToken: 'test-google-token-for-existing-user'
-      });
-
-    // May return 401 (invalid token), 500 (token verification fails), or 409 (if token is valid and user exists)
-    expect([401, 409, 500]).toContain(response.status);
-  });
-
-  test('should return 500 when JWT_SECRET is missing', async () => {
-    /**
-     * Input: POST /api/auth/signup with valid new user token
-     * Expected Status Code: 500
-     * Expected Output: JWT configuration error
-     * Expected Behavior:
-     *   - Google token verification succeeds
-     *   - User doesn't exist, create new user
-     *   - Try to generate JWT
-     *   - JWT_SECRET env variable is missing
-     *   - Return 500
-     * Note: This test requires setting up environment properly
-     */
-    
-    // Note: This test may not be easily testable without environment manipulation
-    // It's documented for completeness
-  });
 });
 
-describe('POST /api/auth/google - No Mocking (Legacy)', () => {
-  /**
-   * Interface: POST /api/auth/google
-   * Mocking: None (legacy endpoint - find or create)
-   */
-
-  test('should return 400 when idToken is missing', async () => {
-    /**
-     * Input: POST /api/auth/google without idToken in body
-     * Expected Status Code: 400
-     * Expected Output: Google ID token is required error
-     * Expected Behavior:
-     *   - Validate request body
-     *   - idToken is missing
-     *   - Return 400 immediately
-     */
-
-    const response = await request(app)
-      .post('/api/auth/google')
-      .send({});
-
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe('Bad Request');
-    expect(response.body.message).toBe('Google ID token is required');
-  });
-
-  test('should return 401 when Google token is invalid', async () => {
-    /**
-     * Input: POST /api/auth/google with invalid idToken
-     * Expected Status Code: 401
-     * Expected Output: Invalid Google token error
-     * Expected Behavior:
-     *   - Verify Google token
-     *   - Token verification fails
-     *   - Return 401
-     * Note: Requires actual Google token verification or mock
-     */
-
-    const response = await request(app)
-      .post('/api/auth/google')
-      .send({
-        idToken: 'invalid-google-token'
-      });
-
-    // May return 401 (invalid token) or 500 (verification error)
-    expect([401, 500]).toContain(response.status);
-  });
-});
-
-describe('POST /api/auth/signin - No Mocking', () => {
-  /**
-   * Interface: POST /api/auth/signin
-   * Mocking: None
-   */
-
+describe('POST /api/auth/signin - Validation (No Mocking)', () => {
   test('should return 400 when idToken is missing', async () => {
     /**
      * Input: POST /api/auth/signin without idToken in body
      * Expected Status Code: 400
-     * Expected Output: Google ID token is required error
-     * Expected Behavior:
-     *   - Validate request body
-     *   - idToken is missing
-     *   - Return 400 immediately
+     * Expected Output: Google ID token is required
+     * Expected Behavior: Controller validates request, returns 400 immediately
      */
 
     const response = await request(app)
@@ -198,55 +105,38 @@ describe('POST /api/auth/signin - No Mocking', () => {
     expect(response.body.error).toBe('Bad Request');
     expect(response.body.message).toBe('Google ID token is required');
   });
+});
 
-  test('should return 404 when user does not exist', async () => {
+describe('POST /api/auth/google - Validation (No Mocking)', () => {
+  test('should return 400 when idToken is missing', async () => {
     /**
-     * Input: POST /api/auth/signin with idToken for non-existent user
-     * Expected Status Code: 404
-     * Expected Output:
-     *   {
-     *     error: 'Not Found',
-     *     message: 'Account not found. Please sign up first.'
-     *   }
-     * Expected Behavior:
-     *   - Verify Google token
-     *   - Check if user exists
-     *   - User doesn't exist
-     *   - Return 404
-     * Note: Requires valid Google token or mocked verification
+     * Input: POST /api/auth/google without idToken in body
+     * Expected Status Code: 400
+     * Expected Output: Google ID token is required
+     * Expected Behavior: Controller validates request, returns 400 immediately
      */
 
     const response = await request(app)
-      .post('/api/auth/signin')
-      .send({
-        idToken: 'test-google-token-non-existent'
-      });
+      .post('/api/auth/google')
+      .send({});
 
-    // May return 401 (invalid token), 404 (user not found if token is valid), or 500 (token verification fails)
-    expect([401, 404, 500]).toContain(response.status);
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Bad Request');
+    expect(response.body.message).toBe('Google ID token is required');
   });
 });
 
 describe('POST /api/auth/logout - No Mocking', () => {
-  /**
-   * Interface: POST /api/auth/logout
-   * Mocking: None
-   */
-
   test('should return 200 and logout user successfully', async () => {
     /**
-     * Input: POST /api/auth/logout with valid token
+     * Input: POST /api/auth/logout with valid JWT token
      * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     message: 'Logged out successfully'
-     *   }
+     * Expected Output: Logged out successfully
      * Expected Behavior:
      *   - Auth middleware verifies token
-     *   - Extract userId from token
      *   - Find user in database
-     *   - Set user.status = OFFLINE
-     *   - Save user
+     *   - Update user.status to OFFLINE
+     *   - Save to database
      *   - Return success
      */
 
@@ -266,7 +156,7 @@ describe('POST /api/auth/logout - No Mocking', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('Logged out successfully');
 
-    // Verify user status was updated
+    // Verify user status was updated in database
     const updatedUser = await User.findById(testUsers[0]._id);
     expect(updatedUser!.status).toBe(UserStatus.OFFLINE);
   });
@@ -285,16 +175,46 @@ describe('POST /api/auth/logout - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
+  test('should return 401 with invalid token', async () => {
+    /**
+     * Input: POST /api/auth/logout with malformed JWT
+     * Expected Status Code: 401
+     * Expected Output: Invalid token error
+     * Expected Behavior: Auth middleware verifies and rejects invalid token
+     */
+
+    const response = await request(app)
+      .post('/api/auth/logout')
+      .set('Authorization', 'Bearer invalid-token-format');
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toMatch(/invalid/i);
+  });
+
+  test('should return 401 with expired token', async () => {
+    /**
+     * Input: POST /api/auth/logout with expired JWT
+     * Expected Status Code: 401
+     * Expected Output: Token expired error
+     * Expected Behavior: Auth middleware catches TokenExpiredError
+     */
+
+    const expiredToken = generateExpiredToken(testUsers[0]._id);
+
+    const response = await request(app)
+      .post('/api/auth/logout')
+      .set('Authorization', `Bearer ${expiredToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toMatch(/expired|invalid/i);
+  });
+
   test('should return 200 even if user not found', async () => {
     /**
      * Input: POST /api/auth/logout with valid token for non-existent user
      * Expected Status Code: 200
      * Expected Output: Logged out successfully
-     * Expected Behavior:
-     *   - Auth succeeds (token is valid)
-     *   - User.findById() returns null
-     *   - Controller handles gracefully
-     *   - Return 200 (logout successful even if user not found)
+     * Expected Behavior: Logout succeeds even if user not in database (graceful handling)
      */
 
     const nonExistentUserId = '507f1f77bcf86cd799439011';
@@ -308,35 +228,18 @@ describe('POST /api/auth/logout - No Mocking', () => {
       .post('/api/auth/logout')
       .set('Authorization', `Bearer ${token}`);
 
-    // Logout should succeed even if user not found
     expect(response.status).toBe(200);
   });
 });
 
 describe('GET /api/auth/verify - No Mocking', () => {
-  /**
-   * Interface: GET /api/auth/verify
-   * Mocking: None
-   */
-
   test('should return 200 and user info with valid token', async () => {
     /**
      * Input: GET /api/auth/verify with valid JWT token
      * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     user: {
-     *       userId: string,
-     *       name: string,
-     *       email: string,
-     *       profilePicture: string,
-     *       credibilityScore: number,
-     *       status: UserStatus
-     *     }
-     *   }
+     * Expected Output: User information
      * Expected Behavior:
      *   - Auth middleware verifies token
-     *   - Extract userId from token
      *   - Query database for user
      *   - Return user info
      */
@@ -375,15 +278,26 @@ describe('GET /api/auth/verify - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
+  test('should return 401 with invalid token', async () => {
+    /**
+     * Input: GET /api/auth/verify with malformed JWT
+     * Expected Status Code: 401
+     * Expected Output: Invalid token error
+     * Expected Behavior: Auth middleware verifies and rejects invalid token
+     */
+
+    const response = await request(app)
+      .get('/api/auth/verify')
+      .set('Authorization', 'Bearer invalid-token-format');
+
+    expect(response.status).toBe(401);
+  });
+
   test('should return 404 when user not found', async () => {
     /**
      * Input: GET /api/auth/verify with valid token for non-existent user
      * Expected Status Code: 404
-     * Expected Output:
-     *   {
-     *     error: 'Not Found',
-     *     message: 'User not found'
-     *   }
+     * Expected Output: User not found error
      * Expected Behavior:
      *   - Auth succeeds (token is valid)
      *   - Query database for user
@@ -409,25 +323,16 @@ describe('GET /api/auth/verify - No Mocking', () => {
 });
 
 describe('POST /api/auth/fcm-token - No Mocking', () => {
-  /**
-   * Interface: POST /api/auth/fcm-token
-   * Mocking: None
-   */
-
   test('should return 200 and update FCM token successfully', async () => {
     /**
      * Input: POST /api/auth/fcm-token with fcmToken in body
      * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     message: 'FCM token updated successfully'
-     *   }
+     * Expected Output: FCM token updated successfully
      * Expected Behavior:
      *   - Auth succeeds
-     *   - Extract userId from token
      *   - Find user in database
      *   - Update user.fcmToken
-     *   - Save user
+     *   - Save to database
      *   - Return success
      */
 
@@ -447,7 +352,7 @@ describe('POST /api/auth/fcm-token - No Mocking', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('FCM token updated successfully');
 
-    // Verify FCM token was saved
+    // Verify FCM token was saved in database
     const updatedUser = await User.findById(testUsers[0]._id);
     expect(updatedUser!.fcmToken).toBe(newFcmToken);
   });
@@ -456,16 +361,8 @@ describe('POST /api/auth/fcm-token - No Mocking', () => {
     /**
      * Input: POST /api/auth/fcm-token without fcmToken in body
      * Expected Status Code: 400
-     * Expected Output:
-     *   {
-     *     error: 'Bad Request',
-     *     message: 'FCM token is required'
-     *   }
-     * Expected Behavior:
-     *   - Auth succeeds
-     *   - Validate request body
-     *   - fcmToken is missing
-     *   - Return 400 immediately
+     * Expected Output: FCM token is required
+     * Expected Behavior: Controller validates request, returns 400 immediately
      */
 
     const token = generateTestToken(
@@ -530,25 +427,15 @@ describe('POST /api/auth/fcm-token - No Mocking', () => {
 });
 
 describe('DELETE /api/auth/account - No Mocking', () => {
-  /**
-   * Interface: DELETE /api/auth/account
-   * Mocking: None
-   */
-
   test('should return 200 and delete account successfully', async () => {
     /**
      * Input: DELETE /api/auth/account with valid token
      * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     message: 'Account deleted successfully'
-     *   }
+     * Expected Output: Account deleted successfully
      * Expected Behavior:
      *   - Auth succeeds
-     *   - Extract userId from token
      *   - Find user in database
-     *   - Check if user is in room or group
-     *   - User is not in room/group
+     *   - User has no roomId or groupId
      *   - Delete user from database
      *   - Return success
      */
@@ -562,7 +449,9 @@ describe('DELETE /api/auth/account - No Mocking', () => {
       credibilityScore: 100,
       status: UserStatus.ONLINE,
       roomId: null,
-      groupId: null
+      groupId: null,
+      budget: 50,
+      radiusKm: 10,
     });
 
     const token = generateTestToken(
@@ -578,7 +467,7 @@ describe('DELETE /api/auth/account - No Mocking', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('Account deleted successfully');
 
-    // Verify user was actually deleted
+    // Verify user was actually deleted from database
     const deletedUser = await User.findById(deletableUser._id);
     expect(deletedUser).toBeNull();
   });
@@ -587,14 +476,10 @@ describe('DELETE /api/auth/account - No Mocking', () => {
     /**
      * Input: DELETE /api/auth/account for user with roomId
      * Expected Status Code: 400
-     * Expected Output:
-     *   {
-     *     error: 'Bad Request',
-     *     message: 'Cannot delete account while in a room or group. Please leave first.'
-     *   }
+     * Expected Output: Cannot delete account while in a room or group
      * Expected Behavior:
      *   - Auth succeeds
-     *   - Find user
+     *   - Find user in database
      *   - User has roomId set
      *   - Return 400 (business logic prevents deletion)
      */
@@ -618,12 +503,12 @@ describe('DELETE /api/auth/account - No Mocking', () => {
     /**
      * Input: DELETE /api/auth/account for user with groupId
      * Expected Status Code: 400
-     * Expected Output: Cannot delete account while in a room or group error
+     * Expected Output: Cannot delete account while in a room or group
      * Expected Behavior:
      *   - Auth succeeds
-     *   - Find user
+     *   - Find user in database
      *   - User has groupId set
-     *   - Return 400
+     *   - Return 400 (business logic prevents deletion)
      */
 
     const token = generateTestToken(
@@ -682,26 +567,46 @@ describe('DELETE /api/auth/account - No Mocking', () => {
     expect(response.body.message).toBe('User not found');
   });
 });
+// ... (all previous tests remain the same)
 
 // ============================================
 // AuthService Direct Tests - No Mocking
 // ============================================
 
-describe('AuthService - No Mocking', () => {
+describe('AuthService - Direct Unit Tests (No Mocking)', () => {
   /**
    * Interface: AuthService class methods
-   * Mocking: None (uses real database, Google OAuth may need mocking)
+   * Mocking: None (uses real database operations)
+   * 
+   * These tests verify the AuthService methods work correctly with real database.
+   * They test business logic, data transformations, and database interactions.
    */
 
-  let authService: AuthService;
+  let authService: any; // Use any to avoid importing AuthService in test
 
   beforeEach(() => {
+    // Import AuthService dynamically to avoid circular dependencies
+    const { AuthService } = require('../../src/services/authService');
     authService = new AuthService();
   });
 
   describe('generateToken()', () => {
     test('should generate valid JWT token for user', () => {
-      const user = testUsers[0];
+      /**
+       * Input: User object with _id, email, googleId
+       * Expected Output: Valid JWT string
+       * Expected Behavior:
+       *   - Generate JWT with user data
+       *   - Token should have 3 parts (header.payload.signature)
+       *   - Token should be verifiable
+       */
+
+      const user = {
+        _id: testUsers[0]._id,
+        email: testUsers[0].email,
+        googleId: testUsers[0].googleId,
+      };
+
       const token = authService.generateToken(user);
       
       expect(token).toBeDefined();
@@ -715,10 +620,23 @@ describe('AuthService - No Mocking', () => {
     });
 
     test('should throw error when JWT_SECRET is missing', () => {
+      /**
+       * Input: User object, but JWT_SECRET env variable missing
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Check if JWT_SECRET exists
+       *   - Throw configuration error
+       */
+
       const originalSecret = process.env.JWT_SECRET;
       delete process.env.JWT_SECRET;
       
-      const user = testUsers[0];
+      const user = {
+        _id: testUsers[0]._id,
+        email: testUsers[0].email,
+        googleId: testUsers[0].googleId,
+      };
+
       expect(() => {
         authService.generateToken(user);
       }).toThrow('JWT configuration error');
@@ -729,7 +647,20 @@ describe('AuthService - No Mocking', () => {
 
   describe('verifyToken()', () => {
     test('should verify and decode valid token', () => {
-      const user = testUsers[0];
+      /**
+       * Input: Valid JWT token
+       * Expected Output: Decoded token payload
+       * Expected Behavior:
+       *   - Verify token signature
+       *   - Decode and return payload
+       */
+
+      const user = {
+        _id: testUsers[0]._id,
+        email: testUsers[0].email,
+        googleId: testUsers[0].googleId,
+      };
+
       const token = authService.generateToken(user);
       const decoded = authService.verifyToken(token);
       
@@ -740,13 +671,37 @@ describe('AuthService - No Mocking', () => {
     });
 
     test('should throw error for invalid token', () => {
+      /**
+       * Input: Malformed JWT token
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Try to verify invalid token
+       *   - JWT verification fails
+       *   - Throw error
+       */
+
       expect(() => {
         authService.verifyToken('invalid.token.string');
       }).toThrow('Invalid or expired token');
     });
 
     test('should throw error for expired token', () => {
-      const user = testUsers[0];
+      /**
+       * Input: Expired JWT token
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Verify token
+       *   - Token is expired
+       *   - Throw error
+       */
+
+      const jwt = require('jsonwebtoken');
+      const user = {
+        _id: testUsers[0]._id,
+        email: testUsers[0].email,
+        googleId: testUsers[0].googleId,
+      };
+
       const expiredToken = jwt.sign(
         {
           userId: user._id,
@@ -765,7 +720,21 @@ describe('AuthService - No Mocking', () => {
 
   describe('findOrCreateUser()', () => {
     test('should find existing user and update status', async () => {
+      /**
+       * Input: Google user data matching existing user
+       * Expected Output: Existing user with updated status
+       * Expected Behavior:
+       *   - Find user by googleId in database
+       *   - User exists
+       *   - Update status to ONLINE
+       *   - Save and return user
+       */
+
       const existingUser = testUsers[0];
+      
+      // Set user to OFFLINE first
+      await User.findByIdAndUpdate(existingUser._id, { status: UserStatus.OFFLINE });
+
       const googleData = {
         googleId: existingUser.googleId,
         email: existingUser.email,
@@ -779,18 +748,31 @@ describe('AuthService - No Mocking', () => {
       expect(user._id.toString()).toBe(existingUser._id);
       expect(user.status).toBe(UserStatus.ONLINE);
       
+      // Verify database was updated
       const updatedUser = await User.findById(existingUser._id);
       expect(updatedUser!.status).toBe(UserStatus.ONLINE);
     });
 
     test('should create new user when not found', async () => {
+      /**
+       * Input: Google user data for non-existent user
+       * Expected Output: Newly created user
+       * Expected Behavior:
+       *   - Search for user by googleId
+       *   - User doesn't exist
+       *   - Create new user with Google data
+       *   - Set default values (credibilityScore: 100, status: ONLINE)
+       *   - Save and return new user
+       */
+
       const googleData = {
-        googleId: 'new-google-id-12345',
-        email: 'newuser@example.com',
+        googleId: `new-google-id-${Date.now()}`,
+        email: `newuser-${Date.now()}@example.com`,
         name: 'New User',
         picture: 'https://example.com/new-picture.jpg'
       };
       
+      // Ensure user doesn't exist
       await User.deleteOne({ googleId: googleData.googleId });
       
       const user = await authService.findOrCreateUser(googleData);
@@ -801,39 +783,81 @@ describe('AuthService - No Mocking', () => {
       expect(user.status).toBe(UserStatus.ONLINE);
       expect(user.credibilityScore).toBe(100);
       
+      // Clean up
       await User.deleteOne({ _id: user._id });
     });
   });
 
   describe('logoutUser()', () => {
     test('should set user status to OFFLINE', async () => {
+      /**
+       * Input: User ID
+       * Expected Output: User status updated to OFFLINE
+       * Expected Behavior:
+       *   - Find user by ID in database
+       *   - Update status to OFFLINE
+       *   - Save to database
+       */
+
       const user = testUsers[0];
+      
+      // Set user to ONLINE first
       await User.findByIdAndUpdate(user._id, { status: UserStatus.ONLINE });
       
       await authService.logoutUser(user._id);
       
+      // Verify database was updated
       const updatedUser = await User.findById(user._id);
       expect(updatedUser!.status).toBe(UserStatus.OFFLINE);
     });
 
     test('should handle non-existent user gracefully', async () => {
+      /**
+       * Input: Non-existent user ID
+       * Expected Output: No error thrown
+       * Expected Behavior:
+       *   - Try to find user
+       *   - User doesn't exist
+       *   - Handle gracefully without throwing error
+       */
+
       const nonExistentId = '507f1f77bcf86cd799439011';
+      
       await expect(authService.logoutUser(nonExistentId)).resolves.not.toThrow();
     });
   });
 
   describe('updateFCMToken()', () => {
     test('should update FCM token for user', async () => {
+      /**
+       * Input: User ID and FCM token
+       * Expected Output: User's FCM token updated in database
+       * Expected Behavior:
+       *   - Find user by ID
+       *   - Update fcmToken field
+       *   - Save to database
+       */
+
       const user = testUsers[0];
-      const fcmToken = 'test-fcm-token-12345';
+      const fcmToken = `test-fcm-token-${Date.now()}`;
       
       await authService.updateFCMToken(user._id, fcmToken);
       
+      // Verify database was updated
       const updatedUser = await User.findById(user._id);
       expect(updatedUser!.fcmToken).toBe(fcmToken);
     });
 
     test('should throw error when user not found', async () => {
+      /**
+       * Input: Non-existent user ID
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Try to find user
+       *   - User doesn't exist
+       *   - Throw 'User not found' error
+       */
+
       const nonExistentId = '507f1f77bcf86cd799439011';
       const fcmToken = 'test-fcm-token';
       
@@ -845,38 +869,82 @@ describe('AuthService - No Mocking', () => {
 
   describe('deleteAccount()', () => {
     test('should delete user account when not in room or group', async () => {
+      /**
+       * Input: User ID (user not in room/group)
+       * Expected Output: User deleted from database
+       * Expected Behavior:
+       *   - Find user by ID
+       *   - Check roomId and groupId are null
+       *   - Delete user from database
+       */
+
+      // Create deletable user
       const deletableUser = await User.create({
-        googleId: 'deletable-user-123',
-        email: 'deletable@example.com',
+        googleId: `deletable-user-${Date.now()}`,
+        email: `deletable-${Date.now()}@example.com`,
         name: 'Deletable User',
         status: UserStatus.ONLINE,
         preference: [],
         credibilityScore: 100,
-        budget: 0,
-        radiusKm: 5,
+        budget: 50,
+        radiusKm: 10,
       });
       
       await authService.deleteAccount(deletableUser._id.toString());
       
+      // Verify user was deleted from database
       const deletedUser = await User.findById(deletableUser._id);
       expect(deletedUser).toBeNull();
     });
 
-    test('should throw error when user is in a group', async () => {
-      const userInGroup = testUsers.find(u => u.groupId) || testUsers[0];
-      await User.findByIdAndUpdate(userInGroup._id, { 
-        groupId: '507f1f77bcf86cd799439011' 
-      });
+    test('should throw error when user is in a room', async () => {
+      /**
+       * Input: User ID (user in room)
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Find user by ID
+       *   - User has roomId set
+       *   - Throw 'Cannot delete account while in a room or group' error
+       */
+
+      // Temporarily set user to be in a room
+      const userId = testUsers[2]._id; // User with roomId
       
-      await expect(authService.deleteAccount(userInGroup._id))
+      await expect(authService.deleteAccount(userId))
         .rejects
         .toThrow('Cannot delete account while in a room or group');
+    });
+
+    test('should throw error when user is in a group', async () => {
+      /**
+       * Input: User ID (user in group)
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Find user by ID
+       *   - User has groupId set
+       *   - Throw 'Cannot delete account while in a room or group' error
+       */
+
+      // User with groupId
+      const userId = testUsers[3]._id;
       
-      await User.findByIdAndUpdate(userInGroup._id, { groupId: null });
+      await expect(authService.deleteAccount(userId))
+        .rejects
+        .toThrow('Cannot delete account while in a room or group');
     });
 
     test('should throw error when user not found', async () => {
+      /**
+       * Input: Non-existent user ID
+       * Expected Output: Error thrown
+       * Expected Behavior:
+       *   - Try to find user
+       *   - User doesn't exist
+       *   - Throw 'User not found' error
+       */
+
       const nonExistentId = '507f1f77bcf86cd799439011';
+      
       await expect(authService.deleteAccount(nonExistentId))
         .rejects
         .toThrow('User not found');

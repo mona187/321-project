@@ -1,22 +1,7 @@
 // tests/no-mocks/group.test.ts
 
 // ============================================
-// MOCK NOTIFICATIONS ONLY
-// ============================================
-
-// Mock notification service (named exports - matches your groupService import)
-jest.mock('../../src/services/notificationService', () => ({
-  notifyGroupMembers: jest.fn().mockResolvedValue(undefined),
-  notifyRestaurantSelected: jest.fn().mockResolvedValue(undefined),
-  notifyRoomMatched: jest.fn().mockResolvedValue(undefined),
-  notifyRoomExpired: jest.fn().mockResolvedValue(undefined),
-  sendNotificationToUser: jest.fn().mockResolvedValue(undefined),
-  sendNotificationToUsers: jest.fn().mockResolvedValue(undefined),
-  notifyRoomMembers: jest.fn().mockResolvedValue(undefined),
-}));
-
-// ============================================
-// IMPORTS
+// NO MOCKING - USING REAL SERVICES WITH SPIES
 // ============================================
 
 import request from 'supertest';
@@ -34,18 +19,26 @@ import { initializeTestSocket, closeTestSocket } from '../helpers/socket.helper'
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { UserStatus } from '../../src/models/User';
 import socketManager from '../../src/utils/socketManager';
+import * as firebase from '../../src/config/firebase';
 
 /**
- * Group Routes Tests - No Mocking
- * Tests group endpoints with actual database interactions
- * Uses real Socket.IO server with spies to verify emissions
+ * Group Routes Tests - No Mocking (Controllable Scenarios)
+ * 
+ * This test suite covers CONTROLLABLE scenarios:
+ * - Real database operations
+ * - Real Socket.IO server with spies
+ * - Real notification service logic
+ * - Spies on Firebase to prevent actual API calls
+ * 
+ * Tests all success paths and user-triggered errors (404, 400, 409)
+ * Does NOT test uncontrollable failures (network, timeouts, API errors)
  */
 
 let testUsers: TestUser[];
 let testGroups: TestGroup[];
 
 beforeAll(async () => {
-  console.log('\n🚀 Starting Group Tests (No Mocking)...\n');
+  console.log('\n🚀 Starting Group Tests (No Mocking - Controllable Scenarios)...\n');
 
   // Initialize real Socket.IO server
   await initializeTestSocket();
@@ -53,7 +46,7 @@ beforeAll(async () => {
   // Connect to database
   await connectDatabase();
   
-  // Seed test users
+  // Seed test users (now includes FCM tokens)
   testUsers = await seedTestUsers();
 
   // Create test groups
@@ -104,27 +97,41 @@ afterAll(async () => {
   console.log('✅ Cleanup complete.\n');
 });
 
+beforeEach(() => {
+  // Spy on Firebase functions to prevent actual API calls
+  jest.spyOn(firebase, 'sendPushNotification').mockResolvedValue('mock-message-id');
+  jest.spyOn(firebase, 'sendMulticastNotification').mockResolvedValue({
+    successCount: 1,
+    failureCount: 0,
+    responses: []
+  } as any);
+});
+
 afterEach(async () => {
   const UserModel = (await import('../../src/models/User')).default;
   
   // Reset test users 0 and 1 to group1
   await UserModel.findByIdAndUpdate(testUsers[0]._id, { 
     groupId: testGroups[0]._id, 
-    status: UserStatus.IN_GROUP 
+    status: UserStatus.IN_GROUP,
+    fcmToken: 'mock-fcm-token-user1'  // Restore FCM token
   });
   await UserModel.findByIdAndUpdate(testUsers[1]._id, { 
     groupId: testGroups[0]._id, 
-    status: UserStatus.IN_GROUP 
+    status: UserStatus.IN_GROUP,
+    fcmToken: 'mock-fcm-token-user2'  // Restore FCM token
   });
   
   // Reset test users 2 and 3 to group2
   await UserModel.findByIdAndUpdate(testUsers[2]._id, { 
     groupId: testGroups[1]._id, 
-    status: UserStatus.IN_GROUP 
+    status: UserStatus.IN_GROUP,
+    fcmToken: 'mock-fcm-token-user3'  // Restore FCM token
   });
   await UserModel.findByIdAndUpdate(testUsers[3]._id, { 
     groupId: testGroups[1]._id, 
-    status: UserStatus.IN_GROUP 
+    status: UserStatus.IN_GROUP,
+    fcmToken: 'mock-fcm-token-user4'  // Restore FCM token
   });
   
   // Restore all spies
@@ -132,23 +139,7 @@ afterEach(async () => {
 });
 
 describe('GET /api/group/status - No Mocking', () => {
-  /**
-   * Interface: GET /api/group/status
-   * Mocking: Notifications only (Socket.IO is real)
-   */
-
   test('Should return 200 and group status for user in a group', async () => {
-    /**
-     * Input: GET /api/group/status with valid token for user in group
-     * Expected Status Code: 200
-     * Expected Output: Group status with all details
-     * Expected Behavior:
-     *   - Auth middleware verifies token
-     *   - Extract userId from token
-     *   - Query database for user's group
-     *   - Return group status with all details
-     */
-
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
@@ -172,12 +163,6 @@ describe('GET /api/group/status - No Mocking', () => {
   });
 
   test('should return 404 when user is not in a group', async () => {
-    /**
-     * Input: GET /api/group/status with valid token for user without group
-     * Expected Status Code: 404
-     * Expected Behavior: Service returns null, controller returns 404
-     */
-
     const token = generateTestToken(
       testUsers[4]._id,
       testUsers[4].email,
@@ -195,12 +180,6 @@ describe('GET /api/group/status - No Mocking', () => {
   });
 
   test('should return 401 without authentication token', async () => {
-    /**
-     * Input: GET /api/group/status without Authorization header
-     * Expected Status Code: 401
-     * Expected Behavior: Auth middleware blocks request
-     */
-
     const response = await request(app)
       .get('/api/group/status');
 
@@ -209,12 +188,6 @@ describe('GET /api/group/status - No Mocking', () => {
   });
 
   test('should return 401 with invalid token', async () => {
-    /**
-     * Input: GET /api/group/status with malformed JWT token
-     * Expected Status Code: 401
-     * Expected Behavior: Auth middleware verifies and rejects invalid token
-     */
-
     const response = await request(app)
       .get('/api/group/status')
       .set('Authorization', 'Bearer invalid-token-format');
@@ -223,12 +196,6 @@ describe('GET /api/group/status - No Mocking', () => {
   });
 
   test('should return group status with restaurant selected', async () => {
-    /**
-     * Input: GET /api/group/status for group with restaurant already selected
-     * Expected Status Code: 200
-     * Expected Behavior: Return status 'completed' with restaurant info
-     */
-
     const token = generateTestToken(
       testUsers[2]._id,
       testUsers[2].email,
@@ -248,18 +215,7 @@ describe('GET /api/group/status - No Mocking', () => {
 });
 
 describe('POST /api/group/vote/:groupId - No Mocking', () => {
-  /**
-   * Interface: POST /api/group/vote/:groupId
-   * Mocking: Notifications only (Socket.IO is real with spies)
-   */
-
   test('should return 400 when restaurantID is missing', async () => {
-    /**
-     * Input: POST /api/group/vote/:groupId without restaurantID in body
-     * Expected Status Code: 400
-     * Expected Behavior: Validate request body, return 400 immediately
-     */
-
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
@@ -277,12 +233,6 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
   });
 
   test('should return 500 when group not found', async () => {
-    /**
-     * Input: POST /api/group/vote/non-existent-group-id
-     * Expected Status Code: 500
-     * Expected Behavior: Service throws Error('Group not found')
-     */
-
     const nonExistentGroupId = '507f1f77bcf86cd799439011';
     const token = generateTestToken(
       testUsers[0]._id,
@@ -300,12 +250,6 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
   });
 
   test('should return 400 for invalid ObjectId format in groupId', async () => {
-    /**
-     * Input: POST /api/group/vote/invalid-format-123
-     * Expected Status Code: 400
-     * Expected Behavior: Mongoose throws CastError, error handler returns 400
-     */
-
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
@@ -322,12 +266,6 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
   });
 
   test('should return 500 when user is not a member of the group', async () => {
-    /**
-     * Input: POST /api/group/vote/:groupId for user not in group
-     * Expected Status Code: 500
-     * Expected Behavior: Service throws Error('User is not a member of this group')
-     */
-
     const token = generateTestToken(
       testUsers[4]._id,
       testUsers[4].email,
@@ -344,12 +282,6 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
   });
 
   test('should return 500 when restaurant already selected', async () => {
-    /**
-     * Input: POST /api/group/vote/:groupId for group with restaurantSelected = true
-     * Expected Status Code: 500
-     * Expected Behavior: Service throws Error('Restaurant has already been selected')
-     */
-
     const token = generateTestToken(
       testUsers[2]._id,
       testUsers[2].email,
@@ -366,17 +298,6 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
   });
 
   test('should allow user to change their vote and emit socket events', async () => {
-    /**
-     * Input: POST /api/group/vote/:groupId twice with different restaurantIDs
-     * Expected Status Code: 200 for both
-     * Expected Behavior:
-     *   - User votes for restaurant A
-     *   - Socket event emitted
-     *   - User votes again for restaurant B
-     *   - Socket event emitted
-     *   - Vote counts reflect the change
-     */
-
     // Spy on socket manager
     const emitVoteUpdateSpy = jest.spyOn(socketManager, 'emitVoteUpdate');
 
@@ -428,24 +349,116 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
     // Verify socket event was emitted again
     expect(emitVoteUpdateSpy).toHaveBeenCalledTimes(2);
   });
+
+  test('should successfully vote and trigger restaurant selection with notification', async () => {
+    /**
+     * Test that notification service is called with correct parameters
+     * when all members vote and restaurant is selected
+     */
+    
+    // Spy on Firebase function to verify it's called
+    const firebaseSpy = jest.spyOn(firebase, 'sendMulticastNotification');
+
+    const votingGroup = await seedTestGroup(
+      'test-room-vote-complete',
+      [testUsers[0]._id]  // Single member for quick completion
+    );
+
+    const User = (await import('../../src/models/User')).default;
+    
+    // User already has FCM token from seed, just update group
+    await User.findByIdAndUpdate(testUsers[0]._id, { 
+      groupId: votingGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    const response = await request(app)
+      .post(`/api/group/vote/${votingGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-winner',
+        restaurant: {
+          name: 'Winner Restaurant',
+          location: '123 Winner St',
+          restaurantId: 'rest-winner'
+        }
+      });
+
+    expect(response.status).toBe(200);
+
+    // Verify Firebase was called (notification service used it)
+    expect(firebaseSpy).toHaveBeenCalled();
+    
+    // Verify notification had correct content
+    const notificationCall = firebaseSpy.mock.calls[0];
+    expect(notificationCall[0]).toEqual(['mock-fcm-token-user1']); // tokens array
+    expect(notificationCall[1]).toMatchObject({
+      title: 'Restaurant Selected! 🍽️',
+      body: expect.stringContaining('Winner Restaurant')
+    });
+    expect(notificationCall[2]).toMatchObject({
+      type: 'restaurant_selected',
+      restaurantName: 'Winner Restaurant'
+    });
+  });
+
+  test('should still succeed when voting even if user has no FCM token', async () => {
+    /**
+     * Test that voting succeeds even when notification fails
+     * (user has no FCM token)
+     */
+    
+    const firebaseSpy = jest.spyOn(firebase, 'sendMulticastNotification');
+
+    const votingGroup = await seedTestGroup(
+      'test-room-vote-no-token',
+      [testUsers[0]._id]
+    );
+
+    const User = (await import('../../src/models/User')).default;
+    
+    // Remove FCM token to test graceful handling
+    await User.findByIdAndUpdate(testUsers[0]._id, { 
+      groupId: votingGroup._id,
+      status: UserStatus.IN_GROUP,
+      fcmToken: null  // ← No token
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    const response = await request(app)
+      .post(`/api/group/vote/${votingGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-winner',
+        restaurant: {
+          name: 'Winner Restaurant',
+          location: '123 Winner St',
+          restaurantId: 'rest-winner'
+        }
+      });
+
+    // Vote should still succeed
+    expect(response.status).toBe(200);
+    expect(response.body.Body.message).toBe('Voting successful');
+
+    // Firebase should NOT be called (no tokens available)
+    expect(firebaseSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/group/leave/:groupId - No Mocking', () => {
-  /**
-   * Interface: POST /api/group/leave/:groupId
-   * Mocking: Notifications only (Socket.IO is real with spies)
-   */
-
   test('should return 200 and successfully leave a group', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId
-     * Expected Status Code: 200
-     * Expected Behavior:
-     *   - Remove user from group
-     *   - Emit socket events
-     *   - Update user status to ONLINE
-     */
-
     // Spy on socket manager
     const emitMemberLeftSpy = jest.spyOn(socketManager, 'emitMemberLeft');
 
@@ -494,12 +507,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should return 401 without authentication token', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId without Authorization header
-     * Expected Status Code: 401
-     * Expected Behavior: Auth middleware blocks request
-     */
-
     const response = await request(app)
       .post(`/api/group/leave/${testGroups[0]._id}`);
 
@@ -507,12 +514,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should return 500 when group not found', async () => {
-    /**
-     * Input: POST /api/group/leave/non-existent-group-id
-     * Expected Status Code: 500
-     * Expected Behavior: Service throws Error('Group not found')
-     */
-
     const nonExistentGroupId = '507f1f77bcf86cd799439011';
     const token = generateTestToken(
       testUsers[0]._id,
@@ -529,12 +530,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should return 400 for invalid ObjectId format in groupId', async () => {
-    /**
-     * Input: POST /api/group/leave/invalid-format-123
-     * Expected Status Code: 400
-     * Expected Behavior: Mongoose throws CastError
-     */
-
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
@@ -550,12 +545,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should return 500 when user not found', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId with valid token for non-existent user
-     * Expected Status Code: 500
-     * Expected Behavior: Service throws Error('User not found')
-     */
-
     const nonExistentUserId = '507f1f77bcf86cd799439011';
     const token = generateTestToken(
       nonExistentUserId,
@@ -572,12 +561,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should delete group when last member leaves', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId when user is the only member
-     * Expected Status Code: 200
-     * Expected Behavior: Group is deleted from database
-     */
-
     const singleMemberGroup = await seedTestGroup(
       'test-room-single-member',
       [testUsers[0]._id]
@@ -607,12 +590,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should preserve restaurant data when member leaves (group not deleted)', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId when group has restaurant selected
-     * Expected Status Code: 200
-     * Expected Behavior: Restaurant data preserved in remaining group
-     */
-
     // Spy on socket manager
     const emitRestaurantSelectedSpy = jest.spyOn(socketManager, 'emitRestaurantSelected');
 
@@ -671,12 +648,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should delete restaurant data when last member leaves (group deleted)', async () => {
-    /**
-     * Input: POST /api/group/leave/:groupId when last member leaves
-     * Expected Status Code: 200
-     * Expected Behavior: Group deleted, restaurant data deleted with it
-     */
-
     const groupWithRestaurant = await seedTestGroup(
       'test-room-restaurant-delete',
       [testUsers[0]._id],
@@ -716,12 +687,6 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   });
 
   test('should verify restaurant field remains after completionTime if not cleared', async () => {
-    /**
-     * Input: GET /api/group/status for group past completionTime with restaurant data
-     * Expected Status Code: 200
-     * Expected Behavior: Status returns 'expired', restaurant data remains
-     */
-
     const expiredGroupWithRestaurant = await seedTestGroup(
       'test-room-expired-restaurant',
       [testUsers[0]._id],
