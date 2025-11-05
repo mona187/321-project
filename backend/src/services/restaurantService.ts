@@ -88,6 +88,7 @@ export class RestaurantService {
         throw new AppError(`Restaurant not found: ${response.data.status}`, 404);
       }
 
+      
       const place = response.data.result;
       return this.formatPlaceData(place);
     } catch (error: any) {
