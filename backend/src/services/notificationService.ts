@@ -41,7 +41,7 @@ export const sendNotificationToUsers = async (
     
     const tokens = users
       .map(user => user.fcmToken)
-      .filter((token): token is string => token !== null && token !== undefined);
+      .filter((token): token is string => token !== null);
 
     if (tokens.length === 0) {
       console.warn('No valid FCM tokens found for the provided users');
@@ -85,7 +85,7 @@ export const notifyRoomMatched = async (
   groupId: string
 ): Promise<void> => {
   const notification: NotificationPayload = {
-    title: 'Group Matched! 🎉',
+    title: 'Group Matched! ',
     body: 'Your waiting room is full! Time to vote for a restaurant.',
     data: {
       type: 'room_matched',
