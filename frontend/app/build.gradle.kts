@@ -50,7 +50,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.example.cpen_321.HiltTestRunner"
+        testInstrumentationRunnerArguments["clearPackageData"] = "false"
 
         // 👇 CHANGED - Now reads from local.properties 👇
         buildConfigField(
@@ -94,6 +95,28 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    sourceSets {
+        getByName("androidTest") {
+            java.srcDirs("src/androidTest/java")
+        }
+    }
+
+    // 👇 NEW - Test Options for E2E Testing 👇
+    testOptions {
+        animationsDisabled = true
+        unitTests.isReturnDefaultValues = true
+    }
+
+    // 👇 NEW - Packaging Options 👇
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE.md"      // ADD THIS
+            excludes += "META-INF/LICENSE-notice.md" // ADD THIS
+            excludes += "META-INF/NOTICE.md"       // ADD THIS
+        }
     }
 }
 
@@ -141,17 +164,76 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // Testing
-    implementation(libs.androidx.espresso.core)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // ========== TESTING DEPENDENCIES ==========
+    // Unit Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.8")
+
+    // Android Instrumented Testing
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:rules:1.5.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Compose Testing
+    androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // UI Automator for system-level interactions
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+
+    // Hilt Testing
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.48.1")
+    kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.48.1")
+
+    // Coroutines Testing
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+    // MockK for Android Tests (optional)
+    androidTestImplementation("io.mockk:mockk-android:1.13.8")
+//    // Unit Testing
+//    testImplementation(libs.junit)
+//    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+//
+//    // Android Instrumentation Testing - Core
+//    androidTestImplementation(libs.androidx.junit)
+//
+//    // Force Espresso 3.5.0 (Compose requires this version)
+//    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0") {
+//        version {
+//            strictly("3.5.0")
+//        }
+//    }
+//
+//    androidTestImplementation("androidx.test:core:1.5.0")
+//    androidTestImplementation("androidx.test:core-ktx:1.5.0")
+//    androidTestImplementation("androidx.test:runner:1.5.0")
+//    androidTestImplementation("androidx.test:rules:1.5.0")
+//
+//    // UI Automator for cross-app E2E testing
+//    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+//
+//    // Compose Testing
+//    androidTestImplementation(platform(libs.androidx.compose.bom))
+//    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+//    debugImplementation(libs.androidx.compose.ui.tooling)
+//    debugImplementation(libs.androidx.compose.ui.test.manifest)
+//
+//    // Hilt Testing
+//    androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
+//    kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
+//
+//    // Coroutines Testing
+//    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+//
+//    // Navigation Testing
+//    androidTestImplementation("androidx.navigation:navigation-testing:2.8.0")
 }
 
+// 👇 NEW - Kapt Configuration 👇
 kapt {
     correctErrorTypes = true
 }
