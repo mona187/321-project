@@ -66,7 +66,9 @@ export class RestaurantService {
         throw new AppError(`Google Places API error: ${response.data.status}`, 500);
       }
 
-      let results: GooglePlace[] = (response.data.results as GooglePlace[]) ?? [];
+      let results: GooglePlace[] = Array.isArray(response.data.results) 
+        ? (response.data.results as GooglePlace[])
+        : [];
       console.log(`🍽️ Found ${results.length} restaurants from Google Places`);
 
       // Filter by price level if specified

@@ -74,11 +74,14 @@ export class GroupService {
     
     await group.save();
 
-    // Convert Map to object for response
-    const currentVotes: Record<string, number> = {};
-    group.restaurantVotes.forEach((count: number, id: string) => {
-      currentVotes[id] = count;
-    });
+    // Convert Map to object for response - using Object.fromEntries for safe conversion
+    const currentVotes: Record<string, number> = Object.fromEntries(
+      Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+        // Ensure id is a valid string to prevent injection
+        const safeId = String(id);
+        return [safeId, count];
+      })
+    );
 
     // Emit vote update to all group members
     socketManager.emitVoteUpdate(
@@ -172,10 +175,14 @@ export class GroupService {
           group.restaurantSelected = true;
           await group.save();
 
-          const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count: number, id: string) => {
-            currentVotes[id] = count;
-          });
+          // Convert Map to object for response - using Object.fromEntries for safe conversion
+          const currentVotes: Record<string, number> = Object.fromEntries(
+            Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+              // Ensure id is a valid string to prevent injection
+              const safeId = String(id);
+              return [safeId, count];
+            })
+          );
 
           socketManager.emitRestaurantSelected(
             groupId,
@@ -251,10 +258,14 @@ export class GroupService {
 
         // Notify members
         if (group.restaurant) {
-          const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count: number, id: string) => {
-            currentVotes[id] = count;
-          });
+          // Convert Map to object for response - using Object.fromEntries for safe conversion
+          const currentVotes: Record<string, number> = Object.fromEntries(
+            Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+              // Ensure id is a valid string to prevent injection
+              const safeId = String(id);
+              return [safeId, count];
+            })
+          );
 
           socketManager.emitRestaurantSelected(
             group._id.toString(),
