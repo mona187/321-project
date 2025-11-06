@@ -11,7 +11,7 @@ const router = Router();
  * @access  Public (optional auth)
  */
 router.get('/search', optionalAuth, asyncHandler(async (req, res, next) => {
-  void await restaurantController.searchRestaurants(req, res, next);
+  await restaurantController.searchRestaurants(req, res, next);
 }));
 
 /**
@@ -20,7 +20,7 @@ router.get('/search', optionalAuth, asyncHandler(async (req, res, next) => {
  * @access  Public (optional auth)
  */
 router.get('/:restaurantId', optionalAuth, asyncHandler(async (req, res, next) => {
-  void await restaurantController.getRestaurantDetails(req, res, next);
+  await restaurantController.getRestaurantDetails(req, res, next);
 }));
 
 /**
@@ -29,7 +29,7 @@ router.get('/:restaurantId', optionalAuth, asyncHandler(async (req, res, next) =
  * @access  Private
  */
 router.post('/recommendations/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await restaurantController.getGroupRecommendations(req, res, next);
+  await restaurantController.getGroupRecommendations(req, res, next);
 }));
 
 export default router;
