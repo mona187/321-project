@@ -8,35 +8,35 @@ const router = Router();
 // =======================
 // 🔓 Public routes
 // =======================
-router.post('/signup', asyncHandler((req, res, next): Promise<void> => {
-  return authController.signUp(req, res, next);
+router.post('/signup', asyncHandler(async (req, res, next) => {
+  await authController.signUp(req, res, next);
 }));
 
-router.post('/signin', asyncHandler((req, res, next): Promise<void> => {
-  return authController.signIn(req, res, next);
+router.post('/signin', asyncHandler(async (req, res, next) => {
+  await authController.signIn(req, res, next);
 }));
 
-router.post('/google', asyncHandler((req, res, next): Promise<void> => {
-  return authController.googleAuth(req, res, next); // Legacy endpoint
+router.post('/google', asyncHandler(async (req, res, next) => {
+  await authController.googleAuth(req, res, next); // Legacy endpoint
 }));
 
 // =======================
 // 🔐 Protected routes
 // =======================
-router.post('/logout', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return authController.logout(req, res, next);
+router.post('/logout', authMiddleware, asyncHandler(async (req, res, next) => {
+  await authController.logout(req, res, next);
 }));
 
-router.post('/fcm-token', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return authController.updateFCMToken(req, res, next);
+router.post('/fcm-token', authMiddleware, asyncHandler(async (req, res, next) => {
+  await authController.updateFCMToken(req, res, next);
 }));
 
-router.delete('/account', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return authController.deleteAccount(req, res, next);
+router.delete('/account', authMiddleware, asyncHandler(async (req, res, next) => {
+  await authController.deleteAccount(req, res, next);
 }));
 
-router.get('/verify', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return authController.verifyToken(req, res, next);
+router.get('/verify', authMiddleware, asyncHandler(async (req, res, next) => {
+  await authController.verifyToken(req, res, next);
 }));
 
 export default router;

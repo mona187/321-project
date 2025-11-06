@@ -10,8 +10,8 @@ const router = Router();
  * @desc    Get current user's group status
  * @access  Private
  */
-router.get('/status', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return groupController.getGroupStatus(req, res, next);
+router.get('/status', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.getGroupStatus(req, res, next);
 }));
 
 /**
@@ -19,8 +19,8 @@ router.get('/status', authMiddleware, asyncHandler((req, res, next): Promise<voi
  * @desc    Vote for a restaurant
  * @access  Private
  */
-router.post('/vote/:groupId', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return groupController.voteForRestaurant(req, res, next);
+router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.voteForRestaurant(req, res, next);
 }));
 
 /**
@@ -28,8 +28,8 @@ router.post('/vote/:groupId', authMiddleware, asyncHandler((req, res, next): Pro
  * @desc    Leave a group
  * @access  Private
  */
-router.post('/leave/:groupId', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
-  return groupController.leaveGroup(req, res, next);
+router.post('/leave/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.leaveGroup(req, res, next);
 }));
 
 export default router;
