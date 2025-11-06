@@ -101,8 +101,8 @@ export class MatchingService {
     // Prepare matching criteria
     const matchingPreferences = {
       cuisines: preferences.cuisine || user.preference || [],
-      budget: preferences.budget || user.budget || 50,
-      radiusKm: preferences.radiusKm || user.radiusKm || 5,
+      budget: preferences.budget ?? user.budget ?? 50,
+      radiusKm: preferences.radiusKm ?? user.radiusKm ?? 5,
     };
 
     // Find best matching room

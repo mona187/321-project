@@ -31,7 +31,9 @@ router.put('/leave/:roomId', authMiddleware, asyncHandler((req, res, next) => ma
  * @desc    Get status of a waiting room
  * @access  Private
  */
-router.get('/status/:roomId', authMiddleware, asyncHandler((req, res, next) => matchingController.getRoomStatus(req, res, next)));
+router.get('/status/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.getRoomStatus(req, res, next);
+}));
 
 /**
  * @route   GET /api/matching/users/:roomId
