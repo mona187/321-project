@@ -127,7 +127,9 @@ process.on('unhandledRejection', (reason: Error) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
-  server.close(() => process.exit(1));
+  server.close(() => {
+    process.exit(1);
+  });
 });
 
 // Graceful shutdown
