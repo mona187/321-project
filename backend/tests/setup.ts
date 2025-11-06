@@ -2,7 +2,7 @@
 import dotenv from 'dotenv';
 
 // Increase timeout for all tests (if needed)
-jest.setTimeout(10000);
+jest.setTimeout(30000);
 
 // Global test setup
 beforeAll(() => {

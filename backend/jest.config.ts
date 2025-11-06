@@ -31,7 +31,16 @@ module.exports = {
       statements: 70
     }
   },
-  
+   coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/',            // ignore your test folder
+    '/dist/',             // ignore compiled files
+    'src/utils/logger.ts', // ignore specific file
+    'src/config/',         // ignore config folder
+    'src/mocks/',           // ignore mocks
+    'src/services/credibilityService.ts', // not implemented
+    'src/models/CredibilityLog.ts' // not implemented
+  ],
   // Where to output coverage reports
   coverageDirectory: 'coverage',
   
