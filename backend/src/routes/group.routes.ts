@@ -17,7 +17,9 @@ router.get('/status', authMiddleware, asyncHandler((req, res, next) => groupCont
  * @desc    Vote for a restaurant
  * @access  Private
  */
-router.post('/vote/:groupId', authMiddleware, asyncHandler((req, res, next) => groupController.voteForRestaurant(req, res, next)));
+router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.voteForRestaurant(req, res, next);
+}));
 
 /**
  * @route   POST /api/group/leave/:groupId
