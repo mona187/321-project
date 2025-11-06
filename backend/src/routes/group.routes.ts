@@ -28,9 +28,12 @@ router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next
  * @desc    Leave a group
  * @access  Private
  */
-const leaveGroupHandler = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  await groupController.leaveGroup(req, res, next);
+const leaveGroupHandler = (req: Request, res: Response, next: NextFunction): void => {
+  // Wrap async operation in IIFE with explicit error handling
+  void (async (): Promise<void> => {
+    await groupController.leaveGroup(req, res, next);
+  })().catch(next);
 };
-router.post('/leave/:groupId', authMiddleware, asyncHandler(leaveGroupHandler));
+router.post('/leave/:groupId', authMiddleware, leaveGroupHandler);
 
 export default router;
