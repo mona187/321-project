@@ -84,13 +84,15 @@ export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Execute async function and handle errors
-    // Using .then() and .catch() explicitly to satisfy linters that check for promise returns
-    Promise.resolve(fn(req, res, next))
-      .then(() => {
-        // Promise resolved successfully, no action needed
-      })
-      .catch(next);
+    // Execute async function in IIFE to prevent promise return
+    // Explicitly void the IIFE to satisfy strict linters
+    void (async (): Promise<void> => {
+      try {
+        await fn(req, res, next);
+      } catch (error) {
+        next(error);
+      }
+    })();
     // Function returns void, not a promise
   };
 };
