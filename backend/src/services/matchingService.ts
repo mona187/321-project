@@ -1,4 +1,4 @@
-import Room, { RoomStatus } from '../models/Room';
+import Room, { RoomStatus, IRoomDocument } from '../models/Room';
 import User, { UserStatus } from '../models/User';
 import Group from '../models/Group';
 import socketManager from '../utils/socketManager';
@@ -18,7 +18,7 @@ export class MatchingService {
     cuisines: string[];
     budget: number;
     radiusKm: number;
-  }): Promise<any | null> {
+  }): Promise<IRoomDocument | null> {
     // Get all available rooms
     const availableRooms = await Room.find({
       status: RoomStatus.WAITING,
@@ -80,7 +80,7 @@ export class MatchingService {
       budget?: number;
       radiusKm?: number;
     }
-  ): Promise<{ roomId: string; room: any }> {
+  ): Promise<{ roomId: string; room: IRoomDocument }> {
     // Get user
     const user = await User.findById(userId);
     if (!user) {
@@ -177,7 +177,7 @@ export class MatchingService {
   /**
    * Update room averages (budget, radius)
    */
-  private async updateRoomAverages(room: any): Promise<void> {
+  private async updateRoomAverages(room: IRoomDocument): Promise<void> {
     const users = await User.find({ _id: { $in: room.members } });
 
     const totalBudget = users.reduce((sum, user) => sum + (user.budget || 0), 0);
@@ -308,7 +308,13 @@ export class MatchingService {
   /**
    * Get room status
    */
-  async getRoomStatus(roomId: string): Promise<any> {
+  async getRoomStatus(roomId: string): Promise<{
+    roomID: string;
+    completionTime: number;
+    members: string[];
+    groupReady: boolean;
+    status: RoomStatus;
+  }> {
     const room = await Room.findById(roomId);
     if (!room) {
       throw new Error('Room not found');

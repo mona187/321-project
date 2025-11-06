@@ -2,6 +2,26 @@ import axios from 'axios';
 import { AppError } from '../middleware/errorHandler';
 import { RestaurantType } from '../types';
 
+// Google Places API response types
+interface GooglePlacePhoto {
+  photo_reference: string;
+  width?: number;
+  height?: number;
+}
+
+interface GooglePlace {
+  place_id: string;
+  name?: string;
+  formatted_address?: string;
+  vicinity?: string;
+  price_level?: number;
+  rating?: number;
+  photos?: GooglePlacePhoto[];
+  formatted_phone_number?: string;
+  website?: string;
+  url?: string;
+}
+
 export class RestaurantService {
   private readonly GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || '';
 
@@ -46,18 +66,19 @@ export class RestaurantService {
         throw new AppError(`Google Places API error: ${response.data.status}`, 500);
       }
 
-      let results = response.data.results || [];
+      let results: GooglePlace[] = (response.data.results as GooglePlace[]) || [];
       console.log(`🍽️ Found ${results.length} restaurants from Google Places`);
 
       // Filter by price level if specified
       if (priceLevel) {
-        results = results.filter((place: any) => place.price_level === priceLevel);
+        results = results.filter((place: GooglePlace) => place.price_level === priceLevel);
       }
 
-      return results.map((place: any) => this.formatPlaceData(place));
-    } catch (error: any) {
+      return results.map((place: GooglePlace) => this.formatPlaceData(place));
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
-      console.error('❌ Failed to search restaurants:', error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Failed to search restaurants:', errorMessage);
       // Return mock data on error
       return this.getMockRestaurants();
     }
@@ -88,10 +109,10 @@ export class RestaurantService {
         throw new AppError(`Restaurant not found: ${response.data.status}`, 404);
       }
 
-      
-      const place = response.data.result;
+
+      const place = response.data.result as GooglePlace;
       return this.formatPlaceData(place);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof AppError) throw error;
       console.error('Failed to get restaurant details:', error);
       return this.getMockRestaurant(placeId);
@@ -101,7 +122,7 @@ export class RestaurantService {
   /**
    * Format place data from Google Places API
    */
-  private formatPlaceData(place: any): RestaurantType {
+  private formatPlaceData(place: GooglePlace): RestaurantType {
     return {
       name: place.name || '',
       location: place.formatted_address || place.vicinity || '',
@@ -109,7 +130,7 @@ export class RestaurantService {
       address: place.formatted_address || place.vicinity || '',
       priceLevel: place.price_level,
       rating: place.rating,
-      photos: place.photos?.map((photo: any) => this.getPhotoUrl(photo.photo_reference)) || [],
+      photos: place.photos?.map((photo: GooglePlacePhoto) => this.getPhotoUrl(photo.photo_reference)) || [],
       phoneNumber: place.formatted_phone_number,
       website: place.website,
       url: place.url,
