@@ -41,7 +41,7 @@ export const sendNotificationToUsers = async (
     
     const tokens = users
       .map(user => user.fcmToken)
-      .filter((token): token is string => token !== null);
+      .filter((token): token is string => token !== undefined);
 
     if (tokens.length === 0) {
       console.warn('No valid FCM tokens found for the provided users');
@@ -49,7 +49,7 @@ export const sendNotificationToUsers = async (
     }
 
     await sendMulticastNotification(tokens, notification, notification.data);
-    console.log(`✅ Notification sent to ${tokens.length} users`);
+    console.log(` Notification sent to ${tokens.length} users`);
   } catch (error) {
     console.error('Failed to send notifications to users:', error);
     throw error;

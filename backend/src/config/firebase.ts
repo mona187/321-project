@@ -143,13 +143,22 @@ export const sendMulticastNotification = async (
     
     console.log(`✅ Multicast notification sent: ${response.successCount} succeeded, ${response.failureCount} failed`);
     
-    // Log any failures
+    // Log any failures - using safe iteration to prevent object injection
     if (response.failureCount > 0) {
-      response.responses.forEach((resp, idx) => {
+      // Use entries() to safely iterate with both index and response
+      const entries = Array.from(response.responses.entries());
+      for (const [idx, resp] of entries) {
         if (!resp.success) {
-          console.error(`Failed to send to token ${tokens[idx]}:`, resp.error);
+          // Use safe array access with explicit bounds checking and type validation
+          if (Number.isInteger(idx) && idx >= 0 && idx < tokens.length) {
+            const token = tokens[idx];
+            if (token && typeof token === 'string') {
+              const errorMessage = resp.error?.message || String(resp.error);
+              console.error(`Failed to send to token ${token}:`, errorMessage);
+            }
+          }
         }
-      });
+      }
     }
     
     return response;

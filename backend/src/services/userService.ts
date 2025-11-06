@@ -96,10 +96,10 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined && data.name !== null) user.name = data.name;
-    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
-    if (data.profilePicture !== undefined && data.profilePicture !== null) user.profilePicture = data.profilePicture;
-    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.profilePicture !== undefined) user.profilePicture = data.profilePicture;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
 
     await user.save();
 
@@ -136,19 +136,19 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined && data.name !== null) user.name = data.name;
-    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
-    if (data.preference !== undefined && data.preference !== null) user.preference = data.preference;
-    if (data.profilePicture !== undefined && data.profilePicture !== null) {
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.preference !== undefined) user.preference = data.preference;
+    if (data.profilePicture !== undefined) {
       console.log(`[UserService] Updating profilePicture from "${user.profilePicture}" to "${data.profilePicture}"`);
       
       // Convert Google profile picture URL to Base64 if it's a Google URL
       const convertedProfilePicture = await this.convertGoogleProfilePictureToBase64(data.profilePicture);
       user.profilePicture = convertedProfilePicture;
     }
-    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
-    if (data.budget !== undefined && data.budget !== null) user.budget = data.budget;
-    if (data.radiusKm !== undefined && data.radiusKm !== null) user.radiusKm = data.radiusKm;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined) user.budget = data.budget;
+    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
 
     await user.save();
     console.log(`[UserService] User saved. Current profilePicture: "${user.profilePicture}"`);
@@ -177,17 +177,17 @@ export class UserService {
       throw new Error('User not found');
     }
 
-    if (data.name !== undefined && data.name !== null) user.name = data.name;
-    if (data.bio !== undefined && data.bio !== null) user.bio = data.bio;
-    if (data.preference !== undefined && data.preference !== null) user.preference = data.preference;
-    if (data.profilePicture !== undefined && data.profilePicture !== null) {
+    if (data.name !== undefined) user.name = data.name;
+    if (data.bio !== undefined) user.bio = data.bio;
+    if (data.preference !== undefined) user.preference = data.preference;
+    if (data.profilePicture !== undefined) {
       // Convert Google profile picture URL to Base64 if it's a Google URL
       const convertedProfilePicture = await this.convertGoogleProfilePictureToBase64(data.profilePicture);
       user.profilePicture = convertedProfilePicture;
     }
-    if (data.contactNumber !== undefined && data.contactNumber !== null) user.contactNumber = data.contactNumber;
-    if (data.budget !== undefined && data.budget !== null) user.budget = data.budget;
-    if (data.radiusKm !== undefined && data.radiusKm !== null) user.radiusKm = data.radiusKm;
+    if (data.contactNumber !== undefined) user.contactNumber = data.contactNumber;
+    if (data.budget !== undefined) user.budget = data.budget;
+    if (data.radiusKm !== undefined) user.radiusKm = data.radiusKm;
 
     await user.save();
 

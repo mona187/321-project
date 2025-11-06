@@ -19,15 +19,15 @@ export const connectDatabase = async (): Promise<void> => {
 
     await mongoose.connect(mongoUri, options);
     
-    console.log('✅ MongoDB Atlas connected successfully');
+    console.log('MongoDB Atlas connected successfully');
     
     // Connection event handlers
     mongoose.connection.on('error', (error) => {
-      console.error('❌ MongoDB connection error:', error);
+      console.error('MongoDB connection error:', error);
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+      console.warn('MongoDB disconnected. Attempting to reconnect...');
     });
 
     mongoose.connection.on('reconnected', () => {
@@ -35,14 +35,16 @@ export const connectDatabase = async (): Promise<void> => {
     });
 
     // Graceful shutdown
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      console.log('MongoDB connection closed through app termination');
-      process.exit(0);
+    process.on('SIGINT', () => {
+      void (async () => {
+        await mongoose.connection.close();
+        console.log('MongoDB connection closed through app termination');
+        process.exit(0);
+      })();
     });
 
   } catch (error) {
-    console.error('❌ Failed to connect to MongoDB:', error);
+    console.error(' Failed to connect to MongoDB:', error);
     process.exit(1);
   }
 };

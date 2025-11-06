@@ -94,21 +94,25 @@ const startServer = async () => {
 // Background tasks
 function startBackgroundTasks() {
   // Check expired rooms every minute
-  setInterval(async () => {
-    try {
-      await matchingService.checkExpiredRooms();
-    } catch (error) {
-      console.error('Error checking expired rooms:', error);
-    }
+  setInterval(() => {
+    void (async () => {
+      try {
+        await matchingService.checkExpiredRooms();
+      } catch (error) {
+        console.error('Error checking expired rooms:', error);
+      }
+    })();
   }, 60000); // 1 minute
 
   // Check expired groups every 2 minutes
-  setInterval(async () => {
-    try {
-      await groupService.checkExpiredGroups();
-    } catch (error) {
-      console.error('Error checking expired groups:', error);
-    }
+  setInterval(() => {
+    void (async () => {
+      try {
+        await groupService.checkExpiredGroups();
+      } catch (error) {
+        console.error('Error checking expired groups:', error);
+      }
+    })();
   }, 120000); // 2 minutes
 
   console.log('✅ Background tasks started');
@@ -123,7 +127,15 @@ process.on('unhandledRejection', (reason: Error) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
-  server.close(() => process.exit(1));
+  // Attempt graceful shutdown, but exit immediately if it takes too long
+  server.close(() => {
+    process.exit(1);
+  });
+  // Force exit after 5 seconds if server.close doesn't complete
+  setTimeout(() => {
+    console.error('⚠️ Forcing exit after timeout');
+    process.exit(1);
+  }, 5000);
 });
 
 // Graceful shutdown
@@ -144,6 +156,6 @@ process.on('SIGINT', () => {
 });
 
 // Start the server
-startServer();
+void startServer();
 
 export default app;

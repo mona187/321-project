@@ -200,12 +200,12 @@ export class AuthController {
           radiusKm: 5,
         });
 
-        console.log(`✅ New user created: ${user._id}`);
+        console.log(`✅ New user created: ${user._id.toString()}`);
       } else {
         // Update last login status
         user.status = UserStatus.ONLINE;
         await user.save();
-        console.log(`✅ User logged in: ${user._id}`);
+        console.log(`✅ User logged in: ${user._id.toString()}`);
       }
 
       // Generate JWT

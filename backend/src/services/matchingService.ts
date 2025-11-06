@@ -1,4 +1,4 @@
-import Room, { RoomStatus } from '../models/Room';
+import Room, { RoomStatus, IRoomDocument } from '../models/Room';
 import User, { UserStatus } from '../models/User';
 import Group from '../models/Group';
 import socketManager from '../utils/socketManager';
@@ -18,13 +18,13 @@ export class MatchingService {
     cuisines: string[];
     budget: number;
     radiusKm: number;
-  }): Promise<any | null> {
+  }): Promise<IRoomDocument | null> {
     // Get all available rooms
     const availableRooms = await Room.find({
       status: RoomStatus.WAITING,
       completionTime: { $gt: new Date() },
       $expr: { $lt: [{ $size: '$members' }, this.MAX_MEMBERS] }
-    });
+    }) as unknown as IRoomDocument[];
 
     if (availableRooms.length === 0) {
       return null;
@@ -80,7 +80,7 @@ export class MatchingService {
       budget?: number;
       radiusKm?: number;
     }
-  ): Promise<{ roomId: string; room: any }> {
+  ): Promise<{ roomId: string; room: IRoomDocument }> {
     // Get user
     const user = await User.findById(userId);
     if (!user) {
@@ -100,9 +100,9 @@ export class MatchingService {
 
     // Prepare matching criteria
     const matchingPreferences = {
-      cuisines: preferences.cuisine || user.preference || [],
-      budget: preferences.budget || user.budget || 50,
-      radiusKm: preferences.radiusKm || user.radiusKm || 5,
+      cuisines: preferences.cuisine ?? user.preference,
+      budget: preferences.budget ?? user.budget ?? 50,
+      radiusKm: preferences.radiusKm ?? user.radiusKm ?? 5,
     };
 
     // Find best matching room
@@ -112,7 +112,7 @@ export class MatchingService {
       // No good match found - create new room
       const completionTime = new Date(Date.now() + this.ROOM_DURATION_MS);
       
-      room = await Room.create({
+      room = (await Room.create({
         completionTime,
         maxMembers: this.MAX_MEMBERS,
         members: [userId],
@@ -120,9 +120,9 @@ export class MatchingService {
         cuisine: matchingPreferences.cuisines[0] || null, // Primary cuisine
         averageBudget: matchingPreferences.budget,
         averageRadius: matchingPreferences.radiusKm,
-      });
+      })) as unknown as IRoomDocument;
 
-      console.log(`✅ Created new room: ${room._id} (cuisine: ${room.cuisine})`);
+      console.log(`✅ Created new room: ${room._id.toString()} (cuisine: ${room.cuisine})`);
     } else {
       // Add user to existing room
       room.members.push(userId);
@@ -131,7 +131,7 @@ export class MatchingService {
       await this.updateRoomAverages(room);
       
       await room.save();
-      console.log(`✅ User ${userId} joined room: ${room._id} (members: ${room.members.length}/${this.MAX_MEMBERS})`);
+      console.log(`✅ User ${userId} joined room: ${room._id.toString()} (members: ${room.members.length}/${this.MAX_MEMBERS})`);
     }
 
     // Update user status
@@ -170,14 +170,14 @@ export class MatchingService {
 
     return {
       roomId: room._id.toString(),
-      room: room.toJSON(),
+      room: room.toJSON() as IRoomDocument,
     };
   }
 
   /**
    * Update room averages (budget, radius)
    */
-  private async updateRoomAverages(room: any): Promise<void> {
+  private async updateRoomAverages(room: IRoomDocument): Promise<void> {
     const users = await User.find({ _id: { $in: room.members } });
 
     const totalBudget = users.reduce((sum, user) => sum + (user.budget || 0), 0);
@@ -196,7 +196,7 @@ export class MatchingService {
       throw new Error('User not found');
     }
 
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     
     // ✅ FIXED: If room doesn't exist, just clear the user's roomID
     if (!room) {
@@ -256,7 +256,7 @@ export class MatchingService {
    * Create a group from a full room
    */
   private async createGroupFromRoom(roomId: string): Promise<void> {
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -276,7 +276,7 @@ export class MatchingService {
       restaurantSelected: false,
     });
 
-    console.log(`✅ Created group: ${group._id} from room: ${roomId}`);
+    console.log(`✅ Created group: ${group._id.toString()} from room: ${roomId}`);
 
     // Update all users
     await User.updateMany(
@@ -308,8 +308,14 @@ export class MatchingService {
   /**
    * Get room status
    */
-  async getRoomStatus(roomId: string): Promise<any> {
-    const room = await Room.findById(roomId);
+  async getRoomStatus(roomId: string): Promise<{
+    roomID: string;
+    completionTime: number;
+    members: string[];
+    groupReady: boolean;
+    status: RoomStatus;
+  }> {
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -327,7 +333,7 @@ export class MatchingService {
    * Get users in a room
    */
   async getRoomUsers(roomId: string): Promise<string[]> {
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -342,7 +348,7 @@ export class MatchingService {
     const expiredRooms = await Room.find({
       status: RoomStatus.WAITING,
       completionTime: { $lt: new Date() },
-    });
+    }) as unknown as IRoomDocument[];
 
     for (const room of expiredRooms) {
       // Check if room has enough members
@@ -374,7 +380,7 @@ export class MatchingService {
           }
         }
 
-        console.log(`⏰ Expired room: ${room._id}`);
+        console.log(`⏰ Expired room: ${room._id.toString()}`);
       }
     }
   }
