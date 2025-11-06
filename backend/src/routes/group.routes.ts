@@ -11,7 +11,7 @@ const router = Router();
  * @access  Private
  */
 router.get('/status', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await groupController.getGroupStatus(req, res, next);
+  await groupController.getGroupStatus(req, res, next);
 }));
 
 /**
@@ -20,7 +20,7 @@ router.get('/status', authMiddleware, asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await groupController.voteForRestaurant(req, res, next);
+  await groupController.voteForRestaurant(req, res, next);
 }));
 
 /**
@@ -29,7 +29,7 @@ router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next
  * @access  Private
  */
 router.post('/leave/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await groupController.leaveGroup(req, res, next);
+  await groupController.leaveGroup(req, res, next);
 }));
 
 export default router;

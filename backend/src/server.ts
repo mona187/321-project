@@ -127,26 +127,15 @@ process.on('unhandledRejection', (reason: Error) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
-  let exited = false;
-  const exitProcess = (): void => {
-    if (!exited) {
-      exited = true;
-      process.exit(1);
-    }
-  };
   // Attempt graceful shutdown, but exit immediately if it takes too long
   server.close(() => {
-    exitProcess();
+    process.exit(1);
   });
   // Force exit after 5 seconds if server.close doesn't complete
   setTimeout(() => {
     console.error('⚠️ Forcing exit after timeout');
-    exitProcess();
+    process.exit(1);
   }, 5000);
-  // Safety net: ensure process exits even if callbacks fail (after 6 seconds)
-  setTimeout(() => {
-    exitProcess();
-  }, 6000);
 });
 
 // Graceful shutdown

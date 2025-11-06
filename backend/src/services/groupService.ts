@@ -77,10 +77,7 @@ export class GroupService {
     // Convert Map to object for response
     const currentVotes: Record<string, number> = {};
     group.restaurantVotes.forEach((count: number, id: string) => {
-      // Validate id to prevent object injection
-      if (typeof id === 'string' && id && !id.includes('__proto__') && !id.includes('constructor')) {
-        currentVotes[id] = count;
-      }
+      currentVotes[id] = count;
     });
 
     // Emit vote update to all group members
@@ -177,10 +174,7 @@ export class GroupService {
 
           const currentVotes: Record<string, number> = {};
           group.restaurantVotes.forEach((count: number, id: string) => {
-            // Validate id to prevent object injection
-            if (typeof id === 'string' && id && !id.includes('__proto__') && !id.includes('constructor')) {
-              currentVotes[id] = count;
-            }
+            currentVotes[id] = count;
           });
 
           socketManager.emitRestaurantSelected(
@@ -259,10 +253,7 @@ export class GroupService {
         if (group.restaurant) {
           const currentVotes: Record<string, number> = {};
           group.restaurantVotes.forEach((count: number, id: string) => {
-            // Validate id to prevent object injection
-            if (typeof id === 'string' && id && !id.includes('__proto__') && !id.includes('constructor')) {
-              currentVotes[id] = count;
-            }
+            currentVotes[id] = count;
           });
 
           socketManager.emitRestaurantSelected(

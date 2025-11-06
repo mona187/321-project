@@ -11,7 +11,7 @@ const router = Router();
  * @access  Private
  */
 router.post('/join', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await matchingController.joinMatching(req, res, next);
+  await matchingController.joinMatching(req, res, next);
 }));
 
 /**
@@ -20,7 +20,7 @@ router.post('/join', authMiddleware, asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.post('/join/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await matchingController.joinSpecificRoom(req, res, next);
+  await matchingController.joinSpecificRoom(req, res, next);
 }));
 
 /**
@@ -29,7 +29,7 @@ router.post('/join/:roomId', authMiddleware, asyncHandler(async (req, res, next)
  * @access  Private
  */
 router.put('/leave/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await matchingController.leaveRoom(req, res, next);
+  await matchingController.leaveRoom(req, res, next);
 }));
 
 /**
@@ -38,7 +38,7 @@ router.put('/leave/:roomId', authMiddleware, asyncHandler(async (req, res, next)
  * @access  Private
  */
 router.get('/status/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await matchingController.getRoomStatus(req, res, next);
+  await matchingController.getRoomStatus(req, res, next);
 }));
 
 /**
@@ -47,7 +47,7 @@ router.get('/status/:roomId', authMiddleware, asyncHandler(async (req, res, next
  * @access  Private
  */
 router.get('/users/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
-  void await matchingController.getRoomUsers(req, res, next);
+  await matchingController.getRoomUsers(req, res, next);
 }));
 
 export default router;
