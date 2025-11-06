@@ -1,42 +1,43 @@
 import { Router } from 'express';
-import { authController } from '../controllers/auth.controller';
+import { matchingController } from '../controllers/matching.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
-// =======================
-// 🔓 Public routes
-// =======================
-router.post('/signup', asyncHandler(async (req, res, next) => {
-  await authController.signUp(req, res, next);
-}));
+/**
+ * @route   POST /api/matching/join
+ * @desc    Join the matching pool
+ * @access  Private
+ */
+router.post('/join', authMiddleware, asyncHandler(matchingController.joinMatching));
 
-router.post('/signin', asyncHandler(async (req, res, next) => {
-  await authController.signIn(req, res, next);
-}));
+/**
+ * @route   POST /api/matching/join/:roomId
+ * @desc    Join a specific room (not implemented)
+ * @access  Private
+ */
+router.post('/join/:roomId', authMiddleware, asyncHandler(matchingController.joinSpecificRoom));
 
-router.post('/google', asyncHandler(async (req, res, next) => {
-  await authController.googleAuth(req, res, next); // Legacy endpoint
-}));
+/**
+ * @route   PUT /api/matching/leave/:roomId
+ * @desc    Leave a waiting room
+ * @access  Private
+ */
+router.put('/leave/:roomId', authMiddleware, asyncHandler(matchingController.leaveRoom));
 
-// =======================
-// 🔐 Protected routes
-// =======================
-router.post('/logout', authMiddleware, asyncHandler(async (req, res, next) => {
-  await authController.logout(req, res, next);
-}));
+/**
+ * @route   GET /api/matching/status/:roomId
+ * @desc    Get status of a waiting room
+ * @access  Private
+ */
+router.get('/status/:roomId', authMiddleware, asyncHandler(matchingController.getRoomStatus));
 
-router.post('/fcm-token', authMiddleware, asyncHandler(async (req, res, next) => {
-  await authController.updateFCMToken(req, res, next);
-}));
-
-router.delete('/account', authMiddleware, asyncHandler(async (req, res, next) => {
-  await authController.deleteAccount(req, res, next);
-}));
-
-router.get('/verify', authMiddleware, asyncHandler(async (req, res, next) => {
-  await authController.verifyToken(req, res, next);
-}));
+/**
+ * @route   GET /api/matching/users/:roomId
+ * @desc    Get users in a room
+ * @access  Private
+ */
+router.get('/users/:roomId', authMiddleware, asyncHandler(matchingController.getRoomUsers));
 
 export default router;
