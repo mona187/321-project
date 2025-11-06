@@ -8,7 +8,7 @@ import initializeSocket, { SocketEmitter } from '../config/socket';
  */
 
 class SocketManager {
-  private static instance: SocketManager;
+  private static instance: SocketManager | undefined;
   private io: SocketIOServer | null = null;
   private emitter: SocketEmitter | null = null;
 

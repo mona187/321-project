@@ -10,34 +10,34 @@ const router = Router();
  * @desc    Join the matching pool
  * @access  Private
  */
-router.post('/join', authMiddleware, asyncHandler(matchingController.joinMatching.bind(matchingController)));
+router.post('/join', authMiddleware, asyncHandler((req, res, next) => matchingController.joinMatching(req, res, next)));
 
 /**
  * @route   POST /api/matching/join/:roomId
  * @desc    Join a specific room (not implemented)
  * @access  Private
  */
-router.post('/join/:roomId', authMiddleware, asyncHandler(matchingController.joinSpecificRoom.bind(matchingController)));
+router.post('/join/:roomId', authMiddleware, asyncHandler((req, res, next) => matchingController.joinSpecificRoom(req, res, next)));
 
 /**
  * @route   PUT /api/matching/leave/:roomId
  * @desc    Leave a waiting room
  * @access  Private
  */
-router.put('/leave/:roomId', authMiddleware, asyncHandler(matchingController.leaveRoom.bind(matchingController)));
+router.put('/leave/:roomId', authMiddleware, asyncHandler((req, res, next) => matchingController.leaveRoom(req, res, next)));
 
 /**
  * @route   GET /api/matching/status/:roomId
  * @desc    Get status of a waiting room
  * @access  Private
  */
-router.get('/status/:roomId', authMiddleware, asyncHandler(matchingController.getRoomStatus.bind(matchingController)));
+router.get('/status/:roomId', authMiddleware, asyncHandler((req, res, next) => matchingController.getRoomStatus(req, res, next)));
 
 /**
  * @route   GET /api/matching/users/:roomId
  * @desc    Get users in a room
  * @access  Private
  */
-router.get('/users/:roomId', authMiddleware, asyncHandler(matchingController.getRoomUsers.bind(matchingController)));
+router.get('/users/:roomId', authMiddleware, asyncHandler((req, res, next) => matchingController.getRoomUsers(req, res, next)));
 
 export default router;

@@ -10,14 +10,14 @@ const router = Router();
  * @desc    Search for restaurants near a location
  * @access  Public (optional auth)
  */
-router.get('/search', optionalAuth, asyncHandler(restaurantController.searchRestaurants.bind(restaurantController)));
+router.get('/search', optionalAuth, asyncHandler((req, res, next) => restaurantController.searchRestaurants(req, res, next)));
 
 /**
  * @route   GET /api/restaurant/:restaurantId
  * @desc    Get restaurant details by ID
  * @access  Public (optional auth)
  */
-router.get('/:restaurantId', optionalAuth, asyncHandler(restaurantController.getRestaurantDetails.bind(restaurantController)));
+router.get('/:restaurantId', optionalAuth, asyncHandler((req, res, next) => restaurantController.getRestaurantDetails(req, res, next)));
 
 /**
  * @route   POST /api/restaurant/recommendations/:groupId

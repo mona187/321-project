@@ -6,9 +6,9 @@ import { asyncHandler } from '../middleware/errorHandler';
 const router = Router();
 
 // Public routes
-router.post('/signup', asyncHandler(authController.signUp.bind(authController)));
-router.post('/signin', asyncHandler(authController.signIn.bind(authController)));
-router.post('/google', asyncHandler(authController.googleAuth.bind(authController))); // Legacy endpoint
+router.post('/signup', asyncHandler((req, res, next) => authController.signUp(req, res, next)));
+router.post('/signin', asyncHandler((req, res, next) => authController.signIn(req, res, next)));
+router.post('/google', asyncHandler((req, res, next) => authController.googleAuth(req, res, next))); // Legacy endpoint
 
 // Protected routes
 router.post('/logout', authMiddleware, asyncHandler((req, res, next) => authController.logout(req, res, next)));
