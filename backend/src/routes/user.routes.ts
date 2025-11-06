@@ -10,8 +10,8 @@ const router = Router();
  * @desc    Get user profiles by IDs (comma-separated)
  * @access  Public
  */
-router.get('/profile/:ids', asyncHandler(async (req, res, next) => {
-  await userController.getUserProfiles(req, res, next);
+router.get('/profile/:ids', asyncHandler((req, res, next): Promise<void> => {
+  return userController.getUserProfiles(req, res, next);
 }));
 
 /**
@@ -19,8 +19,8 @@ router.get('/profile/:ids', asyncHandler(async (req, res, next) => {
  * @desc    Get current user's settings
  * @access  Private
  */
-router.get('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.getUserSettings(req, res, next);
+router.get('/settings', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return userController.getUserSettings(req, res, next);
 }));
 
 /**
@@ -28,8 +28,8 @@ router.get('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
  * @desc    Create/update user profile
  * @access  Private
  */
-router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.createUserProfile(req, res, next);
+router.post('/profile', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return userController.createUserProfile(req, res, next);
 }));
 
 /**
@@ -37,8 +37,8 @@ router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
  * @desc    Update user settings
  * @access  Private
  */
-router.post('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.updateUserSettings(req, res, next);
+router.post('/settings', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return userController.updateUserSettings(req, res, next);
 }));
 
 /**
@@ -46,8 +46,8 @@ router.post('/settings', authMiddleware, asyncHandler(async (req, res, next) => 
  * @desc    Update user profile
  * @access  Private
  */
-router.put('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.updateUserProfile(req, res, next);
+router.put('/profile', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return userController.updateUserProfile(req, res, next);
 }));
 
 /**
@@ -55,8 +55,8 @@ router.put('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
  * @desc    Delete user account
  * @access  Private
  */
-router.delete('/:userId', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.deleteUser(req, res, next);
+router.delete('/:userId', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return userController.deleteUser(req, res, next);
 }));
 
 export default router;

@@ -10,8 +10,8 @@ const router = Router();
  * @desc    Search for restaurants near a location
  * @access  Public (optional auth)
  */
-router.get('/search', optionalAuth, asyncHandler(async (req, res, next) => {
-  await restaurantController.searchRestaurants(req, res, next);
+router.get('/search', optionalAuth, asyncHandler((req, res, next): Promise<void> => {
+  return restaurantController.searchRestaurants(req, res, next);
 }));
 
 /**
@@ -19,8 +19,8 @@ router.get('/search', optionalAuth, asyncHandler(async (req, res, next) => {
  * @desc    Get restaurant details by ID
  * @access  Public (optional auth)
  */
-router.get('/:restaurantId', optionalAuth, asyncHandler(async (req, res, next) => {
-  await restaurantController.getRestaurantDetails(req, res, next);
+router.get('/:restaurantId', optionalAuth, asyncHandler((req, res, next): Promise<void> => {
+  return restaurantController.getRestaurantDetails(req, res, next);
 }));
 
 /**
@@ -28,8 +28,8 @@ router.get('/:restaurantId', optionalAuth, asyncHandler(async (req, res, next) =
  * @desc    Get restaurant recommendations for a group
  * @access  Private
  */
-router.post('/recommendations/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
-  await restaurantController.getGroupRecommendations(req, res, next);
+router.post('/recommendations/:groupId', authMiddleware, asyncHandler((req, res, next): Promise<void> => {
+  return restaurantController.getGroupRecommendations(req, res, next);
 }));
 
 export default router;
