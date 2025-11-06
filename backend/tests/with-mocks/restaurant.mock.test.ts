@@ -31,6 +31,7 @@ import app from '../../src/app';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import { seedTestUsers, cleanTestData, TestUser } from '../helpers/seed.helper';
 import { generateTestToken } from '../helpers/auth.helper';
+import * as RestaurantServiceModule from '../../src/services/restaurantService';
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -389,6 +390,7 @@ describe('GET /api/restaurant/search - External Failures', () => {
     expect(response.body.Body[0].name).toBe('Cheap Eats');
     expect(response.body.Body[0].priceLevel).toBe(1);
   });
+
 });
 
 describe('GET /api/restaurant/:restaurantId - External Failures', () => {
@@ -685,5 +687,33 @@ describe('Request Validation - Controller Level', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.Message.error).toContain('User preferences array is required');
+  });
+});
+
+describe('Controller Catch Block Coverage (next(error))', () => {
+  test('should call errorHandler when restaurantService throws', async () => {
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Temporarily spy on the actual imported service used by the controller
+    const spy = jest
+      .spyOn(RestaurantServiceModule.default, 'searchRestaurants')
+      .mockImplementationOnce(() => {
+        throw new Error('Forced controller failure');
+      });
+
+    const response = await request(app)
+      .get('/api/restaurant/search')
+      .query({ latitude: '49.28', longitude: '-123.12' })
+      .set('Authorization', `Bearer ${token}`);
+
+    // The thrown error should bubble up to the errorHandler middleware
+    expect(response.status).toBe(500);
+    expect(response.body.message).toContain('Forced controller failure');
+
+    spy.mockRestore();
   });
 });
