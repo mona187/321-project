@@ -80,19 +80,21 @@ export const notFoundHandler = (
 
 // Async error wrapper - wraps async route handlers to catch errors
 // This wrapper ensures async route handlers don't return promises to Express
+// Type signature explicitly shows it accepts a promise-returning function but returns a void function
 export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
-) => {
+): ((req: Request, res: Response, next: NextFunction) => void) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     // Execute async function in IIFE to prevent promise return
-    // Explicitly void the IIFE to satisfy strict linters
-    void (async (): Promise<void> => {
+    // Explicitly void the IIFE to satisfy strict linters that check for promise returns
+    const promise = (async (): Promise<void> => {
       try {
         await fn(req, res, next);
       } catch (error) {
         next(error);
       }
     })();
-    // Function returns void, not a promise
+    // Explicitly void the promise to prevent it from being returned
+    void promise;
   };
 };
