@@ -24,7 +24,7 @@ export class MatchingService {
       status: RoomStatus.WAITING,
       completionTime: { $gt: new Date() },
       $expr: { $lt: [{ $size: '$members' }, this.MAX_MEMBERS] }
-    });
+    }) as unknown as IRoomDocument[];
 
     if (availableRooms.length === 0) {
       return null;
@@ -112,7 +112,7 @@ export class MatchingService {
       // No good match found - create new room
       const completionTime = new Date(Date.now() + this.ROOM_DURATION_MS);
       
-      room = await Room.create({
+      room = (await Room.create({
         completionTime,
         maxMembers: this.MAX_MEMBERS,
         members: [userId],
@@ -120,7 +120,7 @@ export class MatchingService {
         cuisine: matchingPreferences.cuisines[0] || null, // Primary cuisine
         averageBudget: matchingPreferences.budget,
         averageRadius: matchingPreferences.radiusKm,
-      });
+      })) as unknown as IRoomDocument;
 
       console.log(`✅ Created new room: ${room._id} (cuisine: ${room.cuisine})`);
     } else {
@@ -170,7 +170,7 @@ export class MatchingService {
 
     return {
       roomId: room._id.toString(),
-      room: room.toJSON(),
+      room: room.toJSON() as IRoomDocument,
     };
   }
 
@@ -196,7 +196,7 @@ export class MatchingService {
       throw new Error('User not found');
     }
 
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     
     // ✅ FIXED: If room doesn't exist, just clear the user's roomID
     if (!room) {
@@ -256,7 +256,7 @@ export class MatchingService {
    * Create a group from a full room
    */
   private async createGroupFromRoom(roomId: string): Promise<void> {
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -315,7 +315,7 @@ export class MatchingService {
     groupReady: boolean;
     status: RoomStatus;
   }> {
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -333,7 +333,7 @@ export class MatchingService {
    * Get users in a room
    */
   async getRoomUsers(roomId: string): Promise<string[]> {
-    const room = await Room.findById(roomId);
+    const room = (await Room.findById(roomId)) as unknown as IRoomDocument | null;
     if (!room) {
       throw new Error('Room not found');
     }
@@ -348,7 +348,7 @@ export class MatchingService {
     const expiredRooms = await Room.find({
       status: RoomStatus.WAITING,
       completionTime: { $lt: new Date() },
-    });
+    }) as unknown as IRoomDocument[];
 
     for (const room of expiredRooms) {
       // Check if room has enough members

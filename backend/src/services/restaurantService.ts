@@ -75,10 +75,9 @@ export class RestaurantService {
       }
 
       return results.map((place: GooglePlace) => this.formatPlaceData(place));
-    } catch (error: unknown) {
+    } catch (error: any) {
       if (error instanceof AppError) throw error;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Failed to search restaurants:', errorMessage);
+      console.error('❌ Failed to search restaurants:', error.message);
       // Return mock data on error
       return this.getMockRestaurants();
     }
@@ -112,7 +111,7 @@ export class RestaurantService {
 
       const place = response.data.result as GooglePlace;
       return this.formatPlaceData(place);
-    } catch (error: unknown) {
+    } catch (error: any) {
       if (error instanceof AppError) throw error;
       console.error('Failed to get restaurant details:', error);
       return this.getMockRestaurant(placeId);

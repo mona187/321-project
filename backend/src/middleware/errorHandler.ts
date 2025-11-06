@@ -35,7 +35,7 @@ export const errorHandler = (
     // Mongoose cast error (invalid ObjectId, etc.)
     statusCode = 400;
     message = 'Invalid data format';
-  } else if (err.name === 'MongoServerError' && (err as any).code === 11000) {
+  } else if (err.name === 'MongoServerError' && 'code' in err && (err as { code: number }).code === 11000) {
     // MongoDB duplicate key error
     statusCode = 409;
     message = 'Duplicate entry - resource already exists';

@@ -1,6 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import User, { UserStatus } from '../models/User';
+import User, { UserStatus, IUserDocument } from '../models/User';
 import { AppError } from '../middleware/errorHandler';
 import axios from 'axios';
 
@@ -81,8 +81,8 @@ export class AuthService {
     email: string;
     name: string;
     picture?: string;
-  }): Promise<any> {
-    let user = await User.findOne({ googleId: googleData.googleId });
+  }): Promise<IUserDocument> {
+    let user = (await User.findOne({ googleId: googleData.googleId })) as unknown as IUserDocument | null;
 
     // Convert Google profile picture to Base64 if present
     let convertedProfilePicture = '';
@@ -92,7 +92,7 @@ export class AuthService {
 
     if (!user) {
       // Create new user
-      user = await User.create({
+      user = (await User.create({
         googleId: googleData.googleId,
         email: googleData.email,
         name: googleData.name,
@@ -102,21 +102,21 @@ export class AuthService {
         credibilityScore: 100,
         budget: 0,
         radiusKm: 5,
-      });
+      })) as unknown as IUserDocument;
 
-      console.log(`✅ New user created: ${user._id}`);
+        console.log(`✅ New user created: ${user._id.toString()}`);
     } else {
       // Update existing user
       user.status = UserStatus.ONLINE;
       // Only update profile picture if user doesn't have a custom one
       if (convertedProfilePicture && (!user.profilePicture || user.profilePicture === '')) {
         user.profilePicture = convertedProfilePicture;
-        console.log(`✅ Updated profile picture from Google for user: ${user._id}`);
+        console.log(`✅ Updated profile picture from Google for user: ${user._id.toString()}`);
       } else if (user.profilePicture && user.profilePicture !== '') {
-        console.log(`✅ Keeping existing custom profile picture for user: ${user._id}`);
+        console.log(`✅ Keeping existing custom profile picture for user: ${user._id.toString()}`);
       }
       await user.save();
-      console.log(`✅ User logged in: ${user._id}`);
+      console.log(`✅ User logged in: ${user._id.toString()}`);
     }
 
     return user;
@@ -125,7 +125,7 @@ export class AuthService {
   /**
    * Generate JWT token
    */
-  generateToken(user: any): string {
+  generateToken(user: IUserDocument): string {
     const jwtSecret = process.env.JWT_SECRET;
     
     if (!jwtSecret) {
@@ -176,7 +176,7 @@ export class AuthService {
    * Logout user
    */
   async logoutUser(userId: string): Promise<void> {
-    const user = await User.findById(userId);
+    const user = (await User.findById(userId)) as unknown as IUserDocument | null;
 
     if (user) {
       user.status = UserStatus.OFFLINE;
@@ -188,7 +188,7 @@ export class AuthService {
    * Update FCM token
    */
   async updateFCMToken(userId: string, fcmToken: string): Promise<void> {
-    const user = await User.findById(userId);
+    const user = (await User.findById(userId)) as unknown as IUserDocument | null;
 
     if (!user) {
       throw new AppError('User not found', 404);
@@ -202,7 +202,7 @@ export class AuthService {
    * Delete user account
    */
   async deleteAccount(userId: string): Promise<void> {
-    const user = await User.findById(userId);
+    const user = (await User.findById(userId)) as unknown as IUserDocument | null;
 
     if (!user) {
       throw new AppError('User not found', 404);
