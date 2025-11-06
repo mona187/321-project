@@ -17,14 +17,18 @@ router.get('/profile/:ids', asyncHandler((req, res, next) => userController.getU
  * @desc    Get current user's settings
  * @access  Private
  */
-router.get('/settings', authMiddleware, asyncHandler((req, res, next) => userController.getUserSettings(req, res, next)));
+router.get('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
+  await userController.getUserSettings(req, res, next);
+}));
 
 /**
  * @route   POST /api/user/profile
  * @desc    Create/update user profile
  * @access  Private
  */
-router.post('/profile', authMiddleware, asyncHandler((req, res, next) => userController.createUserProfile(req, res, next)));
+router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
+  await userController.createUserProfile(req, res, next);
+}));
 
 /**
  * @route   POST /api/user/settings
@@ -45,6 +49,8 @@ router.put('/profile', authMiddleware, asyncHandler((req, res, next) => userCont
  * @desc    Delete user account
  * @access  Private
  */
-router.delete('/:userId', authMiddleware, asyncHandler((req, res, next) => userController.deleteUser(req, res, next)));
+router.delete('/:userId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await userController.deleteUser(req, res, next);
+}));
 
 export default router;

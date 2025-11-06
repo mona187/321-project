@@ -24,6 +24,8 @@ router.get('/:restaurantId', optionalAuth, asyncHandler((req, res, next) => rest
  * @desc    Get restaurant recommendations for a group
  * @access  Private
  */
-router.post('/recommendations/:groupId', authMiddleware, asyncHandler((req, res, next) => restaurantController.getGroupRecommendations(req, res, next)));
+router.post('/recommendations/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await restaurantController.getGroupRecommendations(req, res, next);
+}));
 
 export default router;

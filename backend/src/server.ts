@@ -144,6 +144,6 @@ process.on('SIGINT', () => {
 });
 
 // Start the server
-startServer();
+void startServer();
 
 export default app;

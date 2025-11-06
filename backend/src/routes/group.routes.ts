@@ -24,6 +24,8 @@ router.post('/vote/:groupId', authMiddleware, asyncHandler((req, res, next) => g
  * @desc    Leave a group
  * @access  Private
  */
-router.post('/leave/:groupId', authMiddleware, asyncHandler((req, res, next) => groupController.leaveGroup(req, res, next)));
+router.post('/leave/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.leaveGroup(req, res, next);
+}));
 
 export default router;
