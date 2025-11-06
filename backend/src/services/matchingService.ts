@@ -122,7 +122,7 @@ export class MatchingService {
         averageRadius: matchingPreferences.radiusKm,
       })) as unknown as IRoomDocument;
 
-      console.log(`✅ Created new room: ${room._id} (cuisine: ${room.cuisine})`);
+      console.log(`✅ Created new room: ${room._id.toString()} (cuisine: ${room.cuisine})`);
     } else {
       // Add user to existing room
       room.members.push(userId);
@@ -131,7 +131,7 @@ export class MatchingService {
       await this.updateRoomAverages(room);
       
       await room.save();
-      console.log(`✅ User ${userId} joined room: ${room._id} (members: ${room.members.length}/${this.MAX_MEMBERS})`);
+      console.log(`✅ User ${userId} joined room: ${room._id.toString()} (members: ${room.members.length}/${this.MAX_MEMBERS})`);
     }
 
     // Update user status
@@ -276,7 +276,7 @@ export class MatchingService {
       restaurantSelected: false,
     });
 
-    console.log(`✅ Created group: ${group._id} from room: ${roomId}`);
+    console.log(`✅ Created group: ${group._id.toString()} from room: ${roomId}`);
 
     // Update all users
     await User.updateMany(
@@ -380,7 +380,7 @@ export class MatchingService {
           }
         }
 
-        console.log(`⏰ Expired room: ${room._id}`);
+        console.log(`⏰ Expired room: ${room._id.toString()}`);
       }
     }
   }

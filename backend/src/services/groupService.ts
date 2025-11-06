@@ -273,7 +273,7 @@ export class GroupService {
           });
         }
 
-        console.log(`â° Auto-selected restaurant for expired group: ${group._id}`);
+        console.log(`â° Auto-selected restaurant for expired group: ${group._id.toString()}`);
       } else {
         // No votes - disband group
         await this.closeGroup(group._id.toString());
@@ -287,7 +287,7 @@ export class GroupService {
           },
         });
 
-        console.log(`â° Disbanded expired group with no votes: ${group._id}`);
+        console.log(`â° Disbanded expired group with no votes: ${group._id.toString()}`);
       }
     }
   }
