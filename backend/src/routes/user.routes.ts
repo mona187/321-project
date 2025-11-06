@@ -11,7 +11,7 @@ const router = Router();
  * @access  Public
  */
 router.get('/profile/:ids', asyncHandler(async (req, res, next) => {
-  await userController.getUserProfiles(req, res, next);
+  void await userController.getUserProfiles(req, res, next);
 }));
 
 /**
@@ -20,7 +20,7 @@ router.get('/profile/:ids', asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.get('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.getUserSettings(req, res, next);
+  void await userController.getUserSettings(req, res, next);
 }));
 
 /**
@@ -29,7 +29,7 @@ router.get('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.createUserProfile(req, res, next);
+  void await userController.createUserProfile(req, res, next);
 }));
 
 /**
@@ -38,7 +38,7 @@ router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.post('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.updateUserSettings(req, res, next);
+  void await userController.updateUserSettings(req, res, next);
 }));
 
 /**
@@ -47,7 +47,7 @@ router.post('/settings', authMiddleware, asyncHandler(async (req, res, next) => 
  * @access  Private
  */
 router.put('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.updateUserProfile(req, res, next);
+  void await userController.updateUserProfile(req, res, next);
 }));
 
 /**
@@ -56,7 +56,7 @@ router.put('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 router.delete('/:userId', authMiddleware, asyncHandler(async (req, res, next) => {
-  await userController.deleteUser(req, res, next);
+  void await userController.deleteUser(req, res, next);
 }));
 
 export default router;
