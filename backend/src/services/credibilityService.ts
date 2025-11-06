@@ -151,7 +151,7 @@ export class CredibilityService {
   async getUserCredibilityLogs(
     userId: string,
     limit: number = 20
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const logs = await CredibilityLog.findByUserId(userId, limit);
     return logs;
   }

@@ -146,8 +146,10 @@ export const sendMulticastNotification = async (
     // Log any failures
     if (response.failureCount > 0) {
       response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          console.error(`Failed to send to token ${tokens[idx]}:`, resp.error);
+        if (!resp.success && idx < tokens.length) {
+          const token = tokens[idx];
+          const errorMessage = resp.error?.message || String(resp.error);
+          console.error(`Failed to send to token ${token}:`, errorMessage);
         }
       });
     }

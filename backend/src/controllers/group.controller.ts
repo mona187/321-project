@@ -32,7 +32,16 @@ export class GroupController {
         return;
       }
 
-      const status = await groupService.getGroupStatus(group._id.toString());
+      const groupId = group._id?.toString();
+      if (!groupId) {
+        res.status(404).json({
+          Status: 404,
+          Message: { error: 'Group ID not found' },
+          Body: null
+        });
+        return;
+      }
+      const status = await groupService.getGroupStatus(groupId);
 
       res.status(200).json({
         Status: 200,

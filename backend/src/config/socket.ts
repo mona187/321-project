@@ -266,7 +266,7 @@ export class SocketEmitter {
   /**
    * Emit to a specific user
    */
-  emitToUser(userId: string, event: string, data: any, attempt = 1) {
+  emitToUser(userId: string, event: string, data: unknown, attempt = 1) {
     const socketId = userSocketMap.get(userId);
     if (!socketId) {
       if (attempt === 1) {

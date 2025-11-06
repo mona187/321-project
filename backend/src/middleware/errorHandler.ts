@@ -83,6 +83,7 @@ export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
+    // Explicitly void the promise to satisfy linter - we handle errors via .catch()
     void Promise.resolve(fn(req, res, next)).catch(next);
   };
 };

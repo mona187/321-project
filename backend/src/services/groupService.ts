@@ -1,14 +1,14 @@
-import Group from '../models/Group';
+import Group, { IGroupDocument } from '../models/Group';
 import User, { UserStatus } from '../models/User';
 import socketManager from '../utils/socketManager';
 import { notifyGroupMembers, notifyRestaurantSelected } from './notificationService';
-import { RestaurantType } from '../types';
+import { RestaurantType, GroupStatusResponse } from '../types';
 
 export class GroupService {
   /**
    * Get group status
    */
-  async getGroupStatus(groupId: string): Promise<any> {
+  async getGroupStatus(groupId: string): Promise<GroupStatusResponse & { groupId: string }> {
     const group = await Group.findById(groupId);
 
     if (!group) {
@@ -30,12 +30,12 @@ export class GroupService {
   /**
    * Get group status string
    */
-  private getGroupStatusString(group: any): string {
+  private getGroupStatusString(group: IGroupDocument | { restaurantSelected: boolean; completionTime: Date }): 'voting' | 'matched' | 'completed' | 'disbanded' {
     if (group.restaurantSelected) {
       return 'completed';
     }
     if (new Date() > group.completionTime) {
-      return 'expired';
+      return 'disbanded';
     }
     return 'voting';
   }
@@ -76,7 +76,7 @@ export class GroupService {
 
     // Convert Map to object for response
     const currentVotes: Record<string, number> = {};
-    group.restaurantVotes.forEach((count, id) => {
+    group.restaurantVotes.forEach((count: number, id: string) => {
       currentVotes[id] = count;
     });
 
@@ -173,7 +173,7 @@ export class GroupService {
           await group.save();
 
           const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count, id) => {
+          group.restaurantVotes.forEach((count: number, id: string) => {
             currentVotes[id] = count;
           });
 
@@ -197,7 +197,7 @@ export class GroupService {
   /**
    * Get group by user ID
    */
-  async getGroupByUserId(userId: string): Promise<any | null> {
+  async getGroupByUserId(userId: string): Promise<IGroupDocument | null> {
     const user = await User.findById(userId);
     
     if (!user || !user.groupId) {
@@ -252,7 +252,7 @@ export class GroupService {
         // Notify members
         if (group.restaurant) {
           const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count, id) => {
+          group.restaurantVotes.forEach((count: number, id: string) => {
             currentVotes[id] = count;
           });
 

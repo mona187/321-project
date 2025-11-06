@@ -127,9 +127,15 @@ process.on('unhandledRejection', (reason: Error) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
+  // Attempt graceful shutdown, but exit immediately if it takes too long
   server.close(() => {
     process.exit(1);
   });
+  // Force exit after 5 seconds if server.close doesn't complete
+  setTimeout(() => {
+    console.error('⚠️ Forcing exit after timeout');
+    process.exit(1);
+  }, 5000);
 });
 
 // Graceful shutdown
