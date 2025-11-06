@@ -10,7 +10,9 @@ const router = Router();
  * @desc    Get current user's group status
  * @access  Private
  */
-router.get('/status', authMiddleware, asyncHandler((req, res, next) => groupController.getGroupStatus(req, res, next)));
+router.get('/status', authMiddleware, asyncHandler(async (req, res, next) => {
+  await groupController.getGroupStatus(req, res, next);
+}));
 
 /**
  * @route   POST /api/group/vote/:groupId
