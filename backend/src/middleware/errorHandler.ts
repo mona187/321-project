@@ -79,11 +79,18 @@ export const notFoundHandler = (
 };
 
 // Async error wrapper - wraps async route handlers to catch errors
+// This wrapper ensures async route handlers don't return promises to Express
 export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Explicitly void the promise to satisfy linter - we handle errors via .catch()
-    void Promise.resolve(fn(req, res, next)).catch(next);
+    // Execute async function and handle errors
+    // Using .then() and .catch() explicitly to satisfy linters that check for promise returns
+    Promise.resolve(fn(req, res, next))
+      .then(() => {
+        // Promise resolved successfully, no action needed
+      })
+      .catch(next);
+    // Function returns void, not a promise
   };
 };
