@@ -10,7 +10,9 @@ const router = Router();
  * @desc    Get user profiles by IDs (comma-separated)
  * @access  Public
  */
-router.get('/profile/:ids', asyncHandler((req, res, next) => userController.getUserProfiles(req, res, next)));
+router.get('/profile/:ids', asyncHandler(async (req, res, next) => {
+  await userController.getUserProfiles(req, res, next);
+}));
 
 /**
  * @route   GET /api/user/settings
@@ -35,14 +37,18 @@ router.post('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
  * @desc    Update user settings
  * @access  Private
  */
-router.post('/settings', authMiddleware, asyncHandler((req, res, next) => userController.updateUserSettings(req, res, next)));
+router.post('/settings', authMiddleware, asyncHandler(async (req, res, next) => {
+  await userController.updateUserSettings(req, res, next);
+}));
 
 /**
  * @route   PUT /api/user/profile
  * @desc    Update user profile
  * @access  Private
  */
-router.put('/profile', authMiddleware, asyncHandler((req, res, next) => userController.updateUserProfile(req, res, next)));
+router.put('/profile', authMiddleware, asyncHandler(async (req, res, next) => {
+  await userController.updateUserProfile(req, res, next);
+}));
 
 /**
  * @route   DELETE /api/user/:userId

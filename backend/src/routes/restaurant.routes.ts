@@ -1,31 +1,53 @@
 import { Router } from 'express';
-import { restaurantController } from '../controllers/restaurant.controller';
-import { authMiddleware, optionalAuth } from '../middleware/auth.middleware';
+import { matchingController } from '../controllers/matching.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 import { asyncHandler } from '../middleware/errorHandler';
 
 const router = Router();
 
 /**
- * @route   GET /api/restaurant/search
- * @desc    Search for restaurants near a location
- * @access  Public (optional auth)
- */
-router.get('/search', optionalAuth, asyncHandler((req, res, next) => restaurantController.searchRestaurants(req, res, next)));
-
-/**
- * @route   GET /api/restaurant/:restaurantId
- * @desc    Get restaurant details by ID
- * @access  Public (optional auth)
- */
-router.get('/:restaurantId', optionalAuth, asyncHandler((req, res, next) => restaurantController.getRestaurantDetails(req, res, next)));
-
-/**
- * @route   POST /api/restaurant/recommendations/:groupId
- * @desc    Get restaurant recommendations for a group
+ * @route   POST /api/matching/join
+ * @desc    Join the matching pool
  * @access  Private
  */
-router.post('/recommendations/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
-  await restaurantController.getGroupRecommendations(req, res, next);
+router.post('/join', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.joinMatching(req, res, next);
+}));
+
+/**
+ * @route   POST /api/matching/join/:roomId
+ * @desc    Join a specific room (not implemented)
+ * @access  Private
+ */
+router.post('/join/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.joinSpecificRoom(req, res, next);
+}));
+
+/**
+ * @route   PUT /api/matching/leave/:roomId
+ * @desc    Leave a waiting room
+ * @access  Private
+ */
+router.put('/leave/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.leaveRoom(req, res, next);
+}));
+
+/**
+ * @route   GET /api/matching/status/:roomId
+ * @desc    Get status of a waiting room
+ * @access  Private
+ */
+router.get('/status/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.getRoomStatus(req, res, next);
+}));
+
+/**
+ * @route   GET /api/matching/users/:roomId
+ * @desc    Get users in a room
+ * @access  Private
+ */
+router.get('/users/:roomId', authMiddleware, asyncHandler(async (req, res, next) => {
+  await matchingController.getRoomUsers(req, res, next);
 }));
 
 export default router;
