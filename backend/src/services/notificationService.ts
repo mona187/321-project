@@ -41,7 +41,7 @@ export const sendNotificationToUsers = async (
     
     const tokens = users
       .map(user => user.fcmToken)
-      .filter((token): token is string => token !== null);
+      .filter((token): token is string => token !== null && token !== undefined);
 
     if (tokens.length === 0) {
       console.warn('No valid FCM tokens found for the provided users');

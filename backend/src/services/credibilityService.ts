@@ -46,7 +46,7 @@ export class CredibilityService {
         scoreChange = -8;
         break;
       default:
-        throw new Error(`Invalid credibility action: ${action}`);
+        throw new Error(`Invalid credibility action: ${String(action)}`);
     }
     
     let newScore = previousScore + scoreChange;

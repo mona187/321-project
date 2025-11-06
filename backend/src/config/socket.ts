@@ -271,7 +271,7 @@ export class SocketEmitter {
     if (!socketId) {
       if (attempt === 1) {
         console.warn(`⚠️ emitToUser: No socket found for user ${userId}, retrying in 500ms...`);
-        setTimeout(() => this.emitToUser(userId, event, data, 2), 500);
+        setTimeout(() => { this.emitToUser(userId, event, data, 2); }, 500);
       } else {
         console.warn(`❌ emitToUser: Failed after retry for user ${userId}`);
       }

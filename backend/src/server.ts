@@ -94,21 +94,25 @@ const startServer = async () => {
 // Background tasks
 function startBackgroundTasks() {
   // Check expired rooms every minute
-  setInterval(async () => {
-    try {
-      await matchingService.checkExpiredRooms();
-    } catch (error) {
-      console.error('Error checking expired rooms:', error);
-    }
+  setInterval(() => {
+    void (async () => {
+      try {
+        await matchingService.checkExpiredRooms();
+      } catch (error) {
+        console.error('Error checking expired rooms:', error);
+      }
+    })();
   }, 60000); // 1 minute
 
   // Check expired groups every 2 minutes
-  setInterval(async () => {
-    try {
-      await groupService.checkExpiredGroups();
-    } catch (error) {
-      console.error('Error checking expired groups:', error);
-    }
+  setInterval(() => {
+    void (async () => {
+      try {
+        await groupService.checkExpiredGroups();
+      } catch (error) {
+        console.error('Error checking expired groups:', error);
+      }
+    })();
   }, 120000); // 2 minutes
 
   console.log('✅ Background tasks started');
