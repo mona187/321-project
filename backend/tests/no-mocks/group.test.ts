@@ -962,6 +962,45 @@ describe('Group Model Methods - Integration Tests', () => {
     await testGroup!.save();
   });
 
+  test('should use || 0 fallback when removing vote for restaurant not in restaurantVotes', async () => {
+    /**
+     * Covers Group.ts line 158: removeVote method || 0 fallback
+     * Path: if (restaurantId) [TRUE BRANCH] -> this.restaurantVotes.get(restaurantId) returns undefined -> || 0 fallback
+     * This tests the edge case where a vote exists in votes Map but the restaurant is not in restaurantVotes Map
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-remove-orphan-vote',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Manually set a vote in votes Map but don't add it to restaurantVotes
+    // This simulates an edge case where restaurantVotes.get() would return undefined
+    testGroup!.votes.set(testUsers[0]._id.toString(), 'rest-orphan');
+    // Ensure rest-orphan is NOT in restaurantVotes (or delete it if it exists)
+    testGroup!.restaurantVotes.delete('rest-orphan');
+    await testGroup!.save();
+    
+    // Verify the orphan vote exists but restaurantVotes doesn't have it
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-orphan');
+    expect(testGroup!.restaurantVotes.get('rest-orphan')).toBeUndefined();
+    
+    // Now remove the vote - this should trigger the || 0 fallback
+    testGroup!.removeVote(testUsers[0]._id.toString());
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    // The vote should be removed from votes Map
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBeUndefined();
+    // The orphan restaurant should have count 0 (or not exist) after decrementing from 0
+    expect(testGroup!.restaurantVotes.get('rest-orphan') || 0).toBe(0);
+  });
+
   test('should get winning restaurant when votes exist', async () => {
     /**
      * Covers Group.ts lines 165-177: getWinningRestaurant method

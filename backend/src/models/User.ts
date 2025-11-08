@@ -149,8 +149,6 @@ UserSchema.virtual('userId').get(function() {
 });
 
 // Configure JSON serialization
-// Configure JSON serialization
-// Configure JSON serialization
 UserSchema.set('toJSON', {
   virtuals: true,
   transform: function(_doc, ret) {

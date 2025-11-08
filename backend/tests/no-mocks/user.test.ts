@@ -753,10 +753,25 @@ describe('User Model Methods - Integration Tests', () => {
    * Covers: pre-save hooks
    */
 
+  test('should access userId virtual property directly on document', async () => {
+    /**
+     * Covers User.ts lines 147-149: userId virtual getter
+     * Path: UserSchema.virtual('userId').get() -> this._id.toString()
+     * This test directly accesses the virtual property on a User document instance
+     */
+    const User = (await import('../../src/models/User')).default;
+    const user = await User.findById(testUsers[0]._id) as any;
+    expect(user).not.toBeNull();
+    
+    // Directly access the userId virtual property
+    expect(user.userId).toBe(testUsers[0]._id);
+    expect(user.userId).toBe(user._id.toString());
+  });
+
   test('should access userId virtual property through API response', async () => {
     /**
-     * Covers User.ts line 151: userId virtual getter
-     * Path: UserSchema.virtual('userId').get() -> this._id.toString()
+     * Covers User.ts lines 147-149: userId virtual getter via toJSON
+     * Path: UserSchema.virtual('userId').get() -> this._id.toString() -> toJSON includes it
      */
     const token = generateTestToken(
       testUsers[0]._id,
@@ -773,15 +788,41 @@ describe('User Model Methods - Integration Tests', () => {
 
   test('should use toJSON transform to include userId', async () => {
     /**
-     * Covers User.ts lines 160-162: toJSON transform function
-     * Path: transform function -> userId extraction -> return { userId, ...rest }
+     * Covers User.ts lines 152-159: toJSON transform function
+     * Path: transform function -> userId extraction from _id -> destructure to remove _id and __v -> return { userId, ...rest }
+     * Verifies: userId is included, _id is removed, __v is removed
      */
     const response = await request(app)
       .get(`/api/user/profile/${testUsers[0]._id}`);
     expect(response.status).toBe(200);
     expect(response.body.Body[0]).toHaveProperty('userId');
+    expect(response.body.Body[0].userId).toBe(testUsers[0]._id);
     expect(response.body.Body[0]).not.toHaveProperty('_id');
     expect(response.body.Body[0]).not.toHaveProperty('__v');
+  });
+
+  test('should call toJSON transform directly on User document', async () => {
+    /**
+     * Covers User.ts lines 152-159: toJSON transform function (direct call)
+     * Path: User document -> toJSON() -> transform function executes all lines
+     * This ensures the transform function itself is directly tested, not just through API responses
+     */
+    const User = (await import('../../src/models/User')).default;
+    const user = await User.findById(testUsers[0]._id);
+    expect(user).not.toBeNull();
+    
+    // Call toJSON directly to ensure transform function is executed
+    const json = user!.toJSON() as any;
+    
+    // Verify transform function worked correctly
+    expect(json).toHaveProperty('userId');
+    expect(json.userId).toBe(testUsers[0]._id);
+    expect(json.userId).toBe(user!._id.toString());
+    expect(json).not.toHaveProperty('_id');
+    expect(json).not.toHaveProperty('__v');
+    // Verify other properties are preserved
+    expect(json).toHaveProperty('email');
+    expect(json).toHaveProperty('name');
   });
 
   test('should trigger pre-save hook when roomId is set', async () => {
