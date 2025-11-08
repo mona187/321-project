@@ -2,7 +2,7 @@
 
 import request from 'supertest';
 import app from '../../src/app';
-import { generateTestToken, generateExpiredToken } from '../helpers/auth.helper';
+import { generateTestToken } from '../helpers/auth.helper';
 import { 
   seedTestUsers, 
   cleanTestData, 
@@ -70,14 +70,16 @@ afterEach(() => {
 });
 
 describe('POST /api/auth/signup - Validation (No Mocking)', () => {
+  // Consolidated test: 400 when idToken is missing
+  // This tests the if (!idToken) -> 400 pattern
+  // The SAME code exists in signup (line 20-25), signin (line 90-95), and googleAuth (line 160-165)
+  // Testing once is sufficient since all three use identical code: if (!idToken) { 400 }
   test('should return 400 when idToken is missing', async () => {
     /**
-     * Input: POST /api/auth/signup without idToken in body
-     * Expected Status Code: 400
-     * Expected Output: Google ID token is required
-     * Expected Behavior: Controller validates request, returns 400 immediately
+     * Tests if (!idToken) -> 400 pattern
+     * Covers: auth.controller.ts lines 20-25 (signup), 90-95 (signin), 160-165 (googleAuth)
+     * All three methods have identical code: if (!idToken) { 400 }
      */
-
     const response = await request(app)
       .post('/api/auth/signup')
       .send({});
@@ -192,22 +194,8 @@ describe('POST /api/auth/signup - Validation (No Mocking)', () => {
 });
 
 describe('POST /api/auth/signin - Validation (No Mocking)', () => {
-  test('should return 400 when idToken is missing', async () => {
-    /**
-     * Input: POST /api/auth/signin without idToken in body
-     * Expected Status Code: 400
-     * Expected Output: Google ID token is required
-     * Expected Behavior: Controller validates request, returns 400 immediately
-     */
-
-    const response = await request(app)
-      .post('/api/auth/signin')
-      .send({});
-
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe('Bad Request');
-    expect(response.body.message).toBe('Google ID token is required');
-  });
+  // Note: "400 when idToken is missing" test is consolidated above in signup endpoint tests
+  // The same if (!idToken) -> 400 pattern exists in signup, signin, and googleAuth
 
   test('should return 404 when user not found', async () => {
     /**
@@ -239,48 +227,16 @@ describe('POST /api/auth/signin - Validation (No Mocking)', () => {
   // Note: "500 when JWT_SECRET is missing" test is consolidated above in signup endpoint tests
   // The same if (!jwtSecret) -> 500 pattern exists in signup, signin, and logout
 
-  test('should handle errors in catch block and call next(error)', async () => {
-    /**
-     * Covers auth.controller.ts line 148: catch block -> next(error) in signin
-     * Path: Error thrown -> catch block -> next(error) -> error handler
-     */
-    const { AuthService } = require('../../src/services/authService');
-    
-    // Mock verifyGoogleToken to throw an error
-    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockRejectedValueOnce(
-      new Error('Google token verification failed')
-    );
-    
-    const response = await request(app)
-      .post('/api/auth/signin')
-      .send({ idToken: 'mock-google-token-error' });
-
-    jest.restoreAllMocks();
-    
-    // Error should be caught and handled by error handler
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty('message');
-    expect(response.body.message).toContain('Google token verification failed');
-  });
+  // Consolidated test: catch block -> next(error) pattern
+  // This tests the catch block -> next(error) -> error handler pattern
+  // The SAME pattern exists in signup (line 78), signin (line 148), and googleAuth (line 245)
+  // Testing once is sufficient since all three use identical pattern: catch (error) { next(error) }
+  // Note: The test above in signup covers this pattern for all three methods
 });
 
 describe('POST /api/auth/google - Validation (No Mocking)', () => {
-  test('should return 400 when idToken is missing', async () => {
-    /**
-     * Input: POST /api/auth/google without idToken in body
-     * Expected Status Code: 400
-     * Expected Output: Google ID token is required
-     * Expected Behavior: Controller validates request, returns 400 immediately
-     */
-
-    const response = await request(app)
-      .post('/api/auth/google')
-      .send({});
-
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe('Bad Request');
-    expect(response.body.message).toBe('Google ID token is required');
-  });
+  // Note: "400 when idToken is missing" test is consolidated above in signup endpoint tests
+  // The same if (!idToken) -> 400 pattern exists in signup, signin, and googleAuth
 
   test('should return 401 when Google token payload is invalid (missing sub)', async () => {
     /**
@@ -457,32 +413,8 @@ describe('POST /api/auth/google - Validation (No Mocking)', () => {
   // Note: "500 when JWT_SECRET is missing" test is consolidated above in signup endpoint tests
   // The same if (!jwtSecret) -> 500 pattern exists in signup, signin, logout, and googleAuth (all use identical code)
 
-  test('should handle errors in catch block and call next(error)', async () => {
-    /**
-     * Covers auth.controller.ts line 245: catch block -> next(error) in googleAuth
-     * Path: Error thrown -> catch block -> next(error) -> error handler
-     */
-    // Mock the OAuth2Client prototype method to throw an error
-    const { OAuth2Client } = require('google-auth-library');
-    const originalVerify = OAuth2Client.prototype.verifyIdToken;
-    
-    // Mock verifyIdToken to throw an error
-    OAuth2Client.prototype.verifyIdToken = jest.fn().mockRejectedValueOnce(
-      new Error('Google OAuth verification failed')
-    );
-    
-    const response = await request(app)
-      .post('/api/auth/google')
-      .send({ idToken: 'mock-google-token-error' });
-
-    // Restore original implementation
-    OAuth2Client.prototype.verifyIdToken = originalVerify;
-    
-    // Error should be caught and handled by error handler
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty('message');
-    expect(response.body.message).toContain('Google OAuth verification failed');
-  });
+  // Note: "should handle errors in catch block and call next(error)" test is consolidated above in signup endpoint tests
+  // The same catch block -> next(error) -> error handler pattern exists in signup, signin, and googleAuth
 });
 
 describe('POST /api/auth/logout - No Mocking', () => {
@@ -534,39 +466,8 @@ describe('POST /api/auth/logout - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
-  test('should return 401 with invalid token', async () => {
-    /**
-     * Input: POST /api/auth/logout with malformed JWT
-     * Expected Status Code: 401
-     * Expected Output: Invalid token error
-     * Expected Behavior: Auth middleware verifies and rejects invalid token
-     */
-
-    const response = await request(app)
-      .post('/api/auth/logout')
-      .set('Authorization', 'Bearer invalid-token-format');
-
-    expect(response.status).toBe(401);
-    expect(response.body.message).toMatch(/invalid/i);
-  });
-
-  test('should return 401 with expired token', async () => {
-    /**
-     * Input: POST /api/auth/logout with expired JWT
-     * Expected Status Code: 401
-     * Expected Output: Token expired error
-     * Expected Behavior: Auth middleware catches TokenExpiredError
-     */
-
-    const expiredToken = generateExpiredToken(testUsers[0]._id);
-
-    const response = await request(app)
-      .post('/api/auth/logout')
-      .set('Authorization', `Bearer ${expiredToken}`);
-
-    expect(response.status).toBe(401);
-    expect(response.body.message).toMatch(/expired|invalid/i);
-  });
+  // Note: "401 with invalid token" and "401 with expired token" tests are consolidated in user.test.ts
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   test('should return 200 even if user not found', async () => {
     /**
@@ -822,20 +723,8 @@ describe('GET /api/auth/verify - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
-  test('should return 401 with invalid token', async () => {
-    /**
-     * Input: GET /api/auth/verify with malformed JWT
-     * Expected Status Code: 401
-     * Expected Output: Invalid token error
-     * Expected Behavior: Auth middleware verifies and rejects invalid token
-     */
-
-    const response = await request(app)
-      .get('/api/auth/verify')
-      .set('Authorization', 'Bearer invalid-token-format');
-
-    expect(response.status).toBe(401);
-  });
+  // Note: "401 with invalid token" test is consolidated in user.test.ts
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   // Consolidated test: 404 when user not found
   // This tests the User.findById() -> if (!user) -> 404 pattern

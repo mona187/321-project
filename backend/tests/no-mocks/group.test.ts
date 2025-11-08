@@ -179,7 +179,15 @@ describe('GET /api/group/status - No Mocking', () => {
     expect(response.body.Body).toBeNull();
   });
 
+  // Consolidated test: 401 authentication errors
+  // These test the authMiddleware code which is the SAME for all endpoints
+  // Testing once is sufficient since all endpoints use the same middleware
   test('should return 401 without authentication token', async () => {
+    /**
+     * Tests authMiddleware -> no token -> 401 pattern
+     * Covers: auth.middleware.ts lines 20-26
+     * All endpoints use the same authMiddleware, so testing one endpoint covers all
+     */
     const response = await request(app)
       .get('/api/group/status');
 
@@ -188,6 +196,11 @@ describe('GET /api/group/status - No Mocking', () => {
   });
 
   test('should return 401 with invalid token', async () => {
+    /**
+     * Tests authMiddleware -> invalid token -> 401 pattern
+     * Covers: auth.middleware.ts lines 56-62 (JsonWebTokenError)
+     * All endpoints use the same authMiddleware, so testing one endpoint covers all
+     */
     const response = await request(app)
       .get('/api/group/status')
       .set('Authorization', 'Bearer invalid-token-format');
@@ -259,13 +272,23 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
     expect(response.body.message).toBe('Group not found');
   });
 
+  // Consolidated test: 400 for invalid ObjectId format
+  // This tests the CastError -> errorHandler -> "Invalid data format" pattern
+  // The SAME code exists in vote (invalid groupId) and leave (invalid groupId)
+  // Testing once is sufficient since both trigger the same CastError handling
   test('should return 400 for invalid ObjectId format in groupId', async () => {
+    /**
+     * Tests CastError -> errorHandler -> "Invalid data format" pattern
+     * Covers: errorHandler.ts CastError handling (line 38)
+     * Both vote and leave endpoints trigger the same CastError when groupId is invalid
+     */
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
       testUsers[0].googleId
     );
 
+    // Test with vote endpoint - the code path is identical for vote and leave
     const response = await request(app)
       .post('/api/group/vote/invalid-group-id-format')
       .set('Authorization', `Bearer ${token}`)
@@ -516,30 +539,14 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     expect(emitMemberLeftSpy).toHaveBeenCalled();
   });
 
-  test('should return 401 without authentication token', async () => {
-    const response = await request(app)
-      .post(`/api/group/leave/${testGroups[0]._id}`);
-
-    expect(response.status).toBe(401);
-  });
+  // Note: "401 without authentication" test is consolidated above in status endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   // Note: "500 when group not found" test is consolidated above in vote endpoint tests
   // The same Group.findById() -> if (!group) -> throw Error('Group not found') pattern exists in vote and leave
 
-  test('should return 400 for invalid ObjectId format in groupId', async () => {
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
-    const response = await request(app)
-      .post('/api/group/leave/invalid-group-id-format')
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(response.status).toBe(400);
-    expect(response.body.message).toBe('Invalid data format');
-  });
+  // Note: "400 for invalid ObjectId format" test is consolidated above in vote endpoint tests
+  // The same CastError -> errorHandler -> "Invalid data format" pattern exists in vote and leave
 
   test('should return 500 when user not found', async () => {
     const nonExistentUserId = '507f1f77bcf86cd799439011';

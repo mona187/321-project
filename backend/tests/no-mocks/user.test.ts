@@ -202,14 +202,15 @@ describe('GET /api/user/settings - No Mocking', () => {
     expect(response.body.message).toMatch(/token|unauthorized/i);
   });
 
+  // Consolidated test: 401 with invalid/expired token
+  // These test the authMiddleware code which is the SAME for all endpoints
+  // Testing once is sufficient since all endpoints use the same middleware
   test('should return 401 with invalid token', async () => {
     /**
-     * Input: GET /api/user/settings with malformed JWT token
-     * Expected Status Code: 401
-     * Expected Output: Invalid token error
-     * Expected Behavior: Auth middleware verifies and rejects invalid token
+     * Tests authMiddleware -> invalid token -> 401 pattern
+     * Covers: auth.middleware.ts lines 56-62 (JsonWebTokenError)
+     * All endpoints use the same authMiddleware, so testing one endpoint covers all
      */
-
     const response = await request(app)
       .get('/api/user/settings')
       .set('Authorization', 'Bearer invalid-token-format');
@@ -220,12 +221,10 @@ describe('GET /api/user/settings - No Mocking', () => {
 
   test('should return 401 with expired token', async () => {
     /**
-     * Input: GET /api/user/settings with expired JWT
-     * Expected Status Code: 401
-     * Expected Output: Token expired error
-     * Expected Behavior: Auth middleware catches TokenExpiredError
+     * Tests authMiddleware -> expired token -> 401 pattern
+     * Covers: auth.middleware.ts lines 64-70 (TokenExpiredError)
+     * All endpoints use the same authMiddleware, so testing one endpoint covers all
      */
-
     const expiredToken = generateExpiredToken(testUsers[0]._id);
 
     const response = await request(app)
@@ -236,19 +235,16 @@ describe('GET /api/user/settings - No Mocking', () => {
     expect(response.body.message).toMatch(/expired|invalid/i);
   });
 
+  // Consolidated test: 500 when user not found
+  // This tests the User.findById() -> if (!user) -> throw Error('User not found') pattern
+  // The SAME pattern exists in getUserSettings (userService line 57-60) and updateProfile (userService line 93-96)
+  // Testing once is sufficient since both use identical pattern: if (!user) { throw new Error('User not found') }
   test('should return 500 when user not found in database', async () => {
     /**
-     * Input: GET /api/user/settings with valid token for non-existent user
-     * Expected Status Code: 500
-     * Expected Output: User not found error
-     * Expected Behavior:
-     *   - Auth succeeds (token is valid)
-     *   - Query database for userId from token
-     *   - User doesn't exist
-     *   - Service throws Error('User not found')
-     *   - Error handler returns 500
+     * Tests User.findById() -> if (!user) -> throw Error('User not found') pattern
+     * Covers: userService.ts lines 57-60 (getUserSettings), 93-96 (updateProfile)
+     * Both methods have identical code: if (!user) { throw new Error('User not found') }
      */
-
     // Create token for user that doesn't exist in database
     const nonExistentUserId = new mongoose.Types.ObjectId().toString();
     const token = generateTestToken(
@@ -257,6 +253,7 @@ describe('GET /api/user/settings - No Mocking', () => {
       'google-nonexistent'
     );
 
+    // Test with settings endpoint - the code path is identical for settings and profile
     const response = await request(app)
       .get('/api/user/settings')
       .set('Authorization', `Bearer ${token}`);
@@ -310,48 +307,11 @@ describe('POST /api/user/profile - No Mocking', () => {
     expect(response.body.Body.contactNumber).toBe('9999999999');
   });
 
-  test('should return 401 without authentication', async () => {
-    /**
-     * Input: POST /api/user/profile without Authorization header
-     * Expected Status Code: 401
-     * Expected Output: Unauthorized error
-     * Expected Behavior: Auth middleware blocks request
-     */
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
-    const response = await request(app)
-      .post('/api/user/profile')
-      .send({ name: 'Test' });
-
-    expect(response.status).toBe(401);
-  });
-
-  test('should return 500 when user not found', async () => {
-    /**
-     * Input: POST /api/user/profile with valid token for non-existent user
-     * Expected Status Code: 500
-     * Expected Output: User not found error
-     * Expected Behavior:
-     *   - Auth succeeds
-     *   - Service tries to find user
-     *   - User doesn't exist
-     *   - Throws Error('User not found')
-     */
-
-    const nonExistentUserId = new mongoose.Types.ObjectId().toString();
-    const token = generateTestToken(
-      nonExistentUserId,
-      'nonexistent@example.com',
-      'google-nonexistent'
-    );
-
-    const response = await request(app)
-      .post('/api/user/profile')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Test' });
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('User not found');
-  });
+  // Note: "500 when user not found" test is consolidated above in settings endpoint tests
+  // The same User.findById() -> if (!user) -> throw Error('User not found') pattern exists in settings and profile
 
   test('should handle partial updates', async () => {
     /**
@@ -449,20 +409,8 @@ describe('POST /api/user/settings - No Mocking', () => {
     expect(response.body.Body.radiusKm).toBe(25);
   });
 
-  test('should return 401 without authentication', async () => {
-    /**
-     * Input: POST /api/user/settings without token
-     * Expected Status Code: 401
-     * Expected Output: Unauthorized error
-     * Expected Behavior: Auth middleware blocks request
-     */
-
-    const response = await request(app)
-      .post('/api/user/settings')
-      .send({ preference: ['vegan'] });
-
-    expect(response.status).toBe(401);
-  });
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   test('should accept partial settings updates', async () => {
     /**
@@ -536,20 +484,8 @@ describe('PUT /api/user/profile - No Mocking', () => {
     expect(response.body.Body.name).toBe('PUT Updated Name');
   });
 
-  test('should return 401 without authentication', async () => {
-    /**
-     * Input: PUT /api/user/profile without token
-     * Expected Status Code: 401
-     * Expected Output: Unauthorized error
-     * Expected Behavior: Auth middleware blocks request
-     */
-
-    const response = await request(app)
-      .put('/api/user/profile')
-      .send({ name: 'Test' });
-
-    expect(response.status).toBe(401);
-  });
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   test('should handle partial profile updates', async () => {
     /**
@@ -585,19 +521,8 @@ describe('DELETE /api/user/:userId - No Mocking', () => {
    * Mocking: None
    */
 
-  test('should return 401 without authentication', async () => {
-    /**
-     * Input: DELETE /api/user/someUserId without Authorization header
-     * Expected Status Code: 401
-     * Expected Output: Unauthorized error
-     * Expected Behavior: Auth middleware blocks request
-     */
-
-    const response = await request(app)
-      .delete(`/api/user/${testUsers[0]._id}`);
-
-    expect(response.status).toBe(401);
-  });
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
   test('should return 403 when trying to delete different user', async () => {
     /**

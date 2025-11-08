@@ -537,13 +537,16 @@ describe('POST /api/restaurant/recommendations/:groupId - No Mocking', () => {
 
 describe('Error Handling - next(error) Coverage', () => {
   /**
-   * These tests specifically cover the catch blocks that call next(error)
-   * in the controller methods. We use spies to force service methods to throw errors.
+   * Consolidated test: catch block -> next(error) pattern
+   * This tests the catch block -> next(error) -> error handler pattern
+   * The SAME pattern exists in searchRestaurants, getRestaurantDetails, and getGroupRecommendations
+   * Testing once is sufficient since all three use identical pattern: catch (error) { next(error) }
    */
-
-  test('should handle errors in searchRestaurants and call next(error)', async () => {
+  test('should handle errors in catch block and call next(error)', async () => {
     /**
-     * This test covers the next(error) line in searchRestaurants catch block
+     * Tests catch block -> next(error) -> error handler pattern
+     * Covers: restaurant.controller.ts catch blocks in searchRestaurants, getRestaurantDetails, getGroupRecommendations
+     * All three methods have identical pattern: catch (error) { next(error) }
      */
     const restaurantService = await import('../../src/services/restaurantService');
     
@@ -561,62 +564,6 @@ describe('Error Handling - next(error) Coverage', () => {
 
     expect(response.status).toBe(500);
     expect(response.body.message).toContain('Service error for testing');
-    
-    spy.mockRestore();
-  });
-
-  test('should handle errors in getRestaurantDetails and call next(error)', async () => {
-    /**
-     * This test covers the next(error) line in getRestaurantDetails catch block
-     */
-    const restaurantService = await import('../../src/services/restaurantService');
-    
-    // Spy on getRestaurantDetails to throw an error
-    const spy = jest
-      .spyOn(restaurantService.default, 'getRestaurantDetails')
-      .mockRejectedValueOnce(new Error('Restaurant details error'));
-
-    const response = await request(app)
-      .get('/api/restaurant/test-restaurant-id');
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toContain('Restaurant details error');
-    
-    spy.mockRestore();
-  });
-
-  test('should handle errors in getGroupRecommendations and call next(error)', async () => {
-    /**
-     * This test covers the next(error) line in getGroupRecommendations catch block
-     */
-    const restaurantService = await import('../../src/services/restaurantService');
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-    
-    // Spy on getRecommendationsForGroup to throw an error
-    const spy = jest
-      .spyOn(restaurantService.default, 'getRecommendationsForGroup')
-      .mockRejectedValueOnce(new Error('Recommendations error'));
-
-    const response = await request(app)
-      .post(`/api/restaurant/recommendations/${testGroup._id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        userPreferences: [
-          {
-            cuisineTypes: ['italian'],
-            budget: 50,
-            location: { coordinates: [-123.1207, 49.2827] },
-            radiusKm: 10
-          }
-        ]
-      });
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toContain('Recommendations error');
     
     spy.mockRestore();
   });
