@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import restaurantService from '../services/restaurantService';
+import { requireParam } from '../middleware/errorHandler';
 
 export class RestaurantController {
   /**
@@ -50,7 +51,7 @@ export class RestaurantController {
    */
   async getRestaurantDetails(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { restaurantId } = req.params;
+      const restaurantId = requireParam(req, 'restaurantId');
 
       const restaurant = await restaurantService.getRestaurantDetails(restaurantId);
 
@@ -71,7 +72,7 @@ export class RestaurantController {
    */
   async getGroupRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { groupId } = req.params;
+      const groupId = requireParam(req, 'groupId');
       const { userPreferences } = req.body;
 
       if (!userPreferences || !Array.isArray(userPreferences)) {

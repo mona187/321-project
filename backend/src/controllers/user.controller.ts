@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/userService';
+import { requireParam } from '../middleware/errorHandler';
 
 const userService = new UserService();
 
@@ -11,7 +12,7 @@ export class UserController {
    */
   async getUserProfiles(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { ids } = req.params;
+      const ids = requireParam(req, 'ids');
       const userIds = ids.split(',').map(id => id.trim());
 
       const profiles = await userService.getUserProfiles(userIds);
@@ -175,7 +176,7 @@ export class UserController {
    */
   async deleteUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { userId } = req.params;
+      const userId = requireParam(req, 'userId');
       const requesterId = req.user?.userId;
 
       // Only allow users to delete their own account

@@ -79,6 +79,16 @@ export const notFoundHandler = (
   next(error);
 };
 
+// Helper function to safely extract required route parameters
+// Throws AppError if parameter is missing (should never happen with proper routing, but satisfies TypeScript)
+export function requireParam(req: Request, paramName: string): string {
+  const value = req.params[paramName];
+  if (!value) {
+    throw new AppError(`Missing required parameter: ${paramName}`, 400);
+  }
+  return value;
+}
+
 // Async error wrapper - wraps async route handlers to catch errors
 // This wrapper ensures async route handlers don't return promises to Express
 // Type signature explicitly shows it accepts a promise-returning function but returns a void function

@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import matchingService from '../services/matchingService';
+import { requireParam } from '../middleware/errorHandler';
 
 export class MatchingController {
   /**
@@ -75,7 +76,7 @@ async joinSpecificRoom(req: AuthRequest, res: Response, next: NextFunction): Pro
   async leaveRoom(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { roomId } = req.params;
+      const roomId = requireParam(req, 'roomId');
 
       // if (!userId) {
       //   res.status(401).json({
@@ -104,7 +105,7 @@ async joinSpecificRoom(req: AuthRequest, res: Response, next: NextFunction): Pro
    */
   async getRoomStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { roomId } = req.params;
+      const roomId = requireParam(req, 'roomId');
 
       const status = await matchingService.getRoomStatus(roomId);
 
@@ -124,7 +125,7 @@ async joinSpecificRoom(req: AuthRequest, res: Response, next: NextFunction): Pro
    */
   async getRoomUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { roomId } = req.params;
+      const roomId = requireParam(req, 'roomId');
 
       const users = await matchingService.getRoomUsers(roomId);
 

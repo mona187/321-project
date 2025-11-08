@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import groupService from '../services/groupService';
+import { requireParam } from '../middleware/errorHandler';
 
 export class GroupController {
   /**
@@ -51,7 +52,7 @@ export class GroupController {
   async voteForRestaurant(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { groupId } = req.params;
+      const groupId = requireParam(req, 'groupId');
       const { restaurantID, restaurant } = req.body;
 
       if (!restaurantID) {
@@ -90,7 +91,7 @@ export class GroupController {
   async leaveGroup(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.userId;
-      const { groupId } = req.params;
+      const groupId = requireParam(req, 'groupId');
 
       await groupService.leaveGroup(userId, groupId);
 

@@ -60,6 +60,10 @@ export class MatchingService {
     // Only return a room if it has a minimum score
     const bestMatch = scoredRooms[0];
     
+    if (!bestMatch) {
+      return null;
+    }
+    
     if (bestMatch.score >= this.MINIMUM_MATCH_SCORE) {
       console.log(`✅ Best room match found with score: ${bestMatch.score}`);
       return bestMatch.room;
