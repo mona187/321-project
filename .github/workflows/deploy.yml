@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           source: "backend/"
-          target: "/home/ubuntu/feastfriends/backend"
+          target: "/home/ubuntu/321-project/backend"
 
       - name: Rebuild and Deploy on EC2
         uses: appleboy/ssh-action@master
@@ -29,7 +29,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ubuntu/feastfriends/backend
+            cd /home/ubuntu/321-project/backend
 
             # Write .env file safely
             cat > .env << 'EOF'
