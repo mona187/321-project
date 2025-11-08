@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Restaurant matching app backend",
-  "main": "dist/server.js",
+  "main": "dist/server.ts",
   "scripts": {
     "dev": "dotenv -e .env --npm nodemon -e .ts src/server.ts",
     "build": "tsc",
