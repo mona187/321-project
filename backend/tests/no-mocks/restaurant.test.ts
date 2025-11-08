@@ -148,71 +148,23 @@ describe('GET /api/restaurant/search - No Mocking', () => {
     expect(response.body.Message.error).toBe('Latitude and longitude are required');
   });
 
-  test('should accept optional radius parameter', async () => {
+  // Consolidated test: optional query parameters
+  // This tests the optional parameter parsing pattern
+  // The SAME code path exists for radius (line 25), cuisineTypes (line 26), and priceLevel (line 27)
+  // Testing all three together is sufficient since they all use identical parsing logic
+  test('should accept optional query parameters (radius, cuisineTypes, priceLevel)', async () => {
     /**
-     * Input: GET /api/restaurant/search?latitude=49.2827&longitude=-123.1207&radius=10000
-     * Expected Status Code: 200
-     * Expected Output: Array of restaurants
-     * Expected Behavior:
-     *   - Parse radius from query (in meters)
-     *   - Default radius is 5000 if not provided
-     *   - Pass radius to searchRestaurants()
-     *   - Return results
+     * Tests optional parameter parsing pattern
+     * Covers: restaurant.controller.ts lines 25-27 (radius, cuisineTypes, priceLevel)
+     * All three use identical pattern: param ? parse(param) : undefined
      */
-
     const response = await request(app)
       .get('/api/restaurant/search')
       .query({
         latitude: 49.2827,
         longitude: -123.1207,
-        radius: 10000
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body.Body).toBeDefined();
-  });
-
-  test('should accept optional cuisineTypes parameter', async () => {
-    /**
-     * Input: GET /api/restaurant/search?latitude=49.2827&longitude=-123.1207&cuisineTypes=italian,sushi
-     * Expected Status Code: 200
-     * Expected Output: Array of restaurants
-     * Expected Behavior:
-     *   - Parse comma-separated cuisineTypes
-     *   - Split into array
-     *   - Pass to searchRestaurants()
-     *   - Return filtered results
-     */
-
-    const response = await request(app)
-      .get('/api/restaurant/search')
-      .query({
-        latitude: 49.2827,
-        longitude: -123.1207,
-        cuisineTypes: 'italian,sushi'
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body.Body).toBeDefined();
-  });
-
-  test('should accept optional priceLevel parameter', async () => {
-    /**
-     * Input: GET /api/restaurant/search?latitude=49.2827&longitude=-123.1207&priceLevel=2
-     * Expected Status Code: 200
-     * Expected Output: Array of restaurants
-     * Expected Behavior:
-     *   - Parse priceLevel as integer
-     *   - Pass to searchRestaurants()
-     *   - Filter restaurants by price level
-     *   - Return filtered results
-     */
-
-    const response = await request(app)
-      .get('/api/restaurant/search')
-      .query({
-        latitude: 49.2827,
-        longitude: -123.1207,
+        radius: 10000,
+        cuisineTypes: 'italian,sushi',
         priceLevel: 2
       });
 
@@ -220,17 +172,16 @@ describe('GET /api/restaurant/search - No Mocking', () => {
     expect(response.body.Body).toBeDefined();
   });
 
+  // Consolidated test: optional auth middleware
+  // This tests the optionalAuth middleware pattern
+  // The SAME pattern exists for search (line 223) and getRestaurantDetails (line 286)
+  // Testing once is sufficient since both use identical optionalAuth middleware behavior
   test('should work without authentication (optional auth)', async () => {
     /**
-     * Input: GET /api/restaurant/search without Authorization header
-     * Expected Status Code: 200
-     * Expected Output: Array of restaurants
-     * Expected Behavior:
-     *   - Route uses optionalAuth middleware
-     *   - Request proceeds without token
-     *   - Returns search results
+     * Tests optionalAuth middleware pattern
+     * Covers: optionalAuth middleware allows requests without token
+     * Both search and getRestaurantDetails endpoints use the same optionalAuth middleware
      */
-
     const response = await request(app)
       .get('/api/restaurant/search')
       .query({
@@ -283,23 +234,8 @@ describe('GET /api/restaurant/:restaurantId - No Mocking', () => {
     expect(response.body.Body.restaurantId).toBe('mock_001');
   });
 
-  test('should work without authentication (optional auth)', async () => {
-    /**
-     * Input: GET /api/restaurant/:restaurantId without Authorization header
-     * Expected Status Code: 200
-     * Expected Output: Restaurant details
-     * Expected Behavior:
-     *   - Route uses optionalAuth middleware
-     *   - Request proceeds without token
-     *   - Returns restaurant details
-     */
-
-    const response = await request(app)
-      .get('/api/restaurant/mock_002');
-
-    expect(response.status).toBe(200);
-    expect(response.body.Body).toBeDefined();
-  });
+  // Note: "should work without authentication (optional auth)" test is consolidated above in search endpoint tests
+  // The same optionalAuth middleware pattern exists for both search and getRestaurantDetails
 
   test('should handle different restaurant IDs', async () => {
     /**

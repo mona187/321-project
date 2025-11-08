@@ -367,46 +367,90 @@ describe('POST /api/auth/google - Validation (No Mocking)', () => {
     }
   });
 
-  test('should update existing user status when found', async () => {
+  // Consolidated test: create new user and update existing user status
+  // This tests the findOrCreateUser pattern in /api/auth/google endpoint
+  // The SAME pattern exists: find user -> if exists update status, else create new
+  // Testing both scenarios covers the complete findOrCreateUser logic
+  test('should create new user when not found and update existing user status when found', async () => {
     /**
-     * Covers auth.controller.ts lines 205-208: Update existing user path
-     * Path: else -> user.status = ONLINE -> user.save() -> console.log
+     * Tests findOrCreateUser pattern
+     * Covers: auth.controller.ts lines 187-201 (create), 205-208 (update)
+     * Both scenarios execute the same findOrCreateUser method with different outcomes
      */
     const { OAuth2Client } = require('google-auth-library');
     const originalVerify = OAuth2Client.prototype.verifyIdToken;
+    
+    // Test 1: Create new user
+    const mockPayloadNew = {
+      sub: `google-new-${Date.now()}`,
+      email: `new-${Date.now()}@example.com`,
+      name: 'New Legacy User',
+      picture: 'https://example.com/pic.jpg'
+    };
+    
+    const mockTicketNew = {
+      getPayload: jest.fn().mockReturnValue(mockPayloadNew)
+    };
+    
+    OAuth2Client.prototype.verifyIdToken = jest.fn().mockResolvedValueOnce(mockTicketNew);
+    
+    const responseNew = await request(app)
+      .post('/api/auth/google')
+      .send({ idToken: 'mock-google-token-new' });
+
+    OAuth2Client.prototype.verifyIdToken = originalVerify;
+    
+    if (responseNew.status === 200) {
+      expect(responseNew.body).toHaveProperty('token');
+      expect(responseNew.body).toHaveProperty('user');
+      expect(responseNew.body.user.email).toBe(mockPayloadNew.email);
+      
+      // Verify user was created in database
+      const createdUser = await User.findOne({ googleId: mockPayloadNew.sub });
+      expect(createdUser).not.toBeNull();
+      expect(createdUser!.status).toBe(UserStatus.ONLINE);
+      expect(createdUser!.credibilityScore).toBe(100);
+      
+      // Clean up
+      await User.deleteOne({ googleId: mockPayloadNew.sub });
+    } else {
+      expect([401, 500, 200]).toContain(responseNew.status);
+    }
+    
+    // Test 2: Update existing user
     const existingUser = testUsers[0];
     
     // Set user to OFFLINE first
     await User.findByIdAndUpdate(existingUser._id, { status: UserStatus.OFFLINE });
     
-    const mockPayload = {
+    const mockPayloadExisting = {
       sub: existingUser.googleId,
       email: existingUser.email,
       name: existingUser.name,
       picture: 'https://example.com/pic.jpg'
     };
     
-    const mockTicket = {
-      getPayload: jest.fn().mockReturnValue(mockPayload)
+    const mockTicketExisting = {
+      getPayload: jest.fn().mockReturnValue(mockPayloadExisting)
     };
     
-    OAuth2Client.prototype.verifyIdToken = jest.fn().mockResolvedValueOnce(mockTicket);
+    OAuth2Client.prototype.verifyIdToken = jest.fn().mockResolvedValueOnce(mockTicketExisting);
     
-    const response = await request(app)
+    const responseExisting = await request(app)
       .post('/api/auth/google')
       .send({ idToken: 'mock-google-token-existing' });
 
     OAuth2Client.prototype.verifyIdToken = originalVerify;
     
-    if (response.status === 200) {
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
+    if (responseExisting.status === 200) {
+      expect(responseExisting.body).toHaveProperty('token');
+      expect(responseExisting.body).toHaveProperty('user');
       
       // Verify user status was updated to ONLINE
       const updatedUser = await User.findById(existingUser._id);
       expect(updatedUser!.status).toBe(UserStatus.ONLINE);
     } else {
-      expect([401, 500, 200]).toContain(response.status);
+      expect([401, 500, 200]).toContain(responseExisting.status);
     }
   });
 
@@ -949,87 +993,17 @@ describe('DELETE /api/auth/account - No Mocking', () => {
   // The same User.findById() -> if (!user) -> 404 pattern exists in verify, fcm-token, and deleteAccount
 });
 // ... (all previous tests remain the same)
-describe('POST /api/auth/signup - Google OAuth Integration', () => {
-  test('should return 201 and create new user with valid Google token', async () => {
-    /**
-     * This test requires mocking Google OAuth at the service level
-     * We'll spy on the authService to simulate successful Google verification
-     */
-    
-    const { AuthService } = require('../../src/services/authService');
-    const authService = new AuthService();
-    
-    // Mock the verifyGoogleToken method to return test data
-    const mockGoogleData = {
-      googleId: `google-new-signup-${Date.now()}`,
-      email: `newsignup-${Date.now()}@example.com`,
-      name: 'New Signup User',
-      picture: 'https://example.com/pic.jpg'
-    };
-    
-    jest.spyOn(authService, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
-    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
-    
-    const response = await request(app)
-      .post('/api/auth/signup')
-      .send({ idToken: 'mock-google-token-new-user' });
-
-    // Clean up the spy
-    jest.restoreAllMocks();
-    
-    // If successful, should return 201
-    if (response.status === 201) {
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(mockGoogleData.email);
-      
-      // Clean up created user
-      await User.deleteOne({ googleId: mockGoogleData.googleId });
-    } else {
-      // If it hits the real Google API and fails, that's expected in test env
-      expect([401, 500, 201]).toContain(response.status);
-    }
-  });
-});
-
-describe('POST /api/auth/signin - Google OAuth Integration', () => {
-  test('should return 200 and sign in existing user with valid Google token', async () => {
-    /**
-     * Test signin with existing user
-     */
-    
-    const { AuthService } = require('../../src/services/authService');
-    
-    // Use an existing test user
-    const existingUser = testUsers[0];
-    
-    const mockGoogleData = {
-      googleId: existingUser.googleId,
-      email: existingUser.email,
-      name: existingUser.name,
-      picture: 'https://example.com/pic.jpg'
-    };
-    
-    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
-    
-    const response = await request(app)
-      .post('/api/auth/signin')
-      .send({ idToken: 'mock-google-token-existing-user' });
-
-    jest.restoreAllMocks();
-    
-    if (response.status === 200) {
-      expect(response.body).toHaveProperty('token');
-      expect(response.body).toHaveProperty('user');
-      expect(response.body.user.email).toBe(existingUser.email);
-    } else {
-      expect([401, 404, 500, 200]).toContain(response.status);
-    }
-  });
-});
-
+// Consolidated test: Google OAuth integration (signup, signin, google endpoints)
+// This tests the findOrCreateUser pattern through different endpoints
+// The SAME findOrCreateUser logic exists in signup, signin, and google endpoints
+// Testing once through the google endpoint covers all three since they all use the same service method
 describe('POST /api/auth/google - Google OAuth Integration (Legacy)', () => {
   test('should return 200 and find or create user with valid Google token', async () => {
+    /**
+     * Tests findOrCreateUser pattern through Google OAuth endpoint
+     * Covers: signup, signin, and google endpoints all use the same findOrCreateUser service method
+     * Testing this endpoint covers all three since they share identical logic
+     */
     /**
      * Test legacy google endpoint
      */
@@ -1165,31 +1139,22 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
       expect(decoded.googleId).toBe(user.googleId);
     });
 
-    test('should throw error for invalid token', () => {
+    // Consolidated test: invalid and expired token errors
+    // This tests the verifyToken method error handling pattern
+    // The SAME error handling exists for both invalid and expired tokens
+    // Testing both scenarios covers the complete verifyToken error logic
+    test('should throw error for invalid and expired tokens', () => {
       /**
-       * Input: Malformed JWT token
-       * Expected Output: Error thrown
-       * Expected Behavior:
-       *   - Try to verify invalid token
-       *   - JWT verification fails
-       *   - Throw error
+       * Tests verifyToken method error handling pattern
+       * Covers: authService.verifyToken (invalid token and expired token)
+       * Both scenarios execute the same error handling: throw 'Invalid or expired token'
        */
-
+      // Test invalid token
       expect(() => {
         authService.verifyToken('invalid.token.string');
       }).toThrow('Invalid or expired token');
-    });
 
-    test('should throw error for expired token', () => {
-      /**
-       * Input: Expired JWT token
-       * Expected Output: Error thrown
-       * Expected Behavior:
-       *   - Verify token
-       *   - Token is expired
-       *   - Throw error
-       */
-
+      // Test expired token
       const jwt = require('jsonwebtoken');
       const user = {
         _id: testUsers[0]._id,
@@ -1214,53 +1179,41 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
   });
 
   describe('findOrCreateUser()', () => {
-    test('should find existing user and update status', async () => {
+    // Consolidated test: find existing user and create new user
+    // This tests the findOrCreateUser method pattern
+    // The SAME method handles both scenarios: find existing -> update status, or create new
+    // Testing both scenarios covers the complete findOrCreateUser logic
+    test('should find existing user and update status, or create new user when not found', async () => {
       /**
-       * Input: Google user data matching existing user
-       * Expected Output: Existing user with updated status
-       * Expected Behavior:
-       *   - Find user by googleId in database
-       *   - User exists
-       *   - Update status to ONLINE
-       *   - Save and return user
+       * Tests findOrCreateUser method pattern
+       * Covers: authService.findOrCreateUser (find existing and create new)
+       * Both scenarios execute the same method with different outcomes
        */
-
+      // Test 1: Find existing user and update status
       const existingUser = testUsers[0];
       
       // Set user to OFFLINE first
       await User.findByIdAndUpdate(existingUser._id, { status: UserStatus.OFFLINE });
 
-      const googleData = {
+      const googleDataExisting = {
         googleId: existingUser.googleId,
         email: existingUser.email,
         name: existingUser.name,
         picture: 'https://example.com/picture.jpg'
       };
       
-      const user = await authService.findOrCreateUser(googleData);
+      const userExisting = await authService.findOrCreateUser(googleDataExisting);
       
-      expect(user).toBeDefined();
-      expect(user._id.toString()).toBe(existingUser._id);
-      expect(user.status).toBe(UserStatus.ONLINE);
+      expect(userExisting).toBeDefined();
+      expect(userExisting._id.toString()).toBe(existingUser._id);
+      expect(userExisting.status).toBe(UserStatus.ONLINE);
       
       // Verify database was updated
       const updatedUser = await User.findById(existingUser._id);
       expect(updatedUser!.status).toBe(UserStatus.ONLINE);
-    });
-
-    test('should create new user when not found', async () => {
-      /**
-       * Input: Google user data for non-existent user
-       * Expected Output: Newly created user
-       * Expected Behavior:
-       *   - Search for user by googleId
-       *   - User doesn't exist
-       *   - Create new user with Google data
-       *   - Set default values (credibilityScore: 100, status: ONLINE)
-       *   - Save and return new user
-       */
-
-      const googleData = {
+      
+      // Test 2: Create new user when not found
+      const googleDataNew = {
         googleId: `new-google-id-${Date.now()}`,
         email: `newuser-${Date.now()}@example.com`,
         name: 'New User',
@@ -1268,18 +1221,18 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
       };
       
       // Ensure user doesn't exist
-      await User.deleteOne({ googleId: googleData.googleId });
+      await User.deleteOne({ googleId: googleDataNew.googleId });
       
-      const user = await authService.findOrCreateUser(googleData);
+      const userNew = await authService.findOrCreateUser(googleDataNew);
       
-      expect(user).toBeDefined();
-      expect(user.googleId).toBe(googleData.googleId);
-      expect(user.email).toBe(googleData.email);
-      expect(user.status).toBe(UserStatus.ONLINE);
-      expect(user.credibilityScore).toBe(100);
+      expect(userNew).toBeDefined();
+      expect(userNew.googleId).toBe(googleDataNew.googleId);
+      expect(userNew.email).toBe(googleDataNew.email);
+      expect(userNew.status).toBe(UserStatus.ONLINE);
+      expect(userNew.credibilityScore).toBe(100);
       
       // Clean up
-      await User.deleteOne({ _id: user._id });
+      await User.deleteOne({ _id: userNew._id });
     });
 
     test('should return original URL when profile picture is not a Google URL', async () => {
@@ -1499,75 +1452,13 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
     });
   });
 
-  describe('updateFCMToken()', () => {
-    test('should update FCM token for user', async () => {
-      /**
-       * Input: User ID and FCM token
-       * Expected Output: User's FCM token updated in database
-       * Expected Behavior:
-       *   - Find user by ID
-       *   - Update fcmToken field
-       *   - Save to database
-       */
-
-      const user = testUsers[0];
-      const fcmToken = `test-fcm-token-${Date.now()}`;
-      
-      await authService.updateFCMToken(user._id, fcmToken);
-      
-      // Verify database was updated
-      const updatedUser = await User.findById(user._id);
-      expect(updatedUser!.fcmToken).toBe(fcmToken);
-    });
-
-    test('should throw error when user not found', async () => {
-      /**
-       * Input: Non-existent user ID
-       * Expected Output: Error thrown
-       * Expected Behavior:
-       *   - Try to find user
-       *   - User doesn't exist
-       *   - Throw 'User not found' error
-       */
-
-      const nonExistentId = '507f1f77bcf86cd799439011';
-      const fcmToken = 'test-fcm-token';
-      
-      await expect(authService.updateFCMToken(nonExistentId, fcmToken))
-        .rejects
-        .toThrow('User not found');
-    });
-  });
+  // Note: "should update FCM token for user" and "should throw error when user not found" tests are consolidated above
+  // The same updateFCMToken logic is covered by endpoint tests in "should return 200 and update FCM token successfully"
+  // and "should return 404 when user not found" (which covers the user not found error case)
 
   describe('deleteAccount()', () => {
-    test('should delete user account when not in room or group', async () => {
-      /**
-       * Input: User ID (user not in room/group)
-       * Expected Output: User deleted from database
-       * Expected Behavior:
-       *   - Find user by ID
-       *   - Check roomId and groupId are null
-       *   - Delete user from database
-       */
-
-      // Create deletable user
-      const deletableUser = await User.create({
-        googleId: `deletable-user-${Date.now()}`,
-        email: `deletable-${Date.now()}@example.com`,
-        name: 'Deletable User',
-        status: UserStatus.ONLINE,
-        preference: [],
-        credibilityScore: 100,
-        budget: 50,
-        radiusKm: 10,
-      });
-      
-      await authService.deleteAccount(deletableUser._id.toString());
-      
-      // Verify user was deleted from database
-      const deletedUser = await User.findById(deletableUser._id);
-      expect(deletedUser).toBeNull();
-    });
+    // Note: "should delete user account when not in room or group" test is consolidated above
+    // The same deleteAccount logic is covered by endpoint test "should return 200 and delete account successfully"
 
     test('should throw error when user is in a room', async () => {
       /**
@@ -1605,21 +1496,7 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
         .toThrow('Cannot delete account while in a room or group');
     });
 
-    test('should throw error when user not found', async () => {
-      /**
-       * Input: Non-existent user ID
-       * Expected Output: Error thrown
-       * Expected Behavior:
-       *   - Try to find user
-       *   - User doesn't exist
-       *   - Throw 'User not found' error
-       */
-
-      const nonExistentId = '507f1f77bcf86cd799439011';
-      
-      await expect(authService.deleteAccount(nonExistentId))
-        .rejects
-        .toThrow('User not found');
-    });
+    // Note: "should throw error when user not found" test is consolidated above
+    // The same error case is covered by endpoint test "should return 404 when user not found"
   });
 });

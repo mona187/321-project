@@ -112,27 +112,16 @@ describe('POST /api/matching/join - No Mocking', () => {
    * Mocking: Firebase only (Socket.IO is real with spies)
    */
 
-  test('should create new room when no matching rooms exist', async () => {
+  // Consolidated test: create new room and update user preferences when joining
+  // This tests the POST /api/matching/join endpoint pattern
+  // The SAME endpoint handles both: creating new room and updating user preferences
+  // Testing with preferences covers both scenarios: room creation and preference updates
+  test('should create new room when no matching rooms exist and update user preferences', async () => {
     /**
-     * Input: POST /api/matching/join with preferences
-     *   Body: { cuisine: ["italian"], budget: 50, radiusKm: 10 }
-     * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     Status: 200,
-     *     Message: { text: "Successfully joined matching" },
-     *     Body: { roomId: string, room: object }
-     *   }
-     * Expected Behavior:
-     *   - Authenticate user
-     *   - Check for existing matching rooms
-     *   - No good match found
-     *   - Create new room with user as first member
-     *   - Update user status to IN_WAITING_ROOM
-     *   - Emit socket events (real emissions with spy verification)
-     *   - Return roomId and room details
+     * Tests POST /api/matching/join endpoint pattern
+     * Covers: matching.controller.ts joinMatching method (create room and update preferences)
+     * Both scenarios execute the same code: join matching -> update preferences -> create/join room
      */
-
     // Spy on socket manager methods
     const emitRoomUpdateSpy = jest.spyOn(socketManager, 'emitRoomUpdate');
     const emitToUserSpy = jest.spyOn(socketManager, 'emitToUser');
@@ -161,17 +150,22 @@ describe('POST /api/matching/join - No Mocking', () => {
     expect(response.body.Body).toHaveProperty('roomId');
     expect(response.body.Body).toHaveProperty('room');
     expect(response.body.Body.room.members).toContain(testUsers[0]._id);
+    
+    // Verify user preferences were updated in database (covers preference update scenario)
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser?.budget).toBe(50);
+    expect(updatedUser?.radiusKm).toBe(10);
+    expect(updatedUser?.preference).toEqual(['italian', 'vegetarian']);
 
     // Verify room was created in database
-    const room = await Room.findById(response.body.Body.roomId);
-    expect(room).not.toBeNull();
-    expect(room?.members).toContain(testUsers[0]._id);
-    expect(room?.cuisine).toBe('italian');
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom).not.toBeNull();
+    expect(createdRoom?.members).toContain(testUsers[0]._id);
+    expect(createdRoom?.cuisine).toBe('italian');
 
-    // Verify user was updated in database
-    const user = await User.findById(testUsers[0]._id);
-    expect(user?.roomId).toBe(response.body.Body.roomId);
-    expect(user?.status).toBe(UserStatus.IN_WAITING_ROOM);
+    // Verify user was updated in database (roomId and status)
+    expect(updatedUser?.roomId).toBe(response.body.Body.roomId);
+    expect(updatedUser?.status).toBe(UserStatus.IN_WAITING_ROOM);
 
     // Verify socket events were emitted
     expect(emitRoomUpdateSpy).toHaveBeenCalled();
@@ -293,43 +287,8 @@ describe('POST /api/matching/join - No Mocking', () => {
     expect(response.body.message).toMatch(/already in a room/i);
   });
 
-  test('should update user preferences when joining', async () => {
-    /**
-     * Input: POST /api/matching/join with new preferences
-     * Expected Status Code: 200
-     * Expected Output: Successfully joined
-     * Expected Behavior:
-     *   - Update user.budget, user.radiusKm, user.preference in database
-     *   - Save user with new preferences
-     *   - Use updated preferences for matching algorithm
-     *   - Create/join room with new preferences
-     */
-
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
-    const newPreferences = {
-      cuisine: ['mexican', 'thai'],
-      budget: 75,
-      radiusKm: 15
-    };
-
-    const response = await request(app)
-      .post('/api/matching/join')
-      .set('Authorization', `Bearer ${token}`)
-      .send(newPreferences);
-
-    expect(response.status).toBe(200);
-
-    // Verify user preferences were updated in database
-    const user = await User.findById(testUsers[0]._id);
-    expect(user?.budget).toBe(75);
-    expect(user?.radiusKm).toBe(15);
-    expect(user?.preference).toEqual(['mexican', 'thai']);
-  });
+  // Note: "should update user preferences when joining" test is consolidated above
+  // The same POST /api/matching/join endpoint handles both room creation and preference updates
 });
 
 describe('POST /api/matching/join/:roomId - No Mocking', () => {
@@ -374,30 +333,20 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
    * Mocking: Firebase only
    */
 
-  test('should successfully leave room', async () => {
+  // Consolidated test: leave room (with other members and as last member)
+  // This tests the PUT /api/matching/leave/:roomId endpoint pattern
+  // The SAME endpoint handles both: leaving when others remain, and deleting room when last member leaves
+  // Testing both scenarios covers the complete leave room logic
+  test('should successfully leave room and delete room when last member leaves', async () => {
     /**
-     * Input: PUT /api/matching/leave/:roomId
-     * Expected Status Code: 200
-     * Expected Output:
-     *   {
-     *     Status: 200,
-     *     Message: { text: "Successfully left room" },
-     *     Body: { roomId: string }
-     *   }
-     * Expected Behavior:
-     *   - Find room by ID in database
-     *   - Remove user from room.members array
-     *   - Update user status to ONLINE in database
-     *   - Clear user.roomId in database
-     *   - Update room averages in database
-     *   - Emit socket events
-     *   - If room empty, delete it from database
+     * Tests PUT /api/matching/leave/:roomId endpoint pattern
+     * Covers: matching.controller.ts leaveRoom method (leave with others, delete when last)
+     * Both scenarios execute the same endpoint with different outcomes based on member count
      */
-
     // Spy on socket manager
     const emitMemberLeftSpy = jest.spyOn(socketManager, 'emitMemberLeft');
 
-    // Create room with 2 users
+    // Test 1: Leave room when other members remain
     const { room, memberIds } = await createTestRoomWithMembers(2);
     const userId = memberIds[0];
     const user = await User.findById(userId);
@@ -428,45 +377,36 @@ describe('PUT /api/matching/leave/:roomId - No Mocking', () => {
 
     // Verify socket event was emitted
     expect(emitMemberLeftSpy).toHaveBeenCalled();
-  });
 
-  test('should delete room when last member leaves', async () => {
-    /**
-     * Input: PUT /api/matching/leave/:roomId (last member)
-     * Expected Status Code: 200
-     * Expected Output: Successfully left
-     * Expected Behavior:
-     *   - Remove user from room
-     *   - room.members.length === 0
-     *   - Delete empty room from database
-     *   - Update user status
-     */
+    // Test 2: Delete room when last member leaves
+    const { room: singleRoom, memberIds: singleMemberIds } = await createTestRoomWithMembers(1);
+    const singleUserId = singleMemberIds[0];
+    const singleUser = await User.findById(singleUserId);
 
-    const { room, memberIds } = await createTestRoomWithMembers(1);
-    const userId = memberIds[0];
-    const user = await User.findById(userId);
-
-    const token = generateTestToken(
-      userId,
-      user!.email,
-      user!.googleId
+    const singleToken = generateTestToken(
+      singleUserId,
+      singleUser!.email,
+      singleUser!.googleId
     );
 
-    const response = await request(app)
-      .put(`/api/matching/leave/${room._id}`)
-      .set('Authorization', `Bearer ${token}`);
+    const singleResponse = await request(app)
+      .put(`/api/matching/leave/${singleRoom._id}`)
+      .set('Authorization', `Bearer ${singleToken}`);
 
-    expect(response.status).toBe(200);
+    expect(singleResponse.status).toBe(200);
 
     // Verify room was deleted from database
-    const deletedRoom = await Room.findById(room._id);
+    const deletedRoom = await Room.findById(singleRoom._id);
     expect(deletedRoom).toBeNull();
 
     // Verify user status updated
-    const updatedUser = await User.findById(userId);
-    expect(updatedUser?.roomId).toBeNull();
-    expect(updatedUser?.status).toBe(UserStatus.ONLINE);
+    const singleUpdatedUser = await User.findById(singleUserId);
+    expect(singleUpdatedUser?.roomId).toBeNull();
+    expect(singleUpdatedUser?.status).toBe(UserStatus.ONLINE);
   });
+
+  // Note: "should delete room when last member leaves" test is consolidated above
+  // The same leave room endpoint handles both scenarios: leaving with others and deleting when last
 
   test('should handle leaving non-existent room gracefully', async () => {
     /**

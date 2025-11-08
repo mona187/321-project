@@ -564,16 +564,28 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     expect(response.body.message).toBe('User not found');
   });
 
-  test('should delete group when last member leaves', async () => {
-    const singleMemberGroup = await seedTestGroup(
-      'test-room-single-member',
-      [testUsers[0]._id]
+  // Consolidated test: delete group and restaurant data when last member leaves
+  // This tests the leave group endpoint when last member leaves
+  // The SAME scenario exists: last member leaves -> group deleted -> restaurant data deleted
+  // Testing with restaurant data covers both: group deletion and restaurant data deletion
+  test('should delete group and restaurant data when last member leaves', async () => {
+    const groupWithRestaurant = await seedTestGroup(
+      'test-room-restaurant-delete',
+      [testUsers[0]._id],
+      {
+        restaurantSelected: true,
+        restaurant: {
+          name: 'Deleted Restaurant',
+          location: '999 Delete Ave',
+          restaurantId: 'delete-rest-123'
+        }
+      }
     );
 
     const User = (await import('../../src/models/User')).default;
     await User.findByIdAndUpdate(testUsers[0]._id, { 
-      groupId: singleMemberGroup._id, 
-      status: UserStatus.IN_GROUP 
+      groupId: groupWithRestaurant._id,
+      status: UserStatus.IN_GROUP
     });
 
     const token = generateTestToken(
@@ -583,13 +595,15 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     );
 
     const response = await request(app)
-      .post(`/api/group/leave/${singleMemberGroup._id}`)
+      .post(`/api/group/leave/${groupWithRestaurant._id}`)
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);
 
-    // Verify group was deleted
-    const deletedGroup = await getTestGroupById(singleMemberGroup._id);
+    // Verify group was deleted (covers both group deletion and restaurant data deletion)
+    const Group = (await import('../../src/models/Group')).default;
+    const deletedGroup = await Group.findById(groupWithRestaurant._id);
+    
     expect(deletedGroup).toBeNull();
   });
 
@@ -651,44 +665,8 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     expect(emitRestaurantSelectedSpy).not.toHaveBeenCalled();
   });
 
-  test('should delete restaurant data when last member leaves (group deleted)', async () => {
-    const groupWithRestaurant = await seedTestGroup(
-      'test-room-restaurant-delete',
-      [testUsers[0]._id],
-      {
-        restaurantSelected: true,
-        restaurant: {
-          name: 'Deleted Restaurant',
-          location: '999 Delete Ave',
-          restaurantId: 'delete-rest-123'
-        }
-      }
-    );
-
-    const User = (await import('../../src/models/User')).default;
-    await User.findByIdAndUpdate(testUsers[0]._id, { 
-      groupId: groupWithRestaurant._id,
-      status: UserStatus.IN_GROUP
-    });
-
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
-    const response = await request(app)
-      .post(`/api/group/leave/${groupWithRestaurant._id}`)
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(response.status).toBe(200);
-
-    // Verify group was deleted
-    const Group = (await import('../../src/models/Group')).default;
-    const deletedGroup = await Group.findById(groupWithRestaurant._id);
-    
-    expect(deletedGroup).toBeNull();
-  });
+  // Note: "should delete restaurant data when last member leaves (group deleted)" test is consolidated above
+  // The same scenario (last member leaves -> group deleted) is covered by "should delete group and restaurant data when last member leaves"
 
   test('should verify restaurant field remains after completionTime if not cleared', async () => {
     const expiredGroupWithRestaurant = await seedTestGroup(
@@ -799,10 +777,15 @@ describe('Group Model Methods - Integration Tests', () => {
     expect(typeof json.restaurantVotes).toBe('object');
   });
 
-  test('should add vote when user has no previous vote', async () => {
+  // Consolidated test: add vote when no previous vote and || 0 fallback
+  // This tests the addVote method when no previous vote exists
+  // The SAME code path exists: no previous vote -> add new vote -> || 0 fallback for restaurant not in restaurantVotes
+  // Testing with a restaurant not in restaurantVotes covers both: no previous vote and || 0 fallback
+  test('should add vote when user has no previous vote and use || 0 fallback', async () => {
     /**
-     * Covers Group.ts lines 142-151: addVote method when no previous vote exists
-     * Path: const previousVote = this.votes.get(userId) -> if (previousVote) [FALSE BRANCH] -> add new vote
+     * Tests addVote method when no previous vote exists
+     * Covers: Group.ts lines 142-151 (no previous vote), line 149 (|| 0 fallback)
+     * Both scenarios execute the same code path: no previous vote -> add new vote -> || 0 fallback
      */
     const Group = (await import('../../src/models/Group')).default;
     const testGroupData = await seedTestGroup(
@@ -814,47 +797,23 @@ describe('Group Model Methods - Integration Tests', () => {
     let testGroup = await Group.findById(testGroupData._id);
     expect(testGroup).not.toBeNull();
     
-    // Add first vote (no previous vote exists - covers false branch of line 143)
-    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
-    await testGroup!.save();
-    
-    testGroup = await Group.findById(testGroupData._id);
-    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(1);
-    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-1');
-  });
-
-  test('should use || 0 fallback when adding vote for restaurant not in restaurantVotes', async () => {
-    /**
-     * Covers Group.ts line 149: addVote method || 0 fallback for currentCount
-     * Path: const currentCount = this.restaurantVotes.get(restaurantId) || 0 [FALSE BRANCH]
-     * This tests when adding a vote for a restaurant that doesn't exist in restaurantVotes yet
-     */
-    const Group = (await import('../../src/models/Group')).default;
-    const testGroupData = await seedTestGroup(
-      'test-room-new-restaurant',
-      [testUsers[0]._id]
-    );
-    
-    // Get the actual Group document
-    let testGroup = await Group.findById(testGroupData._id);
-    expect(testGroup).not.toBeNull();
-    
-    // Ensure the restaurant is NOT in restaurantVotes
-    testGroup!.restaurantVotes.delete('rest-new');
+    // Ensure the restaurant is NOT in restaurantVotes (triggers || 0 fallback)
+    testGroup!.restaurantVotes.delete('rest-1');
     await testGroup!.save();
     
     // Verify restaurant is not in restaurantVotes
     testGroup = await Group.findById(testGroupData._id);
-    expect(testGroup!.restaurantVotes.get('rest-new')).toBeUndefined();
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBeUndefined();
     
-    // Add vote for this new restaurant - should trigger || 0 fallback on line 149
-    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-new');
+    // Add first vote (no previous vote exists - covers false branch of line 143)
+    // Also triggers || 0 fallback on line 149 since restaurant not in restaurantVotes
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
     await testGroup!.save();
     
     testGroup = await Group.findById(testGroupData._id);
-    // The restaurant should now have count 1 (0 + 1)
-    expect(testGroup!.restaurantVotes.get('rest-new')).toBe(1);
-    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-new');
+    // The restaurant should now have count 1 (0 + 1, using || 0 fallback)
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(1);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-1');
   });
 
   test('should handle previous vote when adding new vote', async () => {

@@ -98,21 +98,31 @@ describe('GET /api/user/profile/:ids - No Mocking', () => {
     expect(response.body.Body).toHaveLength(0);
   });
 
-  test('should handle multiple IDs correctly', async () => {
+  // Consolidated test: handle single and multiple IDs
+  // This tests the ID parsing and querying pattern
+  // The SAME code path exists whether there's one ID or multiple IDs (comma-separated)
+  // Testing with multiple IDs covers both scenarios: single ID and multiple IDs
+  test('should handle single and multiple IDs correctly', async () => {
     /**
-     * Input: GET /api/user/profile/id1,id2,id3,id4
-     * Expected Status Code: 200
-     * Expected Output: Array with all 4 users
-     * Expected Behavior: Query and return all matching users
+     * Tests ID parsing and querying pattern
+     * Covers: user.controller.ts ID parsing logic (single and comma-separated)
+     * Both single ID and multiple IDs execute the same code: split by comma -> query -> return
      */
+    // Test single ID
+    const singleResponse = await request(app)
+      .get(`/api/user/profile/${testUsers[0]._id}`);
 
+    expect(singleResponse.status).toBe(200);
+    expect(singleResponse.body.Body).toHaveLength(1);
+    expect(singleResponse.body.Body[0].userId).toBe(testUsers[0]._id.toString());
+
+    // Test multiple IDs
     const userIds = testUsers.slice(0, 4).map(u => u._id).join(',');
-    
-    const response = await request(app)
+    const multipleResponse = await request(app)
       .get(`/api/user/profile/${userIds}`);
 
-    expect(response.status).toBe(200);
-    expect(response.body.Body).toHaveLength(4);
+    expect(multipleResponse.status).toBe(200);
+    expect(multipleResponse.body.Body).toHaveLength(4);
   });
 
   test('should return 400 for invalid MongoDB ObjectId format', async () => {
@@ -131,22 +141,6 @@ describe('GET /api/user/profile/:ids - No Mocking', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe('Invalid data format');
-  });
-
-  test('should handle single user ID', async () => {
-    /**
-     * Input: GET /api/user/profile/singleUserId
-     * Expected Status Code: 200
-     * Expected Output: Array with 1 user
-     * Expected Behavior: Query and return single user in array
-     */
-
-    const response = await request(app)
-      .get(`/api/user/profile/${testUsers[0]._id}`);
-
-    expect(response.status).toBe(200);
-    expect(response.body.Body).toHaveLength(1);
-    expect(response.body.Body[0].userId).toBe(testUsers[0]._id);
   });
 });
 
@@ -313,55 +307,40 @@ describe('POST /api/user/profile - No Mocking', () => {
   // Note: "500 when user not found" test is consolidated above in settings endpoint tests
   // The same User.findById() -> if (!user) -> throw Error('User not found') pattern exists in settings and profile
 
-  test('should handle partial updates', async () => {
+  // Consolidated test: partial updates and empty body
+  // This tests the partial update handling pattern
+  // The SAME code path exists whether there are fields to update or an empty body
+  // Testing with partial fields covers both scenarios: partial updates and empty body
+  test('should handle partial updates and empty body', async () => {
     /**
-     * Input: POST /api/user/profile with only name field
-     * Expected Status Code: 200
-     * Expected Output: Profile with only name updated
-     * Expected Behavior:
-     *   - Update only provided field
-     *   - Other fields remain unchanged in database
+     * Tests partial update handling pattern
+     * Covers: user.controller.ts updateProfile method (partial updates and empty body)
+     * Both partial fields and empty body execute the same code: update only provided fields
      */
-
     const token = generateTestToken(
       testUsers[1]._id,
       testUsers[1].email,
       testUsers[1].googleId
     );
 
-    const response = await request(app)
+    // Test partial update
+    const partialResponse = await request(app)
       .post('/api/user/profile')
       .set('Authorization', `Bearer ${token}`)
       .send({ name: 'Only Name Changed' });
 
-    expect(response.status).toBe(200);
-    expect(response.body.Body.name).toBe('Only Name Changed');
+    expect(partialResponse.status).toBe(200);
+    expect(partialResponse.body.Body.name).toBe('Only Name Changed');
     // Bio should remain unchanged
-    expect(response.body.Body.bio).toBe(testUsers[1].bio);
-  });
+    expect(partialResponse.body.Body.bio).toBe(testUsers[1].bio);
 
-  test('should accept empty body without errors', async () => {
-    /**
-     * Input: POST /api/user/profile with empty object {}
-     * Expected Status Code: 200
-     * Expected Output: Unchanged profile
-     * Expected Behavior:
-     *   - No fields updated
-     *   - Return current profile
-     */
-
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
-    const response = await request(app)
+    // Test empty body
+    const emptyResponse = await request(app)
       .post('/api/user/profile')
       .set('Authorization', `Bearer ${token}`)
       .send({});
 
-    expect(response.status).toBe(200);
+    expect(emptyResponse.status).toBe(200);
   });
 });
 
@@ -371,24 +350,24 @@ describe('POST /api/user/settings - No Mocking', () => {
    * Mocking: None
    */
 
-  test('should update settings with valid data', async () => {
+  // Consolidated test: update settings with full and partial data
+  // This tests the POST /api/user/settings update pattern
+  // The SAME code path exists whether there are all fields or partial fields
+  // Testing with both full and partial data covers both scenarios
+  test('should update settings with full and partial data', async () => {
     /**
-     * Input: POST /api/user/settings with settings data
-     * Expected Status Code: 200
-     * Expected Output: Updated settings
-     * Expected Behavior:
-     *   - Auth succeeds
-     *   - Update user settings in database
-     *   - Return complete settings via getUserSettings()
+     * Tests POST /api/user/settings update pattern
+     * Covers: user.controller.ts updateSettings method (full and partial updates)
+     * Both full fields and partial fields execute the same code: update only provided fields
      */
-
     const token = generateTestToken(
       testUsers[1]._id,
       testUsers[1].email,
       testUsers[1].googleId
     );
 
-    const settingsData = {
+    // Test full update
+    const fullSettings = {
       name: 'Settings Updated Name',
       bio: 'Settings updated bio',
       preference: ['vegetarian', 'italian', 'mexican'],
@@ -396,52 +375,36 @@ describe('POST /api/user/settings - No Mocking', () => {
       radiusKm: 25
     };
 
-    const response = await request(app)
+    const fullResponse = await request(app)
       .post('/api/user/settings')
       .set('Authorization', `Bearer ${token}`)
-      .send(settingsData);
+      .send(fullSettings);
 
-    expect(response.status).toBe(200);
-    expect(response.body.Status).toBe(200);
-    expect(response.body.Message.text).toBe('Settings updated successfully');
-    expect(response.body.Body.name).toBe('Settings Updated Name');
-    expect(response.body.Body.budget).toBe(100);
-    expect(response.body.Body.radiusKm).toBe(25);
-  });
+    expect(fullResponse.status).toBe(200);
+    expect(fullResponse.body.Status).toBe(200);
+    expect(fullResponse.body.Message.text).toBe('Settings updated successfully');
+    expect(fullResponse.body.Body.name).toBe('Settings Updated Name');
+    expect(fullResponse.body.Body.budget).toBe(100);
+    expect(fullResponse.body.Body.radiusKm).toBe(25);
 
-  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
-  // All endpoints use the same authMiddleware, so testing one endpoint covers all
-
-  test('should accept partial settings updates', async () => {
-    /**
-     * Input: POST /api/user/settings with only budget and radiusKm
-     * Expected Status Code: 200
-     * Expected Output: Settings with only those fields updated
-     * Expected Behavior:
-     *   - Update only provided fields
-     *   - Other fields remain unchanged
-     */
-
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
+    // Test partial update
     const partialSettings = {
       budget: 150,
       radiusKm: 30
     };
 
-    const response = await request(app)
+    const partialResponse = await request(app)
       .post('/api/user/settings')
       .set('Authorization', `Bearer ${token}`)
       .send(partialSettings);
 
-    expect(response.status).toBe(200);
-    expect(response.body.Body.budget).toBe(150);
-    expect(response.body.Body.radiusKm).toBe(30);
+    expect(partialResponse.status).toBe(200);
+    expect(partialResponse.body.Body.budget).toBe(150);
+    expect(partialResponse.body.Body.radiusKm).toBe(30);
   });
+
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 });
 
 describe('PUT /api/user/profile - No Mocking', () => {
@@ -450,69 +413,55 @@ describe('PUT /api/user/profile - No Mocking', () => {
    * Mocking: None
    */
 
-  test('should update profile with valid data', async () => {
+  // Consolidated test: update profile with full and partial data
+  // This tests the PUT /api/user/profile update pattern
+  // The SAME code path exists whether there are all fields or partial fields
+  // Testing with both full and partial data covers both scenarios
+  test('should update profile with full and partial data', async () => {
     /**
-     * Input: PUT /api/user/profile with updated profile data
-     * Expected Status Code: 200
-     * Expected Output: Updated profile
-     * Expected Behavior:
-     *   - Auth succeeds
-     *   - Update user profile in database
-     *   - Return updated profile
+     * Tests PUT /api/user/profile update pattern
+     * Covers: user.controller.ts updateProfile method (full and partial updates)
+     * Both full fields and partial fields execute the same code: update only provided fields
      */
-
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
       testUsers[0].googleId
     );
 
-    const updatedData = {
+    // Test full update
+    const fullUpdate = {
       name: 'PUT Updated Name',
       bio: 'PUT updated bio',
       preference: ['thai', 'korean']
     };
 
-    const response = await request(app)
+    const fullResponse = await request(app)
       .put('/api/user/profile')
       .set('Authorization', `Bearer ${token}`)
-      .send(updatedData);
+      .send(fullUpdate);
 
-    expect(response.status).toBe(200);
-    expect(response.body.Status).toBe(200);
-    expect(response.body.Message.text).toBe('Profile updated successfully');
-    expect(response.body.Body.name).toBe('PUT Updated Name');
-  });
+    expect(fullResponse.status).toBe(200);
+    expect(fullResponse.body.Status).toBe(200);
+    expect(fullResponse.body.Message.text).toBe('Profile updated successfully');
+    expect(fullResponse.body.Body.name).toBe('PUT Updated Name');
 
-  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
-  // All endpoints use the same authMiddleware, so testing one endpoint covers all
-
-  test('should handle partial profile updates', async () => {
-    /**
-     * Input: PUT /api/user/profile with subset of fields
-     * Expected Status Code: 200
-     * Expected Output: Profile with only provided fields updated
-     * Expected Behavior: Update only specified fields
-     */
-
-    const token = generateTestToken(
-      testUsers[1]._id,
-      testUsers[1].email,
-      testUsers[1].googleId
-    );
-
+    // Test partial update
     const partialUpdate = {
       bio: 'Just bio update via PUT'
     };
 
-    const response = await request(app)
+    const partialResponse = await request(app)
       .put('/api/user/profile')
       .set('Authorization', `Bearer ${token}`)
       .send(partialUpdate);
 
-    expect(response.status).toBe(200);
-    expect(response.body.Body.bio).toBe('Just bio update via PUT');
+    expect(partialResponse.status).toBe(200);
+    expect(partialResponse.body.Body.bio).toBe('Just bio update via PUT');
   });
+
+  // Note: "401 without authentication" test is consolidated above in settings endpoint tests
+  // All endpoints use the same authMiddleware, so testing one endpoint covers all
 });
 
 describe('DELETE /api/user/:userId - No Mocking', () => {
