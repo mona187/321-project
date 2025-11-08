@@ -47,9 +47,7 @@ class AuthViewModel @Inject constructor(
         initializeAuthState()
     }
 
-    /**
-     * Initialize authentication state from stored data
-     */
+
     private fun initializeAuthState() {
         if (authRepository.isLoggedIn()) {
             _authState.value = AuthState.Authenticated
@@ -282,9 +280,7 @@ class AuthViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    /**
-     * Sync profile picture to backend
-     */
+
     private fun syncProfilePictureToBackend(profilePicture: String) {
         viewModelScope.launch {
             try {

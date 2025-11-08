@@ -85,9 +85,7 @@ object Base64ImageHelper {
         }
     }
 
-    /**
-     * Compress bitmap to max 800x800 while maintaining aspect ratio
-     */
+
     private fun compressBitmap(original: Bitmap): Bitmap {
         val maxSize = 800
         val width = original.width

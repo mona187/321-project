@@ -59,9 +59,7 @@ class UserViewModel @Inject constructor(
         loadLocalPreferences()
     }
 
-    /**
-     * Load preferences from local storage
-     */
+
     private fun loadLocalPreferences() {
         _selectedCuisines.value = preferencesManager.getCuisines()
         _budget.value = preferencesManager.getBudget()

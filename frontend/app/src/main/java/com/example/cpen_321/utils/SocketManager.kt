@@ -277,16 +277,10 @@ class SocketManager private constructor() {
 
     // ==================== HELPER METHODS ====================
 
-    /**
-     * Emit event to server
-     */
     private fun emit(event: String, data: JSONObject) {
         socket?.emit(event, data)
     }
 
-    /**
-     * Listen to event from server
-     */
     private fun on(event: String, listener: Emitter.Listener) {
         socket?.on(event, listener)
     }
@@ -325,7 +319,6 @@ class SocketManager private constructor() {
         val error = if (args.isNotEmpty()) args[0].toString() else "unknown error"
         Log.e(TAG, "❌ Socket connection error: $error")
 
-        // Additional debug info
         if (args.isNotEmpty() && args[0] is Exception) {
             val exception = args[0] as Exception
             Log.e(TAG, "Error details: ${exception.message}")

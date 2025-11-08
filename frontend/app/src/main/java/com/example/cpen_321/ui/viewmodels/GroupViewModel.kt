@@ -72,9 +72,7 @@ class GroupViewModel @Inject constructor(
         setupSocketListeners()
     }
 
-    /**
-     * Setup socket listeners for real-time updates
-     */
+
     private fun setupSocketListeners() {
         socketManager.onVoteUpdate { data ->
             handleVoteUpdate(data)
@@ -244,9 +242,6 @@ class GroupViewModel @Inject constructor(
     }
 
 
-    /**
-     * Load group members profiles
-     */
     private fun loadGroupMembers(memberIds: List<String>) {
         viewModelScope.launch {
             if (memberIds.isEmpty()) return@launch
@@ -277,9 +272,7 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle vote update from socket
-     */
+
     private fun handleVoteUpdate(data: JSONObject) {
         Log.d("SocketDebug", "🔔 VOTE_UPDATE EVENT RECEIVED")
         Log.d("SocketDebug", "Raw data: $data")
@@ -311,9 +304,7 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle restaurant selected from socket
-     */
+
     private fun handleRestaurantSelected(data: JSONObject) {
         viewModelScope.launch {
             android.util.Log.d("GroupViewModel", "═══════════════════════════════════")
@@ -351,9 +342,7 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle member left from socket
-     */
+
     private fun handleMemberLeft(data: JSONObject) {
         viewModelScope.launch {
             val userId = data.getStringSafe("userId")
@@ -376,9 +365,7 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Clear group state
-     */
+
     private fun clearGroupState() {
         _currentGroup.value = null
         _groupMembers.value = emptyList()

@@ -79,9 +79,7 @@ class MatchViewModel @Inject constructor(
         setupSocketListeners()
     }
 
-    /**
-     * FIXED: Start a client-side timer that counts down every second
-     */
+
     private fun startTimer(completionTimeMillis: Long) {
         timerJob?.cancel()
 
@@ -107,9 +105,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Setup socket listeners for real-time updates
-     */
+
     private fun setupSocketListeners() {
         socketManager.onRoomUpdate { data ->
             handleRoomUpdate(data)
@@ -263,9 +259,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Load room members profiles
-     */
+
     private fun loadRoomMembers(memberIds: List<String>) {
         viewModelScope.launch {
             if (memberIds.isEmpty()) {
@@ -286,9 +280,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle room update from socket
-     */
+
     private fun handleRoomUpdate(data: JSONObject) {
         viewModelScope.launch {
             val roomId = data.getStringSafe("roomId")
@@ -318,10 +310,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Parse ISO 8601 date string to milliseconds
-     * Compatible with API 24+
-     */
+
     private fun parseIso8601ToMillis(dateString: String?): Long? {
         if (dateString.isNullOrEmpty()) return null
 
@@ -339,9 +328,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle group ready from socket
-     */
+
     private fun handleGroupReady(data: JSONObject) {
         viewModelScope.launch {
             val groupId = data.getStringSafe("groupId")
@@ -356,9 +343,7 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle room expired from socket
-     */
+
     private fun handleRoomExpired(data: JSONObject) {
         viewModelScope.launch {
             Log.d(TAG, "Room expired")
@@ -370,31 +355,20 @@ class MatchViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Handle member joined from socket
-     */
+
     private fun handleMemberJoined(data: JSONObject) {
         viewModelScope.launch {
             val userName = data.getStringSafe("userName")
-            val userId = data.getStringSafe("userId")  // ← ADD THIS
+            val userId = data.getStringSafe("userId")
             Log.d(TAG, "Member joined: $userName")
 
-            // ✅ BETTER: Directly update members list
             _currentRoom.value?.let { room ->
-                // Option 1: Just reload status (current approach)
                 getRoomStatus(room.roomId)
-
-                // Option 2: Or manually add member (faster)
-                // val updatedRoom = room.copy(members = room.members + userId)
-                // _currentRoom.value = updatedRoom
-                // loadRoomMembers(updatedRoom.members)
             }
         }
     }
 
-    /**
-     * Handle member left from socket
-     */
+
     private fun handleMemberLeft(data: JSONObject) {
         viewModelScope.launch {
             val userId = data.getStringSafe("userId")

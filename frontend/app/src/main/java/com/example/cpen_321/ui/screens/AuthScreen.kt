@@ -242,10 +242,7 @@ private fun AuthButtons(
 
 // ========================= GOOGLE SIGN-IN LOGIC =========================
 
-/**
- * Handle Google Sign-In/Sign-Up process
- * Fixed to work without Google account by setting filterByAuthorizedAccounts = false
- */
+
 private fun handleGoogleSignIn(
     context: ComponentActivity?,
     viewModel: AuthViewModel,
