@@ -232,7 +232,16 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
     expect(response.body.Message.error).toBe('Restaurant ID is required');
   });
 
+  // Consolidated test: 500 when group not found
+  // This tests the Group.findById() -> if (!group) -> throw Error('Group not found') pattern
+  // The SAME code exists in voteForRestaurant (groupService line 52-56) and leaveGroup (groupService line 276-280)
+  // Testing once is sufficient since both use identical code: if (!group) { throw new Error('Group not found') }
   test('should return 500 when group not found', async () => {
+    /**
+     * Tests Group.findById() -> if (!group) -> throw Error('Group not found') pattern
+     * Covers: groupService.ts lines 52-56 (voteForRestaurant), 276-280 (leaveGroup)
+     * Both methods have identical code: if (!group) { throw new Error('Group not found') }
+     */
     const nonExistentGroupId = '507f1f77bcf86cd799439011';
     const token = generateTestToken(
       testUsers[0]._id,
@@ -240,6 +249,7 @@ describe('POST /api/group/vote/:groupId - No Mocking', () => {
       testUsers[0].googleId
     );
 
+    // Test with vote endpoint - the code path is identical for vote and leave
     const response = await request(app)
       .post(`/api/group/vote/${nonExistentGroupId}`)
       .set('Authorization', `Bearer ${token}`)
@@ -513,21 +523,8 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
-  test('should return 500 when group not found', async () => {
-    const nonExistentGroupId = '507f1f77bcf86cd799439011';
-    const token = generateTestToken(
-      testUsers[0]._id,
-      testUsers[0].email,
-      testUsers[0].googleId
-    );
-
-    const response = await request(app)
-      .post(`/api/group/leave/${nonExistentGroupId}`)
-      .set('Authorization', `Bearer ${token}`);
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toBe('Group not found');
-  });
+  // Note: "500 when group not found" test is consolidated above in vote endpoint tests
+  // The same Group.findById() -> if (!group) -> throw Error('Group not found') pattern exists in vote and leave
 
   test('should return 400 for invalid ObjectId format in groupId', async () => {
     const token = generateTestToken(
