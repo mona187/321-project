@@ -819,6 +819,40 @@ describe('Group Model Methods - Integration Tests', () => {
     expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-1');
   });
 
+  test('should use || 0 fallback when adding vote for restaurant not in restaurantVotes', async () => {
+    /**
+     * Covers Group.ts line 149: addVote method || 0 fallback for currentCount
+     * Path: const currentCount = this.restaurantVotes.get(restaurantId) || 0 [FALSE BRANCH]
+     * This tests when adding a vote for a restaurant that doesn't exist in restaurantVotes yet
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-new-restaurant',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Ensure the restaurant is NOT in restaurantVotes
+    testGroup!.restaurantVotes.delete('rest-new');
+    await testGroup!.save();
+    
+    // Verify restaurant is not in restaurantVotes
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-new')).toBeUndefined();
+    
+    // Add vote for this new restaurant - should trigger || 0 fallback on line 149
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-new');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    // The restaurant should now have count 1 (0 + 1)
+    expect(testGroup!.restaurantVotes.get('rest-new')).toBe(1);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-new');
+  });
+
   test('should handle previous vote when adding new vote', async () => {
     /**
      * Covers Group.ts lines 143-146: addVote method previous vote handling
@@ -849,6 +883,46 @@ describe('Group Model Methods - Integration Tests', () => {
     expect(testGroup!.restaurantVotes.get('rest-1')).toBe(0);
     expect(testGroup!.restaurantVotes.get('rest-2')).toBe(1);
     expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-2');
+  });
+
+  test('should handle previous vote when restaurantVotes.get returns undefined', async () => {
+    /**
+     * Covers Group.ts line 143: addVote method || 0 fallback
+     * Path: if (previousVote) [TRUE BRANCH] -> this.restaurantVotes.get(previousVote) returns undefined -> || 0 fallback
+     * This tests the edge case where a vote exists in votes Map but the restaurant is not in restaurantVotes Map
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-undefined-fallback',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Manually set a vote in votes Map but don't add it to restaurantVotes
+    // This simulates an edge case where restaurantVotes.get() would return undefined
+    testGroup!.votes.set(testUsers[0]._id.toString(), 'rest-orphan');
+    // Ensure rest-orphan is NOT in restaurantVotes (or delete it if it exists)
+    testGroup!.restaurantVotes.delete('rest-orphan');
+    await testGroup!.save();
+    
+    // Verify the orphan vote exists but restaurantVotes doesn't have it
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-orphan');
+    expect(testGroup!.restaurantVotes.get('rest-orphan')).toBeUndefined();
+    
+    // Now add a new vote - this should trigger the || 0 fallback
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-new');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    // The orphan restaurant should have count 0 (or not exist) after decrementing from 0
+    expect(testGroup!.restaurantVotes.get('rest-orphan') || 0).toBe(0);
+    // The new restaurant should have count 1
+    expect(testGroup!.restaurantVotes.get('rest-new')).toBe(1);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-new');
   });
 
   test('should remove vote when restaurantId exists', async () => {

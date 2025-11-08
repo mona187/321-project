@@ -29,7 +29,6 @@ export interface IGroup {
 export interface IGroupMethods {
   addVote(userId: string, restaurantId: string): void;
   removeVote(userId: string): void;
-  getVoteCount(restaurantId: string): number;
   getWinningRestaurant(): string | null;
   hasAllVoted(): boolean;
   removeMember(userId: string): void;
@@ -42,8 +41,6 @@ export interface IGroupDocument extends Document, IGroup, IGroupMethods {
 
 // Static methods interface
 export interface IGroupModel extends Model<IGroup, {}, IGroupMethods> {
-  findByUserId(userId: string): Promise<IGroupDocument | null>;
-  findActiveGroups(): Promise<IGroupDocument[]>;
 }
 
 // Schema definition
@@ -124,13 +121,12 @@ GroupSchema.set('toJSON', {
   virtuals: true,
   transform: function(_doc, ret) {
     const groupId = ret._id.toString();
-    const { _id, __v, votes, restaurantVotes, ...rest } = ret;
+    const { _id, __v, ...rest } = ret;
     
+    // Mongoose already converts Maps to plain objects before transform runs
     return { 
       groupId, 
-      ...rest,
-      votes: votes instanceof Map ? Object.fromEntries(votes) : votes,
-      restaurantVotes: restaurantVotes instanceof Map ? Object.fromEntries(restaurantVotes) : restaurantVotes
+      ...rest
     };
   }
 });
@@ -164,11 +160,6 @@ GroupSchema.methods.removeVote = function(userId: string): void {
   }
 };
 
-// Instance method: Get vote count for a restaurant
-GroupSchema.methods.getVoteCount = function(restaurantId: string): number {
-  return this.restaurantVotes.get(restaurantId) || 0;
-};
-
 // Instance method: Get winning restaurant
 GroupSchema.methods.getWinningRestaurant = function(): string | null {
   let maxVotes = 0;
@@ -193,21 +184,6 @@ GroupSchema.methods.hasAllVoted = function(): boolean {
 GroupSchema.methods.removeMember = function(userId: string): void {
   this.members = this.members.filter(id => id !== userId);
   this.removeVote(userId);
-};
-
-// Static method: Find group by user ID
-GroupSchema.statics.findByUserId = async function(userId: string): Promise<IGroupDocument | null> {
-  return this.findOne({
-    members: userId
-  });
-};
-
-// Static method: Find active groups
-GroupSchema.statics.findActiveGroups = async function(): Promise<IGroupDocument[]> {
-  return this.find({
-    restaurantSelected: false,
-    completionTime: { $gt: new Date() }
-  });
 };
 
 // Create model
