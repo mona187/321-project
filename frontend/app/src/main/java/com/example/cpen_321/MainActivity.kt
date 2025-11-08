@@ -28,12 +28,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // ADD THIS METHOD - it prevents navigation state from being saved
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        // Don't save navigation state - always start fresh at splash
-        outState.clear()
-    }
+//    // ADD THIS METHOD - it prevents navigation state from being saved
+//    override fun onSaveInstanceState(outState: Bundle) {
+//        super.onSaveInstanceState(outState)
+//        // Don't save navigation state - always start fresh at splash
+//        outState.clear()
+//    }
 }
 
 @Composable

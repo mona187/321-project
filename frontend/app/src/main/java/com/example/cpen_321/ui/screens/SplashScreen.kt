@@ -11,7 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.cpen_321.data.network.dto.ApiResult
+import NavRoutes
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 /*
@@ -33,20 +36,25 @@ fun SplashScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) {
+        // CRITICAL FIX: Wrap all navigation calls in withContext(Dispatchers.Main)
         if (viewModel.isLoggedIn()) {
             // Verify token with backend
             when (val result = viewModel.verifyToken()) {
                 is ApiResult.Success -> {
                     // Token valid, go to home
-                    navController.navigate(NavRoutes.HOME) {
-                        popUpTo("splash") { inclusive = true }
+                    withContext(Dispatchers.Main) {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo("splash") { inclusive = true }
+                        }
                     }
                 }
                 is ApiResult.Error -> {
                     // Token invalid, clear and go to login
                     viewModel.clearAuthData()
-                    navController.navigate(NavRoutes.AUTH) {
-                        popUpTo("splash") { inclusive = true }
+                    withContext(Dispatchers.Main) {
+                        navController.navigate(NavRoutes.AUTH) {
+                            popUpTo("splash") { inclusive = true }
+                        }
                     }
                 }
                 is ApiResult.Loading -> {
@@ -56,8 +64,10 @@ fun SplashScreen(
             }
         } else {
             // No token, go to login
-            navController.navigate(NavRoutes.AUTH) {
-                popUpTo("splash") { inclusive = true }
+            withContext(Dispatchers.Main) {
+                navController.navigate(NavRoutes.AUTH) {
+                    popUpTo("splash") { inclusive = true }
+                }
             }
         }
     }
