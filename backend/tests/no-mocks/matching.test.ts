@@ -750,3 +750,220 @@ describe('Room Model Methods - Integration Tests', () => {
     await Room.deleteOne({ _id: expiredRoom._id });
   });
 });
+
+describe('SocketManager - Integration Tests', () => {
+  /**
+   * These tests verify SocketManager methods directly
+   * Covers: initialize method with already initialized check, emitGroupReady, emitRoomExpired
+   */
+
+  test('should warn and return early when initialize is called twice', async () => {
+    /**
+     * Covers socketManager.ts lines 28-31: initialize when already initialized
+     * Path: if (this.io) [TRUE BRANCH] -> console.warn -> return
+     */
+    const http = require('http');
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    
+    // socketManager is already initialized in beforeAll
+    // Create a new HTTP server for the second initialize call
+    const testServer = http.createServer();
+    
+    // Call initialize again - should trigger the warning
+    socketManager.initialize(testServer);
+    
+    // Verify warning was called
+    expect(consoleWarnSpy).toHaveBeenCalledWith('⚠️  Socket.IO already initialized');
+    
+    consoleWarnSpy.mockRestore();
+    testServer.close();
+  });
+
+  test('should call emitGroupReady through socketManager', async () => {
+    /**
+     * Covers socketManager.ts lines 80-82: emitGroupReady method
+     * Path: emitGroupReady -> getEmitter() -> emitGroupReady(roomId, groupId, members)
+     */
+    const roomId = new mongoose.Types.ObjectId().toString();
+    const groupId = new mongoose.Types.ObjectId().toString();
+    const members = [testUsers[0]._id, testUsers[1]._id];
+    
+    // Spy on the emitter's emitGroupReady method
+    const emitter = socketManager.getEmitter();
+    const emitGroupReadySpy = jest.spyOn(emitter, 'emitGroupReady');
+    
+    // Call emitGroupReady through socketManager
+    socketManager.emitGroupReady(roomId, groupId, members);
+    
+    // Verify the emitter method was called with correct arguments
+    expect(emitGroupReadySpy).toHaveBeenCalledWith(roomId, groupId, members);
+    
+    emitGroupReadySpy.mockRestore();
+  });
+
+  test('should call emitRoomExpired through socketManager', async () => {
+    /**
+     * Covers socketManager.ts lines 87-89: emitRoomExpired method
+     * Path: emitRoomExpired -> getEmitter() -> emitRoomExpired(roomId, reason)
+     */
+    const roomId = new mongoose.Types.ObjectId().toString();
+    const reason = 'Not enough members';
+    
+    // Spy on the emitter's emitRoomExpired method
+    const emitter = socketManager.getEmitter();
+    const emitRoomExpiredSpy = jest.spyOn(emitter, 'emitRoomExpired');
+    
+    // Call emitRoomExpired through socketManager
+    socketManager.emitRoomExpired(roomId, reason);
+    
+    // Verify the emitter method was called with correct arguments
+    expect(emitRoomExpiredSpy).toHaveBeenCalledWith(roomId, reason);
+    
+    emitRoomExpiredSpy.mockRestore();
+  });
+
+  test('should call emitRoomExpired without reason parameter', async () => {
+    /**
+     * Covers socketManager.ts lines 87-89: emitRoomExpired method without reason
+     * Path: emitRoomExpired(roomId) -> getEmitter() -> emitRoomExpired(roomId, undefined)
+     */
+    const roomId = new mongoose.Types.ObjectId().toString();
+    
+    // Spy on the emitter's emitRoomExpired method
+    const emitter = socketManager.getEmitter();
+    const emitRoomExpiredSpy = jest.spyOn(emitter, 'emitRoomExpired');
+    
+    // Call emitRoomExpired without reason
+    socketManager.emitRoomExpired(roomId);
+    
+    // Verify the emitter method was called with roomId and undefined reason
+    expect(emitRoomExpiredSpy).toHaveBeenCalledWith(roomId, undefined);
+    
+    emitRoomExpiredSpy.mockRestore();
+  });
+
+  test('should throw error when getIO is called before initialize', () => {
+    /**
+     * Covers socketManager.ts lines 41-46: getIO method error case
+     * Path: if (!this.io) [TRUE BRANCH] -> throw Error
+     */
+    // Temporarily clear the io property to test uninitialized state
+    const originalIO = (socketManager as any).io;
+    (socketManager as any).io = null;
+    
+    // Try to get IO before initialization - should throw error
+    expect(() => {
+      socketManager.getIO();
+    }).toThrow('Socket.IO not initialized. Call initialize() first.');
+    
+    // Restore the original io
+    (socketManager as any).io = originalIO;
+  });
+
+  test('should throw error when getEmitter is called before initialize', () => {
+    /**
+     * Covers socketManager.ts lines 51-56: getEmitter method error case
+     * Path: if (!this.emitter) [TRUE BRANCH] -> throw Error
+     */
+    // Temporarily clear the emitter property to test uninitialized state
+    const originalEmitter = (socketManager as any).emitter;
+    (socketManager as any).emitter = null;
+    
+    // Try to get emitter before initialization - should throw error
+    expect(() => {
+      socketManager.getEmitter();
+    }).toThrow('SocketEmitter not initialized. Call initialize() first.');
+    
+    // Restore the original emitter
+    (socketManager as any).emitter = originalEmitter;
+  });
+
+  test('should emit event to user when socket with matching userId is found', () => {
+    /**
+     * Covers socketManager.ts lines 166-178: emitToUser method (success path)
+     * Path: getIO() -> loop sockets -> if (socket.userId === userId) [TRUE BRANCH] -> socket.emit() -> return
+     */
+    const io = socketManager.getIO();
+    const testUserId = testUsers[0]._id.toString();
+    const testEvent = 'test_event';
+    const testPayload = { message: 'test' };
+    
+    // Create a mock socket with userId
+    const mockSocket = {
+      userId: testUserId,
+      emit: jest.fn()
+    };
+    
+    // Add mock socket to io.sockets.sockets Map
+    (io.sockets.sockets as any).set('socket-id-1', mockSocket);
+    
+    // Call emitToUser
+    socketManager.emitToUser(testUserId, testEvent, testPayload);
+    
+    // Verify socket.emit was called with correct arguments
+    expect(mockSocket.emit).toHaveBeenCalledWith(testEvent, testPayload);
+    expect(mockSocket.emit).toHaveBeenCalledTimes(1);
+    
+    // Clean up - remove the mock socket
+    (io.sockets.sockets as any).delete('socket-id-1');
+  });
+
+  test('should log warning when no socket with matching userId is found', () => {
+    /**
+     * Covers socketManager.ts lines 166-178: emitToUser method (no socket found path)
+     * Path: getIO() -> loop sockets -> if (socket.userId === userId) [FALSE for all] -> console.warn
+     */
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const testUserId = 'non-existent-user-id';
+    const testEvent = 'test_event';
+    const testPayload = { message: 'test' };
+    
+    // Call emitToUser with a userId that doesn't exist in any socket
+    socketManager.emitToUser(testUserId, testEvent, testPayload);
+    
+    // Verify warning was logged
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `⚠️ emitToUser: No socket found for user ${testUserId}`
+    );
+    
+    consoleWarnSpy.mockRestore();
+  });
+
+  test('should only emit to the first matching socket and return early', () => {
+    /**
+     * Covers socketManager.ts lines 166-178: emitToUser method (return early behavior)
+     * Path: getIO() -> loop sockets -> if (socket.userId === userId) [TRUE] -> socket.emit() -> return
+     * Verifies that only the first matching socket receives the event
+     */
+    const io = socketManager.getIO();
+    const testUserId = testUsers[0]._id.toString();
+    const testEvent = 'test_event';
+    const testPayload = { message: 'test' };
+    
+    // Create multiple mock sockets with the same userId
+    const mockSocket1 = {
+      userId: testUserId,
+      emit: jest.fn()
+    };
+    const mockSocket2 = {
+      userId: testUserId,
+      emit: jest.fn()
+    };
+    
+    // Add both mock sockets to io.sockets.sockets Map
+    (io.sockets.sockets as any).set('socket-id-1', mockSocket1);
+    (io.sockets.sockets as any).set('socket-id-2', mockSocket2);
+    
+    // Call emitToUser
+    socketManager.emitToUser(testUserId, testEvent, testPayload);
+    
+    // Verify only the first socket received the event (due to early return)
+    expect(mockSocket1.emit).toHaveBeenCalledWith(testEvent, testPayload);
+    expect(mockSocket1.emit).toHaveBeenCalledTimes(1);
+    expect(mockSocket2.emit).not.toHaveBeenCalled();
+    
+    // Clean up - remove the mock sockets
+    (io.sockets.sockets as any).delete('socket-id-1');
+    (io.sockets.sockets as any).delete('socket-id-2');
+  });
+});

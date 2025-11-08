@@ -17,7 +17,7 @@
 
 import request from 'supertest';
 import express, { Request, Response, NextFunction } from 'express';
-import { errorHandler, AppError } from '../../src/middleware/errorHandler';
+import { errorHandler, AppError, notFoundHandler, asyncHandler } from '../../src/middleware/errorHandler';
 import User from '../../src/models/User';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
@@ -704,5 +704,104 @@ describe('Controller Error Forwarding - next(error) Coverage', () => {
     expect(response.status).toBe(500);
     expect(response.body).toHaveProperty('message');
     expect(response.body.message).toBe('Simulated controller failure');
+  });
+});
+
+describe('notFoundHandler - 404 Handler', () => {
+  /**
+   * Tests for the notFoundHandler middleware
+   * Covers: notFoundHandler function
+   */
+
+  test('should create AppError with 404 when route not found', async () => {
+    /**
+     * Covers errorHandler.ts lines 69-79: notFoundHandler function
+     * Path: notFoundHandler -> new AppError -> next(error)
+     */
+    const app = express();
+    app.use(express.json());
+    
+    // Add a route that exists
+    app.get('/test/exists', (_req: Request, res: Response) => {
+      res.json({ success: true });
+    });
+    
+    // Add notFoundHandler (should be called for non-existent routes)
+    app.use(notFoundHandler);
+    
+    // Add error handler to catch the AppError
+    app.use(errorHandler);
+    
+    // Make request to non-existent route
+    const response = await request(app)
+      .get('/test/non-existent-route');
+    
+    // Should return 404 with AppError message
+    expect(response.status).toBe(404);
+    // AppError.name is 'AppError', but errorHandler uses err.name || 'Error'
+    // Since AppError extends Error, err.name should be 'AppError'
+    expect(response.body.error).toBe('AppError');
+    expect(response.body.message).toContain('not found');
+    expect(response.body.statusCode).toBe(404);
+  });
+});
+
+describe('asyncHandler - Async Error Wrapper', () => {
+  /**
+   * Tests for the asyncHandler wrapper
+   * Covers: asyncHandler function
+   */
+
+  test('should catch errors from async route handlers', async () => {
+    /**
+     * Covers errorHandler.ts lines 82-88: asyncHandler function
+     * Path: asyncHandler -> Promise.resolve -> catch -> next(error)
+     */
+    const app = express();
+    app.use(express.json());
+    
+    // Create an async route handler that throws an error
+    const asyncRouteHandler = async (_req: Request, _res: Response, _next: NextFunction) => {
+      throw new Error('Async handler error');
+    };
+    
+    // Wrap it with asyncHandler
+    app.get('/test/async-error', asyncHandler(asyncRouteHandler));
+    
+    // Add error handler
+    app.use(errorHandler);
+    
+    // Make request
+    const response = await request(app)
+      .get('/test/async-error');
+    
+    // Should catch the error and pass it to errorHandler
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe('Async handler error');
+  });
+
+  test('should pass through successful async route handlers', async () => {
+    /**
+     * Covers errorHandler.ts lines 82-88: asyncHandler function (success path)
+     * Path: asyncHandler -> Promise.resolve -> success -> no catch
+     */
+    const app = express();
+    app.use(express.json());
+    
+    // Create an async route handler that succeeds
+    const asyncRouteHandler = async (_req: Request, res: Response, _next: NextFunction) => {
+      res.json({ success: true });
+    };
+    
+    // Wrap it with asyncHandler
+    app.get('/test/async-success', asyncHandler(asyncRouteHandler));
+    
+    // Make request
+    const response = await request(app)
+      .get('/test/async-success');
+    
+    // Should succeed without errors
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
   });
 });

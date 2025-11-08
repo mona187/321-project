@@ -1520,6 +1520,183 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
       // Clean up
       await User.deleteOne({ _id: user._id });
     });
+
+    test('should return original URL when profile picture is not a Google URL', async () => {
+      /**
+       * Covers authService.ts lines 19-20: convertGoogleProfilePictureToBase64 early return
+       * Path: if (!profilePictureUrl || !profilePictureUrl.startsWith(...)) [TRUE BRANCH] -> return profilePictureUrl
+       * This tests the convertGoogleProfilePictureToBase64 method indirectly through findOrCreateUser
+       */
+      const googleData = {
+        googleId: `test-google-id-${Date.now()}`,
+        email: `test-${Date.now()}@example.com`,
+        name: 'Test User',
+        picture: 'https://example.com/picture.jpg' // Not a Google URL
+      };
+      
+      // Ensure user doesn't exist
+      await User.deleteOne({ googleId: googleData.googleId });
+      
+      const user = await authService.findOrCreateUser(googleData);
+      
+      // Profile picture should be the original URL (not converted to Base64)
+      expect(user.profilePicture).toBe(googleData.picture);
+      
+      // Clean up
+      await User.deleteOne({ googleId: googleData.googleId });
+    });
+
+    test('should handle profile picture conversion failure gracefully', async () => {
+      /**
+       * Covers authService.ts lines 38-40: convertGoogleProfilePictureToBase64 catch block
+       * Path: axios.get throws error -> catch -> return profilePictureUrl
+       * This tests error handling in convertGoogleProfilePictureToBase64
+       */
+      const axios = require('axios');
+      const originalGet = axios.get;
+      
+      // Mock axios.get to throw an error
+      axios.get = jest.fn().mockRejectedValue(new Error('Network error'));
+      
+      const googleData = {
+        googleId: `test-google-id-${Date.now()}`,
+        email: `test-${Date.now()}@example.com`,
+        name: 'Test User',
+        picture: 'https://lh3.googleusercontent.com/test-picture' // Google URL that will fail
+      };
+      
+      // Ensure user doesn't exist
+      await User.deleteOne({ googleId: googleData.googleId });
+      
+      const user = await authService.findOrCreateUser(googleData);
+      
+      // Should return original URL when conversion fails
+      expect(user.profilePicture).toBe(googleData.picture);
+      
+      // Restore axios.get
+      axios.get = originalGet;
+      
+      // Clean up
+      await User.deleteOne({ googleId: googleData.googleId });
+    });
+
+    test('should use image/png fallback when content-type header is missing', async () => {
+      /**
+       * Covers authService.ts line 32: convertGoogleProfilePictureToBase64 content-type fallback
+       * Path: response.headers['content-type'] || 'image/png' [FALSE BRANCH] -> use 'image/png'
+       * This tests the fallback when content-type header is missing
+       */
+      const axios = require('axios');
+      const originalGet = axios.get;
+      
+      // Mock axios.get to return response without content-type header
+      const mockBuffer = Buffer.from('fake-image-data');
+      axios.get = jest.fn().mockResolvedValue({
+        data: mockBuffer,
+        headers: {} // No content-type header
+      });
+      
+      const googleData = {
+        googleId: `test-google-id-${Date.now()}`,
+        email: `test-${Date.now()}@example.com`,
+        name: 'Test User',
+        picture: 'https://lh3.googleusercontent.com/test-picture'
+      };
+      
+      // Ensure user doesn't exist
+      await User.deleteOne({ googleId: googleData.googleId });
+      
+      const user = await authService.findOrCreateUser(googleData);
+      
+      // Should use 'image/png' as fallback when content-type is missing
+      expect(user.profilePicture).toContain('data:image/png;base64,');
+      
+      // Restore axios.get
+      axios.get = originalGet;
+      
+      // Clean up
+      await User.deleteOne({ googleId: googleData.googleId });
+    });
+  });
+
+  describe('verifyGoogleToken()', () => {
+    test('should throw AppError when payload is invalid', async () => {
+      /**
+       * Covers authService.ts lines 61-62: verifyGoogleToken validation check
+       * Path: if (!payload || !payload.sub || !payload.email) [TRUE BRANCH] -> throw AppError
+       * This requires mocking the Google OAuth client
+       */
+      const { OAuth2Client } = require('google-auth-library');
+      const mockTicket = {
+        getPayload: jest.fn().mockReturnValue({
+          // Missing sub or email
+          name: 'Test User'
+        })
+      };
+      
+      const mockGoogleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue(mockTicket)
+      };
+      
+      // Mock the OAuth2Client constructor
+      jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockImplementation(mockGoogleClient.verifyIdToken);
+      
+      // The validation error gets caught by the catch block and re-thrown
+      // So we expect the catch block's error message
+      await expect(
+        authService.verifyGoogleToken('mock-token')
+      ).rejects.toThrow('Failed to verify Google token');
+      
+      jest.restoreAllMocks();
+    });
+
+    test('should use "User" as fallback when name is missing', async () => {
+      /**
+       * Covers authService.ts line 68: verifyGoogleToken name fallback
+       * Path: name: payload.name || 'User' [FALSE BRANCH] -> use 'User'
+       * This requires mocking the Google OAuth client
+       */
+      const { OAuth2Client } = require('google-auth-library');
+      const mockTicket = {
+        getPayload: jest.fn().mockReturnValue({
+          sub: 'google-id-123',
+          email: 'test@example.com',
+          // name is missing
+        })
+      };
+      
+      const mockGoogleClient = {
+        verifyIdToken: jest.fn().mockResolvedValue(mockTicket)
+      };
+      
+      // Mock the OAuth2Client constructor
+      jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockImplementation(mockGoogleClient.verifyIdToken);
+      
+      const result = await authService.verifyGoogleToken('mock-token');
+      
+      expect(result.name).toBe('User');
+      expect(result.googleId).toBe('google-id-123');
+      expect(result.email).toBe('test@example.com');
+      
+      jest.restoreAllMocks();
+    });
+
+    test('should throw AppError in catch block when verification fails', async () => {
+      /**
+       * Covers authService.ts lines 71-73: verifyGoogleToken catch block
+       * Path: verifyIdToken throws -> catch -> throw AppError
+       */
+      const { OAuth2Client } = require('google-auth-library');
+      
+      // Mock verifyIdToken to throw an error
+      jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockRejectedValue(new Error('Token verification failed'));
+      
+      await expect(
+        authService.verifyGoogleToken('invalid-token')
+      ).rejects.toThrow('Failed to verify Google token');
+      
+      jest.restoreAllMocks();
+    });
   });
 
   describe('logoutUser()', () => {
