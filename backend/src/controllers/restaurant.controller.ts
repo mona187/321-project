@@ -65,8 +65,9 @@ export class RestaurantController {
   }
 
   /**
-   * GET /api/restaurant/recommendations/:groupId
+   * POST /api/restaurant/recommendations/:groupId
    * Get restaurant recommendations for a group
+   * Uses POST because it accepts userPreferences in the request body
    */
   async getGroupRecommendations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {

@@ -11,6 +11,14 @@ export interface AuthRequest extends Request {
   };
 }
 
+// NEW: this version guarantees user exists after authMiddleware
+export interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    email: string;
+    googleId: string;
+  };
+}
 
 /**
  * Socket Event Types

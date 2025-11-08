@@ -83,14 +83,29 @@ export class GroupService {
       })
     );
 
-    // Emit vote update to all group members
-    socketManager.emitVoteUpdate(
-      groupId,
-      restaurantId,
-      currentVotes,
-      group.votes.size,
-      group.members.length
-    );
+    // // Emit vote update to all group members
+    // socketManager.emitVoteUpdate(
+    //   groupId,
+    //   restaurantId,
+    //   currentVotes,
+    //   group.votes.size,
+    //   group.members.length
+    // );
+
+    // 🔥 FIX: Wrap socket emission in try-catch
+    try {
+      socketManager.emitVoteUpdate(
+        groupId,
+        restaurantId,
+        currentVotes,
+        group.votes.size,
+        group.members.length
+      );
+    } catch (error) {
+      console.error('Failed to emit vote update:', error);
+      // Continue execution - socket failure shouldn't block voting
+    }
+
 
     // Check if all members have voted
     if (group.hasAllVoted()) {
@@ -105,19 +120,34 @@ export class GroupService {
         await group.save();
 
         // Emit restaurant selected
-        socketManager.emitRestaurantSelected(
-          groupId,
-          winningRestaurantId,
-          group.restaurant?.name || 'Selected Restaurant',
-          currentVotes
-        );
+        try {
+          socketManager.emitRestaurantSelected(
+            groupId,
+            winningRestaurantId,
+            group.restaurant?.name || 'Selected Restaurant',
+            currentVotes
+          );
+        } catch (error) {
+          console.error('Failed to emit restaurant selected:', error);
+        }
 
-        // Send notifications
-        await notifyRestaurantSelected(
-          group.members,
-          group.restaurant?.name || 'Selected Restaurant',
-          groupId
-        );
+        // // Send notifications
+        // await notifyRestaurantSelected(
+        //   group.members,
+        //   group.restaurant?.name || 'Selected Restaurant',
+        //   groupId
+        // );
+
+      // 🔥 FIX: Wrap notification in try-catch
+        try {
+          await notifyRestaurantSelected(
+            group.members,
+            group.restaurant?.name || 'Selected Restaurant',
+            groupId
+          );
+        } catch (error) {
+          console.error('Failed to send notification:', error);
+        }
 
         console.log(`âœ… Restaurant selected for group ${groupId}`);
       }
@@ -159,13 +189,24 @@ export class GroupService {
     } else {
       await group.save();
 
-      // Notify remaining members
-      socketManager.emitMemberLeft(
-        `group_${groupId}`,
-        userId,
-        user.name,
-        group.members.length
-      );
+      // // Notify remaining members
+      // socketManager.emitMemberLeft(
+      //   `group_${groupId}`,
+      //   userId,
+      //   user.name,
+      //   group.members.length
+      // );
+       // 🔥 FIX: Wrap socket emission in try-catch
+      try {
+        socketManager.emitMemberLeft(
+          `group_${groupId}`,
+          userId,
+          user.name,
+          group.members.length
+        );
+      } catch (error) {
+        console.error('Failed to emit member left:', error);
+      }
 
       // Check if restaurant should be auto-selected (all remaining voted)
       if (group.hasAllVoted() && !group.restaurantSelected) {
@@ -184,18 +225,39 @@ export class GroupService {
             })
           );
 
-          socketManager.emitRestaurantSelected(
-            groupId,
-            winningRestaurantId,
-            group.restaurant.name,
-            currentVotes
-          );
+          // socketManager.emitRestaurantSelected(
+          //   groupId,
+          //   winningRestaurantId,
+          //   group.restaurant.name,
+          //   currentVotes
+          // );
 
-          await notifyRestaurantSelected(
-            group.members,
-            group.restaurant.name,
-            groupId
-          );
+          // await notifyRestaurantSelected(
+          //   group.members,
+          //   group.restaurant.name,
+          //   groupId
+          // );
+          try {
+            socketManager.emitRestaurantSelected(
+              groupId,
+              winningRestaurantId,
+              group.restaurant.name,
+              currentVotes
+            );
+          } catch (error) {
+            console.error('Failed to emit restaurant selected:', error);
+          }
+
+        // 🔥 FIX: Wrap notification in try-catch
+          try {
+            await notifyRestaurantSelected(
+              group.members,
+              group.restaurant.name,
+              groupId
+            );
+          } catch (error) {
+            console.error('Failed to send notification:', error);
+          }
         }
       }
     }

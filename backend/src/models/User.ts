@@ -28,8 +28,6 @@ export interface IUser {
 
 // Instance methods interface
 export interface IUserMethods {
-  getProfile(): IUserProfile;
-  isAvailableForMatching(): boolean;
 }
 
 // Document interface (includes Document properties + virtuals)
@@ -42,7 +40,6 @@ export interface IUserDocument extends Document, IUser, IUserMethods {
 
 // Static methods interface
 export interface IUserModel extends Model<IUser, {}, IUserMethods> {
-  findByIds(ids: string[]): Promise<IUserDocument[]>;
 }
 
 // Profile interface (subset for public profile)
@@ -153,8 +150,6 @@ UserSchema.virtual('userId').get(function() {
 });
 
 // Configure JSON serialization
-// Configure JSON serialization
-// Configure JSON serialization
 UserSchema.set('toJSON', {
   virtuals: true,
   transform: function(_doc, ret) {
@@ -167,27 +162,6 @@ UserSchema.set('toJSON', {
 UserSchema.set('toObject', { 
   virtuals: true 
 });
-
-// Instance method: Get user profile
-UserSchema.methods.getProfile = function(): IUserProfile {
-  return {
-    userId: this._id.toString(),
-    name: this.name,
-    bio: this.bio,
-    preference: this.preference,
-    profilePicture: this.profilePicture
-  };
-};
-
-// Instance method: Check availability
-UserSchema.methods.isAvailableForMatching = function(): boolean {
-  return this.status === UserStatus.ONLINE && !this.roomId && !this.groupId;
-};
-
-// Static method: Find by IDs
-UserSchema.statics.findByIds = async function(ids: string[]): Promise<IUserDocument[]> {
-  return this.find({ _id: { $in: ids } });
-};
 
 // Pre-save hook
 UserSchema.pre('save', function(next) {

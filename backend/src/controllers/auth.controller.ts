@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
 import User, { UserStatus } from '../models/User';
-import { AuthRequest, GoogleAuthRequest, AuthResponse } from '../types';
+import { AuthRequest, AuthenticatedRequest, GoogleAuthRequest, AuthResponse } from '../types';
 import { AuthService } from '../services/authService';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -250,15 +250,15 @@ export class AuthController {
    * POST /api/auth/logout
    * Logout user (set status to offline)
    */
-  async logout(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async logout(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Not authenticated'
-        });
-        return;
-      }
+      // if (!req.user) {
+      //   res.status(401).json({
+      //     error: 'Unauthorized',
+      //     message: 'Not authenticated'
+      //   });
+      //   return;
+      // }
 
       const user = await User.findById(req.user.userId);
 
@@ -279,15 +279,15 @@ export class AuthController {
    * GET /api/auth/verify
    * Verify JWT token and return user info
    */
-  async verifyToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async verifyToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid token'
-        });
-        return;
-      }
+      // if (!req.user) {
+      //   res.status(401).json({
+      //     error: 'Unauthorized',
+      //     message: 'Invalid token'
+      //   });
+      //   return;
+      // }
 
       const user = await User.findById(req.user.userId);
 
@@ -318,15 +318,15 @@ export class AuthController {
    * POST /api/auth/fcm-token
    * Update user's FCM token for push notifications
    */
-  async updateFCMToken(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async updateFCMToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Not authenticated'
-        });
-        return;
-      }
+      // if (!req.user) {
+      //   res.status(401).json({
+      //     error: 'Unauthorized',
+      //     message: 'Not authenticated'
+      //   });
+      //   return;
+      // }
 
       const { fcmToken } = req.body;
 
@@ -363,15 +363,15 @@ export class AuthController {
    * DELETE /api/auth/account
    * Delete user account
    */
-  async deleteAccount(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  async deleteAccount(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Not authenticated'
-        });
-        return;
-      }
+      // if (!req.user) {
+      //   res.status(401).json({
+      //     error: 'Unauthorized',
+      //     message: 'Not authenticated'
+      //   });
+      //   return;
+      // }
 
       const user = await User.findById(req.user.userId);
 

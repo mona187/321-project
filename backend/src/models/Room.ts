@@ -22,11 +22,7 @@ export interface IRoom {
 
 // Instance methods interface
 export interface IRoomMethods {
-  isFull(): boolean;
   isExpired(): boolean;
-  addMember(userId: string): void;
-  removeMember(userId: string): void;
-  getTimeRemaining(): number; // Returns milliseconds remaining
 }
 
 // Document interface
@@ -37,8 +33,6 @@ export interface IRoomDocument extends Document, IRoom, IRoomMethods {
 
 // Static methods interface
 export interface IRoomModel extends Model<IRoom, {}, IRoomMethods> {
-  findActiveRooms(): Promise<IRoomDocument[]>;
-  findByUserId(userId: string): Promise<IRoomDocument | null>;
 }
 
 // Schema definition
@@ -116,47 +110,9 @@ RoomSchema.set('toObject', {
   virtuals: true 
 });
 
-// Instance method: Check if room is full
-RoomSchema.methods.isFull = function(): boolean {
-  return this.members.length >= this.maxMembers;
-};
-
 // Instance method: Check if room is expired
 RoomSchema.methods.isExpired = function(): boolean {
   return new Date() > this.completionTime;
-};
-
-// Instance method: Add member
-RoomSchema.methods.addMember = function(userId: string): void {
-  if (!this.members.includes(userId) && !this.isFull()) {
-    this.members.push(userId);
-  }
-};
-
-// Instance method: Remove member
-RoomSchema.methods.removeMember = function(userId: string): void {
-  this.members = this.members.filter(id => id !== userId);
-};
-
-// Instance method: Get time remaining
-RoomSchema.methods.getTimeRemaining = function(): number {
-  return Math.max(0, this.completionTime.getTime() - Date.now());
-};
-
-// Static method: Find active rooms
-RoomSchema.statics.findActiveRooms = async function(): Promise<IRoomDocument[]> {
-  return this.find({
-    status: RoomStatus.WAITING,
-    completionTime: { $gt: new Date() }
-  });
-};
-
-// Static method: Find room by user ID
-RoomSchema.statics.findByUserId = async function(userId: string): Promise<IRoomDocument | null> {
-  return this.findOne({
-    members: userId,
-    status: RoomStatus.WAITING
-  });
 };
 
 // Pre-save hook: Auto-expire rooms

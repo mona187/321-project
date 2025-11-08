@@ -15,6 +15,15 @@ router.get('/search', optionalAuth, asyncHandler(async (req, res, next) => {
 }));
 
 /**
+ * @route   POST /api/restaurant/recommendations/:groupId
+ * @desc    Get restaurant recommendations for a group
+ * @access  Private
+ * 
+ * NOTE: This route must come BEFORE /:restaurantId to avoid route conflicts
+ */
+router.post('/recommendations/:groupId', authMiddleware, restaurantController.getGroupRecommendations.bind(restaurantController));
+
+/**
  * @route   GET /api/restaurant/:restaurantId
  * @desc    Get restaurant details by ID
  * @access  Public (optional auth)
@@ -33,3 +42,4 @@ router.post('/recommendations/:groupId', authMiddleware, asyncHandler(async (req
 }));
 
 export default router;
+

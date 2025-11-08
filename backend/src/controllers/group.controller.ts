@@ -9,16 +9,7 @@ export class GroupController {
    */
   async getGroupStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.userId;
-
-      if (!userId) {
-        res.status(401).json({
-          Status: 401,
-          Message: { error: 'Unauthorized' },
-          Body: null
-        });
-        return;
-      }
+      const userId = req.user!.userId;
 
       // Get user's current group
       const group = await groupService.getGroupByUserId(userId);
@@ -59,18 +50,9 @@ export class GroupController {
    */
   async voteForRestaurant(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user!.userId;
       const { groupId } = req.params;
       const { restaurantID, restaurant } = req.body;
-
-      if (!userId) {
-        res.status(401).json({
-          Status: 401,
-          Message: { error: 'Unauthorized' },
-          Body: null
-        });
-        return;
-      }
 
       if (!restaurantID) {
         res.status(400).json({
@@ -107,17 +89,8 @@ export class GroupController {
    */
   async leaveGroup(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user!.userId;
       const { groupId } = req.params;
-
-      if (!userId) {
-        res.status(401).json({
-          Status: 401,
-          Message: { error: 'Unauthorized' },
-          Body: null
-        });
-        return;
-      }
 
       await groupService.leaveGroup(userId, groupId);
 
