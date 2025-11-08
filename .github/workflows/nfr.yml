@@ -1,0 +1,29 @@
+name: Nonfunctional tests
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  nonfunctional:
+    name: Run nonfunctional Python scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install minimal dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests
+
+      - name: Run restaurant match script
+        run: python testing/nonfunctional/resturantmatch.py
+
+      - name: Run user requirements script
+        run: python testing/nonfunctional/userreq.py

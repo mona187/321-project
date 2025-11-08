@@ -2,16 +2,6 @@ import User from '../models/User';
 import CredibilityLog, { CredibilityAction } from '../models/CredibilityLog';
 
 export class CredibilityService {
-  // Score changes for different actions
-  private readonly SCORE_CHANGES = {
-    [CredibilityAction.NO_SHOW]: -15,
-    [CredibilityAction.LATE_CANCEL]: -10,
-    [CredibilityAction.LEFT_GROUP_EARLY]: -5,
-    [CredibilityAction.COMPLETED_MEETUP]: +5,
-    [CredibilityAction.POSITIVE_REVIEW]: +3,
-    [CredibilityAction.NEGATIVE_REVIEW]: -8,
-  };
-
   /**
    * Update user's credibility score
    */
@@ -33,7 +23,32 @@ export class CredibilityService {
     }
 
     const previousScore = user.credibilityScore;
-    const scoreChange = this.SCORE_CHANGES[action];
+    
+    // Get score change using switch statement to avoid insecure dynamic property access
+    let scoreChange: number;
+    switch (action) {
+      case CredibilityAction.NO_SHOW:
+        scoreChange = -15;
+        break;
+      case CredibilityAction.LATE_CANCEL:
+        scoreChange = -10;
+        break;
+      case CredibilityAction.LEFT_GROUP_EARLY:
+        scoreChange = -5;
+        break;
+      case CredibilityAction.COMPLETED_MEETUP:
+        scoreChange = 5;
+        break;
+      case CredibilityAction.POSITIVE_REVIEW:
+        scoreChange = 3;
+        break;
+      case CredibilityAction.NEGATIVE_REVIEW:
+        scoreChange = -8;
+        break;
+      default:
+        throw new Error(`Invalid credibility action: ${String(action)}`);
+    }
+    
     let newScore = previousScore + scoreChange;
 
     // Clamp score between 0 and 100
@@ -136,7 +151,7 @@ export class CredibilityService {
   async getUserCredibilityLogs(
     userId: string,
     limit: number = 20
-  ): Promise<any[]> {
+  ): Promise<unknown[]> {
     const logs = await CredibilityLog.findByUserId(userId, limit);
     return logs;
   }

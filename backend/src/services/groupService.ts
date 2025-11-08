@@ -1,14 +1,14 @@
-import Group from '../models/Group';
+import Group, { IGroupDocument } from '../models/Group';
 import User, { UserStatus } from '../models/User';
 import socketManager from '../utils/socketManager';
 import { notifyGroupMembers, notifyRestaurantSelected } from './notificationService';
-import { RestaurantType } from '../types';
+import { RestaurantType, GroupStatusResponse } from '../types';
 
 export class GroupService {
   /**
    * Get group status
    */
-  async getGroupStatus(groupId: string): Promise<any> {
+  async getGroupStatus(groupId: string): Promise<GroupStatusResponse & { groupId: string }> {
     const group = await Group.findById(groupId);
 
     if (!group) {
@@ -30,12 +30,12 @@ export class GroupService {
   /**
    * Get group status string
    */
-  private getGroupStatusString(group: any): string {
+  private getGroupStatusString(group: IGroupDocument | { restaurantSelected: boolean; completionTime: Date }): 'voting' | 'matched' | 'completed' | 'disbanded' {
     if (group.restaurantSelected) {
       return 'completed';
     }
     if (new Date() > group.completionTime) {
-      return 'expired';
+      return 'disbanded';
     }
     return 'voting';
   }
@@ -74,11 +74,14 @@ export class GroupService {
     
     await group.save();
 
-    // Convert Map to object for response
-    const currentVotes: Record<string, number> = {};
-    group.restaurantVotes.forEach((count, id) => {
-      currentVotes[id] = count;
-    });
+    // Convert Map to object for response - using Object.fromEntries for safe conversion
+    const currentVotes: Record<string, number> = Object.fromEntries(
+      Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+        // Ensure id is a valid string to prevent injection
+        const safeId = String(id);
+        return [safeId, count];
+      })
+    );
 
     // // Emit vote update to all group members
     // socketManager.emitVoteUpdate(
@@ -213,10 +216,14 @@ export class GroupService {
           group.restaurantSelected = true;
           await group.save();
 
-          const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count, id) => {
-            currentVotes[id] = count;
-          });
+          // Convert Map to object for response - using Object.fromEntries for safe conversion
+          const currentVotes: Record<string, number> = Object.fromEntries(
+            Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+              // Ensure id is a valid string to prevent injection
+              const safeId = String(id);
+              return [safeId, count];
+            })
+          );
 
           // socketManager.emitRestaurantSelected(
           //   groupId,
@@ -259,7 +266,7 @@ export class GroupService {
   /**
    * Get group by user ID
    */
-  async getGroupByUserId(userId: string): Promise<any | null> {
+  async getGroupByUserId(userId: string): Promise<IGroupDocument | null> {
     const user = await User.findById(userId);
     
     if (!user || !user.groupId) {
@@ -313,10 +320,14 @@ export class GroupService {
 
         // Notify members
         if (group.restaurant) {
-          const currentVotes: Record<string, number> = {};
-          group.restaurantVotes.forEach((count, id) => {
-            currentVotes[id] = count;
-          });
+          // Convert Map to object for response - using Object.fromEntries for safe conversion
+          const currentVotes: Record<string, number> = Object.fromEntries(
+            Array.from(group.restaurantVotes.entries()).map(([id, count]) => {
+              // Ensure id is a valid string to prevent injection
+              const safeId = String(id);
+              return [safeId, count];
+            })
+          );
 
           socketManager.emitRestaurantSelected(
             group._id.toString(),
@@ -335,7 +346,7 @@ export class GroupService {
           });
         }
 
-        console.log(`â° Auto-selected restaurant for expired group: ${group._id}`);
+        console.log(`â° Auto-selected restaurant for expired group: ${group._id.toString()}`);
       } else {
         // No votes - disband group
         await this.closeGroup(group._id.toString());
@@ -349,7 +360,7 @@ export class GroupService {
           },
         });
 
-        console.log(`â° Disbanded expired group with no votes: ${group._id}`);
+        console.log(`â° Disbanded expired group with no votes: ${group._id.toString()}`);
       }
     }
   }

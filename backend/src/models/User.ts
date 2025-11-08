@@ -32,6 +32,7 @@ export interface IUserMethods {
 
 // Document interface (includes Document properties + virtuals)
 export interface IUserDocument extends Document, IUser, IUserMethods {
+  _id: mongoose.Types.ObjectId;
   userId: string; // Virtual property
   createdAt: Date;
   updatedAt: Date;

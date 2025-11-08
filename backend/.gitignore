@@ -63,5 +63,8 @@ Thumbs.db
 firebase-adminsdk.json
 serviceAccountKey.json
 
-serviceAccountKey.json
+
 config/cpen-321-group-project-cb708-firebase-adminsdk-fbsvc-eb2e3116e5.json
+
+#coverage
+coverage/

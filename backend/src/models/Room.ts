@@ -27,6 +27,7 @@ export interface IRoomMethods {
 
 // Document interface
 export interface IRoomDocument extends Document, IRoom, IRoomMethods {
+  _id: mongoose.Types.ObjectId;
   roomId: string; // Virtual property
 }
 

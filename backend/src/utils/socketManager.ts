@@ -8,7 +8,7 @@ import initializeSocket, { SocketEmitter } from '../config/socket';
  */
 
 class SocketManager {
-  private static instance: SocketManager;
+  private static instance: SocketManager | undefined;
   private io: SocketIOServer | null = null;
   private emitter: SocketEmitter | null = null;
 
@@ -163,12 +163,12 @@ class SocketManager {
   /**
    * Emit an event directly to a specific user (by userId)
    */
-  public emitToUser(userId: string, event: string, payload: any): void {
+  public emitToUser(userId: string, event: string, payload: unknown): void {
     const io = this.getIO();
 
     // You must make sure your socket connection stores userId on handshake
     for (const [_, socket] of io.sockets.sockets) {
-      if ((socket as any).userId === userId) {
+      if ((socket as { userId?: string }).userId === userId) {
         socket.emit(event, payload);
         return;
       }

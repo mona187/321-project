@@ -135,12 +135,12 @@ export interface VoteRestaurantResponse {
 /**
  * Standard API Response Format
  */
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   Status: number;
   Message: {
     error?: string;
     text?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   Body: T | null;
 }
@@ -221,7 +221,7 @@ export interface RestaurantSearchParams {
 export interface NotificationPayload {
   title: string;
   body: string;
-  data?: Record<string, any>;
+  data?: Record<string, string>;
 }
 
 export interface SendNotificationRequest {

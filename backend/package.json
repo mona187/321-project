@@ -4,7 +4,7 @@
   "description": "Restaurant matching app backend",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon src/server.ts",
+    "dev": "dotenv -e .env --npm nodemon -e .ts src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest",

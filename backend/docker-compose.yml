@@ -1,0 +1,11 @@
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: feastfriends
+    restart: always
+    env_file: .env
+    ports:
+      - "${PORT}:${PORT}"
+    command: npm start
