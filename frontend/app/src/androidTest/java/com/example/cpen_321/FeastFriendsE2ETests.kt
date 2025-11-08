@@ -275,6 +275,8 @@ class FeastFriendsE2ETests {
      * Test Case 1.3: Add Profile Information - Success
      * Use Case: Add Profile Information
      * Expected Behavior: User successfully adds profile information
+     *
+     * BUG FIX #1: Clear existing text before input
      */
     @Test
     fun test_03_AddProfileInfo_Success() {
@@ -296,15 +298,24 @@ class FeastFriendsE2ETests {
         // Note: Actual image selection would require UI Automator
 
         // Step 4: Add name
-        composeTestRule.onNodeWithText("Name:")
+        // BUG FIX: Clear existing text first, then replace with new text
+        composeTestRule.onNodeWithText("Name:", substring = true)
+            .performTextClearance()
+        composeTestRule.onNodeWithText("Name:", substring = true)
             .performTextInput("John Doe")
 
         // Step 5: Add bio
-        composeTestRule.onNodeWithText("Bio:")
+        // BUG FIX: Clear existing text first
+        composeTestRule.onNodeWithText("Bio:", substring = true)
+            .performTextClearance()
+        composeTestRule.onNodeWithText("Bio:", substring = true)
             .performTextInput("Food enthusiast who loves trying new cuisines")
 
         // Step 6: Add phone number
-        composeTestRule.onNodeWithText("Phone Number:")
+        // BUG FIX: Clear existing text first
+        composeTestRule.onNodeWithText("Phone Number:", substring = true)
+            .performTextClearance()
+        composeTestRule.onNodeWithText("Phone Number:", substring = true)
             .performTextInput("6041234567")
 
         // Step 7: Save profile
@@ -327,6 +338,8 @@ class FeastFriendsE2ETests {
      * Test Case 1.4: Add Profile Information - Invalid Phone Number
      * Use Case: Add Profile Information - Failure Scenario 6
      * Expected Behavior: App validates phone number and shows error
+     *
+     * BUG FIX #2: Clear text field before testing validation
      */
     @Test
     fun test_04_AddProfileInfo_InvalidPhone() {
@@ -336,8 +349,12 @@ class FeastFriendsE2ETests {
         composeTestRule.onNodeWithText("Profile")
             .performClick()
 
+        // BUG FIX: Clear the phone number field first
+        composeTestRule.onNodeWithText("Phone Number:", substring = true)
+            .performTextClearance()
+
         // Enter invalid phone number (less than 10 digits)
-        composeTestRule.onNodeWithText("Phone Number:")
+        composeTestRule.onNodeWithText("Phone Number:", substring = true)
             .performTextInput("12345")
 
         // Try to save
@@ -593,6 +610,8 @@ class FeastFriendsE2ETests {
      * Test Case 3.3: View Group History - Success
      * Use Case: View Group History
      * Expected Behavior: User can view their group history
+     *
+     * BUG FIX #3: Use proper semantic matcher construction
      */
     @Test
     fun test_11_ViewGroupHistory() {
@@ -611,12 +630,25 @@ class FeastFriendsE2ETests {
         // Step 2: Verify ViewGroupsScreen is displayed
         composeTestRule.waitUntil(timeoutMillis = 5000) {
             try {
-                // Either shows active group or no group message
-                composeTestRule.onNode(
-                    hasText("Group - Room", substring = true) or
-                            hasText("You are not in a group")
-                ).assertExists()
-                true
+                // BUG FIX: Use proper matcher combining - can't use 'or' operator on matchers
+                // Check for either condition separately
+                val hasGroupText = try {
+                    composeTestRule.onNodeWithText("Group - Room", substring = true)
+                        .assertExists()
+                    true
+                } catch (e: AssertionError) {
+                    false
+                }
+
+                val hasNoGroupText = try {
+                    composeTestRule.onNodeWithText("You are not in a group")
+                        .assertExists()
+                    true
+                } catch (e: AssertionError) {
+                    false
+                }
+
+                hasGroupText || hasNoGroupText
             } catch (e: AssertionError) {
                 false
             }
@@ -771,11 +803,6 @@ class FeastFriendsE2ETests {
     }
 }
 
-// Extension function for semantic matching
-fun hasText(text: String, substring: Boolean = false): SemanticsMatcher {
-    return if (substring) {
-        hasTextExactly(text, includeEditableText = false)
-    } else {
-        hasText(text)
-    }
-}
+// BUG FIX #4: Remove incorrect extension function that redefines hasText
+// The original function was incorrect and unnecessary since hasText() already exists
+// with the correct signature in the Compose testing library
