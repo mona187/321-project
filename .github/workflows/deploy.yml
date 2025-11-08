@@ -28,7 +28,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "backend/*"
+          source: "."
           target: "/home/ubuntu/321-project/backend"
 
       - name: SSH and deploy on EC2
