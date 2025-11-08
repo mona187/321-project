@@ -1,19 +1,23 @@
-ARG PORT=3000
+FROM node:20.6-alpine AS builder
+
+WORKDIR /app
+
+COPY package.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+
 FROM node:20.6-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY --from=builder /app/package.json ./
+RUN npm ci --omit=dev
 
-COPY . .
+COPY --from=builder /app/dist ./dist
 
-# Build TypeScript code
-RUN npm run build
+EXPOSE 3000
 
-# Set PORT as environment variable for runtime
-ENV PORT=${PORT}
-
-EXPOSE ${PORT}
-
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
