@@ -1,14 +1,17 @@
 services:
-  backend:
-    build: 
+  app:
+    build:
       context: .
       dockerfile: Dockerfile
       args:
-        PORT: ${PORT:-80}
-    container_name: feastfriends
+        PORT: ${PORT:-3000}
     restart: always
+    container_name: cpen321_app
+    env_file: .env
     environment:
-    - PORT=${PROD_PORT}
+      - MONGODB_URI=${MONGODB_URI}
+      - PORT=${PORT:-3000}
+      - NODE_ENV=${NODE_ENV:-production}
     ports:
-      - "${PORT}:${PORT}"
+      - "80:${PORT:-3000}"
     command: npm start
