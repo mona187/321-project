@@ -697,7 +697,7 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(200);
-    expect(response.body.Body.status).toBe('expired');
+    expect(response.body.Body.status).toBe('disbanded');
     expect(response.body.Body.restaurantSelected).toBe(false);
     
     // Restaurant data may still exist
