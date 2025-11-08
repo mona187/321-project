@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "dotenv -e .env --npm nodemon -e .ts src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.ts",
+    "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
