@@ -1,17 +1,31 @@
+version: '3.8'
+
 services:
+  # Backend API
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        PORT: ${PORT:-3000}
-    restart: always
-    container_name: cpen321_app
-    env_file: .env
-    environment:
-      - MONGODB_URI=${MONGODB_URI}
-      - PORT=${PORT:-3000}
-      - NODE_ENV=${NODE_ENV:-production}
+    container_name: feastfriends-backend
     ports:
-      - "80:${PORT:-3000}"
-    command: npm start
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # MongoDB Atlas connection (from your .env)
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      # Optional: Firebase (if you want push notifications later)
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL:-}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
