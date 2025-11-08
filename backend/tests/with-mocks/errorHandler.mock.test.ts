@@ -75,6 +75,14 @@ function createTestApp() {
     next(error);
   });
 
+  // Route that throws error with no name property (to test err.name || 'Error' fallback)
+  app.get('/test/no-name-error', (_req: Request, _res: Response, next: NextFunction) => {
+    const error: any = { message: 'Error without name property' };
+    // Explicitly delete name to test the fallback
+    delete error.name;
+    next(error);
+  });
+
   // Route that throws network error
   app.get('/test/network-error', (_req: Request, _res: Response, next: NextFunction) => {
     const error: any = new Error('ECONNREFUSED');
@@ -343,6 +351,23 @@ describe('Error Handler Middleware - All Error Types', () => {
       expect(response.body).toHaveProperty('error');
       // Error name should be present
       expect(response.body.error).toBeTruthy();
+    });
+
+    test('should return 500 with "Error" fallback when error has no name property', async () => {
+      /**
+       * Covers errorHandler.ts line 58: err.name || 'Error' fallback
+       * Path: error: err.name || 'Error' [FALSE BRANCH] -> uses 'Error' as fallback
+       * Scenario: Error object without name property
+       * Expected: Error handler uses 'Error' as fallback
+       */
+
+      const response = await request(testApp)
+        .get('/test/no-name-error');
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Error'); // Should use fallback
+      expect(response.body.message).toBe('Error without name property');
+      expect(response.body.statusCode).toBe(500);
     });
   });
 

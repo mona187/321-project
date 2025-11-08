@@ -746,3 +746,177 @@ describe('DELETE /api/user/:userId - No Mocking', () => {
     expect(response.body.message).toBe('User not found');
   });
 });
+
+describe('User Model Methods - Integration Tests', () => {
+  /**
+   * These tests verify User model methods through integration with the database
+   * Covers: pre-save hooks
+   */
+
+  test('should access userId virtual property through API response', async () => {
+    /**
+     * Covers User.ts line 151: userId virtual getter
+     * Path: UserSchema.virtual('userId').get() -> this._id.toString()
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+    const response = await request(app)
+      .get(`/api/user/profile/${testUsers[0]._id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body.Body[0]).toHaveProperty('userId');
+    expect(response.body.Body[0].userId).toBe(testUsers[0]._id);
+  });
+
+  test('should use toJSON transform to include userId', async () => {
+    /**
+     * Covers User.ts lines 160-162: toJSON transform function
+     * Path: transform function -> userId extraction -> return { userId, ...rest }
+     */
+    const response = await request(app)
+      .get(`/api/user/profile/${testUsers[0]._id}`);
+    expect(response.status).toBe(200);
+    expect(response.body.Body[0]).toHaveProperty('userId');
+    expect(response.body.Body[0]).not.toHaveProperty('_id');
+    expect(response.body.Body[0]).not.toHaveProperty('__v');
+  });
+
+  test('should trigger pre-save hook when roomId is set', async () => {
+    /**
+     * Covers User.ts lines 193-194: Pre-save hook sets status to IN_WAITING_ROOM
+     * Path: if (this.roomId && this.status !== UserStatus.IN_WAITING_ROOM) -> this.status = IN_WAITING_ROOM
+     */
+    const User = require('../../src/models/User').default;
+    const UserStatus = require('../../src/models/User').UserStatus;
+    
+    // Set user to ONLINE first
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      status: UserStatus.ONLINE,
+      roomId: undefined
+    });
+    
+    // Set roomId - this should trigger pre-save hook
+    const user = await User.findById(testUsers[0]._id);
+    user.roomId = new mongoose.Types.ObjectId();
+    await user.save();
+    
+    // Verify status was updated by pre-save hook
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser.status).toBe(UserStatus.IN_WAITING_ROOM);
+    
+    // Clean up
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      roomId: undefined,
+      status: UserStatus.ONLINE
+    });
+  });
+
+  test('should trigger pre-save hook when groupId is set', async () => {
+    /**
+     * Covers User.ts lines 197-198: Pre-save hook sets status to IN_GROUP
+     * Path: if (this.groupId && this.status !== UserStatus.IN_GROUP) -> this.status = IN_GROUP
+     */
+    const User = require('../../src/models/User').default;
+    const UserStatus = require('../../src/models/User').UserStatus;
+    
+    // Set user to ONLINE first
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      status: UserStatus.ONLINE,
+      groupId: undefined
+    });
+    
+    // Set groupId - this should trigger pre-save hook
+    const user = await User.findById(testUsers[0]._id);
+    user.groupId = new mongoose.Types.ObjectId();
+    await user.save();
+    
+    // Verify status was updated by pre-save hook
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser.status).toBe(UserStatus.IN_GROUP);
+    
+    // Clean up
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: undefined,
+      status: UserStatus.ONLINE
+    });
+  });
+
+  test('should trigger pre-save hook when roomId is removed', async () => {
+    /**
+     * Covers User.ts lines 201-203: Pre-save hook sets status to ONLINE when roomId removed
+     * Path: if (!this.roomId && this.status === UserStatus.IN_WAITING_ROOM) -> this.status = ONLINE
+     */
+    const User = require('../../src/models/User').default;
+    const UserStatus = require('../../src/models/User').UserStatus;
+    
+    // First, ensure user has no groupId (which would override roomId status)
+    const userClean = await User.findById(testUsers[0]._id);
+    userClean.groupId = undefined;
+    userClean.roomId = undefined;
+    userClean.status = UserStatus.ONLINE;
+    await userClean.save();
+    
+    // Set user to IN_WAITING_ROOM with roomId using save() to ensure pre-save hook runs
+    const roomId = new mongoose.Types.ObjectId();
+    const userWithRoom = await User.findById(testUsers[0]._id);
+    userWithRoom.roomId = roomId;
+    userWithRoom.groupId = undefined; // Ensure no groupId
+    await userWithRoom.save(); // Pre-save hook will set status to IN_WAITING_ROOM
+    
+    // Verify user is in IN_WAITING_ROOM status
+    const userBefore = await User.findById(testUsers[0]._id);
+    expect(userBefore.status).toBe(UserStatus.IN_WAITING_ROOM);
+    expect(userBefore.roomId).toBeDefined();
+    
+    // Remove roomId - this should trigger pre-save hook
+    const user = await User.findById(testUsers[0]._id);
+    user.roomId = undefined;
+    await user.save();
+    
+    // Verify status was updated by pre-save hook
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser.status).toBe(UserStatus.ONLINE);
+    expect(updatedUser.roomId).toBeNull();
+  });
+
+  test('should trigger pre-save hook when groupId is removed', async () => {
+    /**
+     * Covers User.ts lines 205-207: Pre-save hook sets status to ONLINE when groupId removed
+     * Path: if (!this.groupId && this.status === UserStatus.IN_GROUP) -> this.status = ONLINE
+     */
+    const User = require('../../src/models/User').default;
+    const UserStatus = require('../../src/models/User').UserStatus;
+    
+    // First, ensure user has no roomId (which could interfere)
+    const userClean = await User.findById(testUsers[0]._id);
+    userClean.groupId = undefined;
+    userClean.roomId = undefined;
+    userClean.status = UserStatus.ONLINE;
+    await userClean.save();
+    
+    // Set user to IN_GROUP with groupId using save() to ensure pre-save hook runs
+    const groupId = new mongoose.Types.ObjectId();
+    const userWithGroup = await User.findById(testUsers[0]._id);
+    userWithGroup.groupId = groupId;
+    userWithGroup.roomId = undefined; // Ensure no roomId
+    await userWithGroup.save(); // Pre-save hook will set status to IN_GROUP
+    
+    // Verify user is in IN_GROUP status
+    const userBefore = await User.findById(testUsers[0]._id);
+    expect(userBefore.status).toBe(UserStatus.IN_GROUP);
+    expect(userBefore.groupId).toBeDefined();
+    
+    // Remove groupId - this should trigger pre-save hook
+    const user = await User.findById(testUsers[0]._id);
+    user.groupId = undefined;
+    await user.save();
+    
+    // Verify status was updated by pre-save hook
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser.status).toBe(UserStatus.ONLINE);
+    expect(updatedUser.groupId).toBeNull();
+  });
+});

@@ -726,3 +726,298 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
     }
   });
 });
+
+describe('Group Model Methods - Integration Tests', () => {
+  /**
+   * These tests verify Group model methods through integration with the database
+   * Covers: groupId virtual, toJSON transform, addVote, removeVote
+   */
+
+  test('should access groupId virtual property through API response', async () => {
+    /**
+     * Covers Group.ts line 119: groupId virtual getter
+     * Path: GroupSchema.virtual('groupId').get() -> this._id.toString()
+     */
+    const User = (await import('../../src/models/User')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-groupid',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroupData._id,
+      status: UserStatus.IN_GROUP
+    });
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+    const response = await request(app)
+      .get('/api/group/status')
+      .set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toHaveProperty('groupId');
+    expect(response.body.Body.groupId).toBe(testGroupData._id);
+  });
+
+  test('should use toJSON transform to convert Maps to objects', async () => {
+    /**
+     * Covers Group.ts lines 122-131: toJSON transform function
+     * Path: transform function -> return { groupId, ...rest }
+     * Mongoose automatically converts Maps to objects before transform runs
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-tojson',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+    
+    // Get the actual Group document
+    const testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add votes to create Map objects
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    testGroup!.addVote(testUsers[1]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    // Get group and convert to JSON
+    const group = await Group.findById(testGroupData._id);
+    const json = group!.toJSON();
+    
+    expect(json).toHaveProperty('groupId');
+    expect(json).not.toHaveProperty('_id');
+    expect(json).not.toHaveProperty('__v');
+    // Votes and restaurantVotes should be objects, not Maps
+    expect(json.votes).not.toBeInstanceOf(Map);
+    expect(json.restaurantVotes).not.toBeInstanceOf(Map);
+    expect(typeof json.votes).toBe('object');
+    expect(typeof json.restaurantVotes).toBe('object');
+  });
+
+  test('should add vote when user has no previous vote', async () => {
+    /**
+     * Covers Group.ts lines 142-151: addVote method when no previous vote exists
+     * Path: const previousVote = this.votes.get(userId) -> if (previousVote) [FALSE BRANCH] -> add new vote
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-first-vote',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add first vote (no previous vote exists - covers false branch of line 143)
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(1);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-1');
+  });
+
+  test('should handle previous vote when adding new vote', async () => {
+    /**
+     * Covers Group.ts lines 143-146: addVote method previous vote handling
+     * Path: if (previousVote) [TRUE BRANCH] -> decrement previous vote count
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-prev-vote',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add first vote
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(1);
+    
+    // Change vote to different restaurant (should decrement rest-1, increment rest-2)
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-2');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(0);
+    expect(testGroup!.restaurantVotes.get('rest-2')).toBe(1);
+    expect(testGroup!.votes.get(testUsers[0]._id.toString())).toBe('rest-2');
+  });
+
+  test('should remove vote when restaurantId exists', async () => {
+    /**
+     * Covers Group.ts lines 159-160: removeVote method condition check
+     * Path: if (restaurantId) -> delete vote and decrement count
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-remove-vote',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add vote
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(1);
+    expect(testGroup!.votes.has(testUsers[0]._id.toString())).toBe(true);
+    
+    // Remove vote
+    testGroup!.removeVote(testUsers[0]._id.toString());
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.restaurantVotes.get('rest-1')).toBe(0);
+    expect(testGroup!.votes.has(testUsers[0]._id.toString())).toBe(false);
+    
+    // Try to remove vote that doesn't exist (should not error)
+    // This covers the false branch of line 157: if (restaurantId) [FALSE]
+    testGroup!.removeVote(testUsers[1]._id.toString());
+    await testGroup!.save();
+  });
+
+  test('should get winning restaurant when votes exist', async () => {
+    /**
+     * Covers Group.ts lines 165-177: getWinningRestaurant method
+     * Path: forEach -> if (votes > maxVotes) [TRUE] -> set winner
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-winning',
+      [testUsers[0]._id, testUsers[1]._id, testUsers[2]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add votes - rest-1 gets 2 votes, rest-2 gets 1 vote
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    testGroup!.addVote(testUsers[1]._id.toString(), 'rest-1');
+    testGroup!.addVote(testUsers[2]._id.toString(), 'rest-2');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    const winner = testGroup!.getWinningRestaurant();
+    expect(winner).toBe('rest-1');
+  });
+
+  test('should return null when no votes exist in getWinningRestaurant', async () => {
+    /**
+     * Covers Group.ts lines 165-177: getWinningRestaurant method when no votes
+     * Path: forEach (empty) -> return winner (null)
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-no-winner',
+      [testUsers[0]._id]
+    );
+    
+    // Get the actual Group document with no votes
+    const testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    const winner = testGroup!.getWinningRestaurant();
+    expect(winner).toBeNull();
+  });
+
+  test('should handle equal votes in getWinningRestaurant', async () => {
+    /**
+     * Covers Group.ts lines 169-174: getWinningRestaurant method with equal votes
+     * Path: forEach -> if (votes > maxVotes) [FALSE when equal] -> returns first winner found
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-equal-votes',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add equal votes - both restaurants get 1 vote
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    testGroup!.addVote(testUsers[1]._id.toString(), 'rest-2');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    const winner = testGroup!.getWinningRestaurant();
+    // When votes are equal, it returns the first one found (depends on Map iteration order)
+    expect(winner).toBeTruthy(); // Should return one of them
+    expect(['rest-1', 'rest-2']).toContain(winner);
+  });
+
+  test('should check if all members have voted', async () => {
+    /**
+     * Covers Group.ts lines 180-182: hasAllVoted method
+     * Path: return this.votes.size === this.members.length
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-all-voted',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Not all voted yet
+    expect(testGroup!.hasAllVoted()).toBe(false);
+    
+    // Add votes for all members
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    testGroup!.addVote(testUsers[1]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.hasAllVoted()).toBe(true);
+  });
+
+  test('should remove member from group', async () => {
+    /**
+     * Covers Group.ts lines 185-188: removeMember method
+     * Path: filter members -> removeVote(userId)
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const testGroupData = await seedTestGroup(
+      'test-room-remove-member',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+    
+    // Get the actual Group document
+    let testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup).not.toBeNull();
+    
+    // Add a vote for the member we'll remove
+    testGroup!.addVote(testUsers[0]._id.toString(), 'rest-1');
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.members).toContain(testUsers[0]._id);
+    expect(testGroup!.votes.has(testUsers[0]._id.toString())).toBe(true);
+    
+    // Remove member
+    testGroup!.removeMember(testUsers[0]._id.toString());
+    await testGroup!.save();
+    
+    testGroup = await Group.findById(testGroupData._id);
+    expect(testGroup!.members).not.toContain(testUsers[0]._id);
+    expect(testGroup!.members).toContain(testUsers[1]._id);
+    expect(testGroup!.votes.has(testUsers[0]._id.toString())).toBe(false);
+  });
+
+});

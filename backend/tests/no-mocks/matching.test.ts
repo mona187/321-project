@@ -715,3 +715,38 @@ describe('GET /api/matching/users/:roomId - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('Room Model Methods - Integration Tests', () => {
+  /**
+   * These tests verify Room model methods through integration with the database
+   * Covers: pre-save hook
+   */
+
+  test('should trigger pre-save hook to expire room', async () => {
+    /**
+     * Covers Room.ts line 164: Pre-save hook sets status to EXPIRED
+     * Path: if (this.isExpired() && this.status === RoomStatus.WAITING) -> this.status = RoomStatus.EXPIRED
+     */
+    const Room = require('../../src/models/Room').default;
+    const RoomStatus = require('../../src/models/Room').RoomStatus;
+    
+    // Create an expired room with WAITING status
+    const expiredRoom = await Room.create({
+      completionTime: new Date(Date.now() - 1000), // 1 second ago
+      maxMembers: 2,
+      members: [testUsers[0]._id],
+      status: RoomStatus.WAITING
+    });
+    
+    // Modify and save to trigger pre-save hook
+    expiredRoom.members.push(testUsers[1]._id);
+    await expiredRoom.save();
+    
+    // Verify status was updated to EXPIRED by pre-save hook
+    const updatedRoom = await Room.findById(expiredRoom._id);
+    expect(updatedRoom!.status).toBe(RoomStatus.EXPIRED);
+    
+    // Clean up
+    await Room.deleteOne({ _id: expiredRoom._id });
+  });
+});
