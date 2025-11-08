@@ -3,9 +3,11 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
+      args:
+        PORT: ${PORT:-80}
     container_name: feastfriends
     restart: always
     env_file: .env
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT:-80}:${PORT:-80}"
     command: npm start
