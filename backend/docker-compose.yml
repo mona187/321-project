@@ -7,7 +7,8 @@ services:
         PORT: ${PORT:-80}
     container_name: feastfriends
     restart: always
-    env_file: .env
+    environment:
+    - PORT=${PROD_PORT}
     ports:
-      - "${PORT:-80}:${PORT:-80}"
+      - "${PORT}:${PORT}"
     command: npm start
