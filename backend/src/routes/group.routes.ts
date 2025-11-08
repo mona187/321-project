@@ -10,20 +10,26 @@ const router = Router();
  * @desc    Get current user's group status
  * @access  Private
  */
-router.get('/status', authMiddleware, asyncHandler(groupController.getGroupStatus));
+router.get('/status', authMiddleware, asyncHandler(async (req, res, next) => {
+  void await groupController.getGroupStatus(req, res, next);
+}));
 
 /**
  * @route   POST /api/group/vote/:groupId
  * @desc    Vote for a restaurant
  * @access  Private
  */
-router.post('/vote/:groupId', authMiddleware, asyncHandler(groupController.voteForRestaurant));
+router.post('/vote/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  void await groupController.voteForRestaurant(req, res, next);
+}));
 
 /**
  * @route   POST /api/group/leave/:groupId
  * @desc    Leave a group
  * @access  Private
  */
-router.post('/leave/:groupId', authMiddleware, asyncHandler(groupController.leaveGroup));
+router.post('/leave/:groupId', authMiddleware, asyncHandler(async (req, res, next) => {
+  void await groupController.leaveGroup(req, res, next);
+}));
 
 export default router;
