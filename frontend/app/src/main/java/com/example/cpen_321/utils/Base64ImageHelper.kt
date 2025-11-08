@@ -93,12 +93,10 @@ object Base64ImageHelper {
         val width = original.width
         val height = original.height
 
-        // If image is already small enough, return copy instead of original
         if (width <= maxSize && height <= maxSize) {
             return original.copy(original.config ?: Bitmap.Config.ARGB_8888, false)
         }
 
-        // Calculate scaling factor
         val scale = if (width > height) {
             maxSize.toFloat() / width
         } else {

@@ -296,7 +296,6 @@ private fun handleGoogleSignIn(
 
         } catch (e: androidx.credentials.exceptions.NoCredentialException) {
             Log.e("AuthScreen", "❌ No Google account available")
-            // Try again WITHOUT filtering - this opens account picker
             context.lifecycleScope.launch {
                 try {
                     val credentialManager = CredentialManager.create(context)

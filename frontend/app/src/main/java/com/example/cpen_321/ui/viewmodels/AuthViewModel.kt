@@ -52,11 +52,8 @@ class AuthViewModel @Inject constructor(
      */
     private fun initializeAuthState() {
         if (authRepository.isLoggedIn()) {
-            // User has a token, set state to authenticated
-            // The actual user data will be loaded by SplashScreen via verifyToken()
             _authState.value = AuthState.Authenticated
         } else {
-            // No token, user is unauthenticated
             _authState.value = AuthState.Unauthenticated
             _currentUser.value = null
         }
@@ -292,8 +289,6 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 android.util.Log.d("AuthViewModel", "Syncing profile picture to backend (${profilePicture.length} chars)")
-                // Use updateUserProfile instead of updateUserSettings to avoid validation issues
-                // updateUserProfile only requires profilePicture, not name/preference
                 val result = userRepository.updateUserProfile(
                     name = null,
                     bio = null,
@@ -309,11 +304,9 @@ class AuthViewModel @Inject constructor(
                         android.util.Log.w("AuthViewModel", "Failed to sync profile picture: ${result.message}")
                     }
                     is ApiResult.Loading -> {
-                        // Should not happen
                     }
                 }
             } catch (e: Exception) {
-                // Log error but don't show to user as this is a background sync
                 android.util.Log.w("AuthViewModel", "Failed to sync profile picture: ${e.message}")
             }
         }

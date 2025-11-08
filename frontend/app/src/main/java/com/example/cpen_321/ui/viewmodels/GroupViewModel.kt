@@ -76,17 +76,14 @@ class GroupViewModel @Inject constructor(
      * Setup socket listeners for real-time updates
      */
     private fun setupSocketListeners() {
-        // Listen for vote updates
         socketManager.onVoteUpdate { data ->
             handleVoteUpdate(data)
         }
 
-        // Listen for restaurant selected
         socketManager.onRestaurantSelected { data ->
             handleRestaurantSelected(data)
         }
 
-        // Listen for member left
         socketManager.onMemberLeft { data ->
             handleMemberLeft(data)
         }
@@ -259,12 +256,11 @@ class GroupViewModel @Inject constructor(
                     val profiles = result.data
                     val votes = _currentGroup.value?.votes ?: emptyMap()
 
-                    // Convert to GroupMember with vote status
                     val members = profiles.map { profile ->
                         GroupMember(
                             userId = profile.userId,
                             name = profile.name,
-                            credibilityScore = 100.0, // Default, update if available
+                            credibilityScore = 100.0,
                             phoneNumber = profile.contactNumber,
                             profilePicture = profile.profilePicture,
                             hasVoted = votes.containsKey(profile.userId)
@@ -274,11 +270,8 @@ class GroupViewModel @Inject constructor(
                     _groupMembers.value = members
                 }
                 is ApiResult.Error -> {
-                    // Don't show error for member loading failure
-                    // Still allow the UI to display the group
                 }
                 is ApiResult.Loading -> {
-                    // Ignore
                 }
             }
         }
@@ -309,7 +302,6 @@ class GroupViewModel @Inject constructor(
 
                 Log.d("SocketDebug", "Setting votes: $votesMap")
 
-                // ✅ CRITICAL: Force new instance to trigger recomposition
                 _currentVotes.value = votesMap.toMap()
 
                 Log.d("SocketDebug", "Votes updated. Current: ${_currentVotes.value}")
@@ -336,11 +328,10 @@ class GroupViewModel @Inject constructor(
             android.util.Log.d("GroupViewModel", "restaurantName: $restaurantName")
             android.util.Log.d("GroupViewModel", "votes: $votes")
 
-            // Create Restaurant object
             val restaurant = Restaurant(
                 restaurantId = restaurantId,
                 name = restaurantName,
-                location = "" // Will be filled from full data
+                location = ""
             )
 
             android.util.Log.d("GroupViewModel", "🏪 Created restaurant object: $restaurant")
@@ -350,7 +341,6 @@ class GroupViewModel @Inject constructor(
             android.util.Log.d("GroupViewModel", "✅ _selectedRestaurant.value SET!")
             android.util.Log.d("GroupViewModel", "Current value: ${_selectedRestaurant.value}")
 
-            // Update current group's restaurantSelected flag
             _currentGroup.value = _currentGroup.value?.copy(
                 restaurantSelected = true,
                 restaurant = restaurant
@@ -368,10 +358,8 @@ class GroupViewModel @Inject constructor(
         viewModelScope.launch {
             val userId = data.getStringSafe("userId")
 
-            // Remove member from list
             _groupMembers.value = _groupMembers.value.filter { it.userId != userId }
 
-            // Update member count in current group
             _currentGroup.value = _currentGroup.value?.copy(
                 numMembers = _groupMembers.value.size
             )
