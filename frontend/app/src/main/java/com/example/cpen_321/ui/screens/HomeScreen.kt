@@ -22,6 +22,7 @@ import com.example.cpen_321.ui.viewmodels.AuthViewModel
 import com.example.cpen_321.ui.viewmodels.MatchViewModel
 import com.example.cpen_321.ui.viewmodels.GroupViewModel
 import com.example.cpen_321.ui.viewmodels.UserViewModel
+import androidx.compose.ui.platform.testTag
 
 // Add font
 val PlaywriteFontFamily = FontFamily(
@@ -88,6 +89,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .width(48.dp)
                         .height(48.dp)
+                        .testTag("home_profile")
                 )
             }
 
