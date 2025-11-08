@@ -13,25 +13,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
-          source: "."
-          target: "/home/ubuntu/321-project/backend"
-
-      - name: Rebuild and Deploy on EC2
-        uses: appleboy/ssh-action@master
+      - name: Clean remote backend folder
+        uses: appleboy/ssh-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
+            rm -rf /home/ubuntu/321-project/backend/*
+
+      - name: Copy backend files to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          source: "backend/*"
+          target: "/home/ubuntu/321-project/backend"
+
+      - name: SSH and deploy on EC2
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            set -e
             cd /home/ubuntu/321-project/backend
 
-            # Write .env file safely
             cat > .env << 'EOF'
             PORT=${{ secrets.PROD_PORT }}
             MONGODB_URI=${{ secrets.PROD_DB_URI }}
@@ -43,5 +52,5 @@ jobs:
             chmod 600 .env
 
             docker-compose --env-file .env down
-            docker-compose --env-file .env up --build -d
-
+            docker-compose --env-file .env build
+            docker-compose --env-file .env up -d
