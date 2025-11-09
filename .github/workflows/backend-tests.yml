@@ -11,6 +11,7 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/backend-test.yml'
+  workflow_dispatch: # Allows manual triggering from GitHub UI
 
 jobs:
   test:
