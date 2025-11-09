@@ -31,153 +31,94 @@ fun ProfileConfigScreen(
     navController: NavController,
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    // Handle logout navigation - simplified approach
     val authState = authViewModel.authState.collectAsState()
     
     LaunchedEffect(authState.value) {
         if (authState.value is AuthState.Unauthenticated) {
-            // Navigate to auth screen when logged out
             navController.navigate(NavRoutes.AUTH) {
                 popUpTo(0) { inclusive = true }
             }
         }
     }
+    
     Scaffold(
         bottomBar = { MainBottomBar(navController = navController) }
     ) { innerPadding ->
-        Column(
+        ProfileConfigContent(
+            navController = navController,
+            authViewModel = authViewModel,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Button(
-                onClick = {
-                    navController.navigate(NavRoutes.PROFILE)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F) // Yellow color
-                )
-            ) {
-                Text(
-                    "Profile",
-                    color = Color.Black,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = {
-                    navController.navigate(NavRoutes.PREFERENCES)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F) // Yellow color
-                )
-            ) {
-                Text(
-                    "Preferences",
-                    color = Color.Black,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Button(
-                onClick = {
-                    navController.navigate(NavRoutes.CREDIBILITY_SCORE)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F) // Yellow color
-                )
-            ) {
-                Text(
-                    text = "Credibility Score",
-                    color = Color.Black,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Go Back button
-            Button(
-                onClick = {
-                    navController.popBackStack()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F)
-                )
-            ) {
-                Text(
-                    text = "Go Back",
-                    color = Color.Black,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Logout button
-            Button(
-                onClick = {
-                    authViewModel.logout()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF5722) // Red color for logout
-                )
-            ) {
-                Text(
-                    text = "Logout",
-                    color = Color.White,
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Delete account button
-            Button(
-                onClick = {
-                    authViewModel.deleteAccount() {
-                        authViewModel.clearAuthData()
-                        navController.navigate(NavRoutes.SPLASH_SCREEN) {
-                            popUpTo(0) // clear navigation stack
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF5722) // Red color for logout
-                )
-            ) {
-                Text(
-                    text = "Delete Account",
-                    color = Color.White,
-                    fontSize = 20.sp
-                )
-            }
-        }
+                .padding(horizontal = 32.dp)
+        )
     }
+}
+
+@Composable
+private fun ProfileConfigContent(
+    navController: NavController,
+    authViewModel: AuthViewModel,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ConfigButton(
+            text = "Profile",
+            onClick = { navController.navigate(NavRoutes.PROFILE) }
+        )
+        ConfigButton(
+            text = "Preferences",
+            onClick = { navController.navigate(NavRoutes.PREFERENCES) }
+        )
+        ConfigButton(
+            text = "Credibility Score",
+            onClick = { navController.navigate(NavRoutes.CREDIBILITY_SCORE) }
+        )
+        ConfigButton(
+            text = "Go Back",
+            onClick = { navController.popBackStack() }
+        )
+        ConfigButton(
+            text = "Logout",
+            onClick = { authViewModel.logout() },
+            containerColor = Color(0xFFFF5722),
+            textColor = Color.White
+        )
+        ConfigButton(
+            text = "Delete Account",
+            onClick = {
+                authViewModel.deleteAccount() {
+                    authViewModel.clearAuthData()
+                    navController.navigate(NavRoutes.SPLASH_SCREEN) {
+                        popUpTo(0)
+                    }
+                }
+            },
+            containerColor = Color(0xFFFF5722),
+            textColor = Color.White
+        )
+    }
+}
+
+@Composable
+private fun ConfigButton(
+    text: String,
+    onClick: () -> Unit,
+    containerColor: Color = Color(0xFFFFD54F),
+    textColor: Color = Color.Black
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor)
+    ) {
+        Text(text = text, color = textColor, fontSize = 20.sp)
+    }
+    Spacer(modifier = Modifier.height(32.dp))
 }

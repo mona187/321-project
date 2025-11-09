@@ -2,11 +2,9 @@ package com.example.cpen_321.ui.screens
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.location.Location
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,52 +45,96 @@ fun VoteRestaurantScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    // Collect states
-    val currentGroup by groupViewModel.currentGroup.collectAsState()
-    val groupMembers by groupViewModel.groupMembers.collectAsState()
-    val currentVotes by groupViewModel.currentVotes.collectAsState()
-    val selectedRestaurant by groupViewModel.selectedRestaurant.collectAsState()
-    val userVote by groupViewModel.userVote.collectAsState()
-
-    val restaurants by restaurantViewModel.restaurants.collectAsState()
-    val isLoadingRestaurants by restaurantViewModel.isLoading.collectAsState()
-    val restaurantError by restaurantViewModel.errorMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var selectedRestaurantForVote by remember { mutableStateOf<Restaurant?>(null) }
     var userLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var locationPermissionGranted by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Location permission launcher
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        locationPermissionGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    val locationPermissionLauncher = createLocationPermissionLauncher(
+        context = context,
+        scope = scope,
+        onPermissionGranted = { locationPermissionGranted = true },
+        onLocationReceived = { userLocation = it }
+    )
 
-        if (locationPermissionGranted) {
-            // Get location after permission granted
-            scope.launch {
-                try {
+    VoteScreenEffects(
+        groupViewModel = groupViewModel,
+        restaurantViewModel = restaurantViewModel,
+        navController = navController,
+        snackbarHostState = snackbarHostState,
+        userLocation = userLocation,
+        locationPermissionLauncher = locationPermissionLauncher
+    )
+
+    VoteScreenContent(
+        groupViewModel = groupViewModel,
+        restaurantViewModel = restaurantViewModel,
+        snackbarHostState = snackbarHostState,
+        selectedRestaurantForVote = selectedRestaurantForVote,
+        userLocation = userLocation,
+        locationPermissionGranted = locationPermissionGranted,
+        locationPermissionLauncher = locationPermissionLauncher,
+        onRestaurantSelected = { selectedRestaurantForVote = it },
+        onVoteSubmitted = { selectedRestaurantForVote = null }
+    )
+}
+
+@Composable
+private fun createLocationPermissionLauncher(
+    context: android.content.Context,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onPermissionGranted: () -> Unit,
+    onLocationReceived: (Pair<Double, Double>) -> Unit
+) = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions()
+) { permissions ->
+    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+    if (granted) {
+        onPermissionGranted()
+        scope.launch {
+            try {
+                // Add explicit permission check
+                if (androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
                     val locationManager = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
                     val location = withContext(Dispatchers.IO) {
                         locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
                             ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
                     }
                     location?.let {
-                        userLocation = Pair(it.latitude, it.longitude)
+                        onLocationReceived(Pair(it.latitude, it.longitude))
                     }
-                } catch (e: SecurityException) {
-                    android.util.Log.e("VoteRestaurantScreen", "Location permission error", e)
-                } catch (e: IllegalArgumentException) {
-                    android.util.Log.e("VoteRestaurantScreen", "Invalid location provider", e)
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("VoteRestaurantScreen", "Location error", e)
             }
         }
     }
+}
 
-    // Request location permission on launch
+@Composable
+private fun VoteScreenEffects(
+    groupViewModel: GroupViewModel,
+    restaurantViewModel: RestaurantViewModel,
+    navController: NavController,
+    snackbarHostState: SnackbarHostState,
+    userLocation: Pair<Double, Double>?,
+    locationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>
+) {
+    val currentGroup by groupViewModel.currentGroup.collectAsState()
+    val selectedRestaurant by groupViewModel.selectedRestaurant.collectAsState()
+    val restaurantError by restaurantViewModel.errorMessage.collectAsState()
+
     LaunchedEffect(Unit) {
         locationPermissionLauncher.launch(
             arrayOf(
@@ -100,97 +142,70 @@ fun VoteRestaurantScreen(
                 Manifest.permission.ACCESS_COARSE_LOCATION
             )
         )
-    }
-
-    // Load group status
-    LaunchedEffect(Unit) {
         groupViewModel.loadGroupStatus()
     }
 
-    // Subscribe to group socket for restaurant_selected event
     LaunchedEffect(currentGroup) {
         currentGroup?.groupId?.let { gId ->
-            android.util.Log.d("VoteRestaurantScreen", "Subscribing to group: $gId")
             groupViewModel.subscribeToGroup(gId)
         }
     }
 
-    LaunchedEffect(currentVotes) {
-        android.util.Log.d("VoteRestaurantScreen", "Votes updated: $currentVotes")
-    }
-
-    // Cleanup: Unsubscribe when leaving screen
     DisposableEffect(Unit) {
         onDispose {
             currentGroup?.groupId?.let { gId ->
-                android.util.Log.d("VoteRestaurantScreen", "Unsubscribing from group: $gId")
                 groupViewModel.unsubscribeFromGroup(gId)
             }
         }
     }
 
-    // Load restaurants when user location is available
     LaunchedEffect(userLocation, currentGroup) {
         if (userLocation != null && currentGroup != null) {
-            val (latitude, longitude) = userLocation!!
-            val radius = 5000 // 5km in meters
-            val cuisines = listOf<String>() // You can derive this from group preferences
-
+            val (latitude, longitude) = userLocation
             restaurantViewModel.searchRestaurants(
                 latitude = latitude,
                 longitude = longitude,
-                radius = radius,
-                cuisineTypes = cuisines,
+                radius = 5000,
+                cuisineTypes = listOf(),
                 priceLevel = null
             )
         }
     }
 
-    // Navigate when restaurant is selected
     LaunchedEffect(selectedRestaurant) {
-        android.util.Log.d(
-            "VoteRestaurantScreen",
-            "🔔 LaunchedEffect triggered! selectedRestaurant = $selectedRestaurant"
-        )
-
         selectedRestaurant?.let { restaurant ->
-            android.util.Log.d(
-                "VoteRestaurantScreen",
-                "✅ Restaurant IS selected: ${restaurant.name}"
-            )
-
             try {
                 snackbarHostState.showSnackbar("${restaurant.name} has been selected!")
-                android.util.Log.d("VoteRestaurantScreen", "⏳ Waiting 1.5s...")
-
                 kotlinx.coroutines.delay(1500)
-
-                android.util.Log.d("VoteRestaurantScreen", "🚀 CALLING NAVIGATE TO: group")
-
                 navController.navigate("group") {
                     popUpTo(0)
                 }
-
-                android.util.Log.d("VoteRestaurantScreen", "✅ Navigation command executed!")
-
-            } catch (e: IllegalArgumentException) {
-                android.util.Log.e("VoteRestaurantScreen", "❌ Invalid navigation route: ${e.message}", e)
-            } catch (e: IllegalStateException) {
-                android.util.Log.e("VoteRestaurantScreen", "❌ Navigation state error: ${e.message}", e)
+            } catch (e: Exception) {
+                android.util.Log.e("VoteRestaurantScreen", "Navigation error", e)
             }
-        } ?: run {
-            android.util.Log.d("VoteRestaurantScreen", "⚠️ selectedRestaurant is NULL")
         }
     }
 
-    // Show error messages
     LaunchedEffect(restaurantError) {
         restaurantError?.let { message ->
             snackbarHostState.showSnackbar(message)
             restaurantViewModel.clearError()
         }
     }
+}
 
+@Composable
+private fun VoteScreenContent(
+    groupViewModel: GroupViewModel,
+    restaurantViewModel: RestaurantViewModel,
+    snackbarHostState: SnackbarHostState,
+    selectedRestaurantForVote: Restaurant?,
+    userLocation: Pair<Double, Double>?,
+    locationPermissionGranted: Boolean,
+    locationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+    onRestaurantSelected: (Restaurant?) -> Unit,
+    onVoteSubmitted: () -> Unit
+) {
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { innerPadding ->
@@ -200,207 +215,275 @@ fun VoteRestaurantScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Header
-            Text(
-                text = "Vote for Restaurant",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp)
+            VoteScreenHeader()
+            VoteStatusCard(groupViewModel)
+            VoteScreenBody(
+                groupViewModel = groupViewModel,
+                restaurantViewModel = restaurantViewModel,
+                selectedRestaurantForVote = selectedRestaurantForVote,
+                userLocation = userLocation,
+                locationPermissionGranted = locationPermissionGranted,
+                locationPermissionLauncher = locationPermissionLauncher,
+                onRestaurantSelected = onRestaurantSelected,
+                onVoteSubmitted = onVoteSubmitted
             )
+        }
+    }
+}
 
-            // Status information
-            currentGroup?.let { group ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF5F5F5)
-                    )
+@Composable
+private fun VoteScreenHeader() {
+    Text(
+        text = "Vote for Restaurant",
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+}
+
+@Composable
+private fun VoteStatusCard(groupViewModel: GroupViewModel) {
+    val currentGroup by groupViewModel.currentGroup.collectAsState()
+    val currentVotes by groupViewModel.currentVotes.collectAsState()
+    val userVote by groupViewModel.userVote.collectAsState()
+
+    currentGroup?.let { group ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF5F5F5)
+            )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Group: ${group.groupId?.take(8) ?: ""}",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                text = "${currentVotes.values.sum()}/${group.numMembers} voted",
-                                fontSize = 14.sp,
-                                color = if (currentVotes.values.sum() == group.numMembers) Color(0xFF4CAF50) else Color.Gray
-                            )
-                        }
-
-                        if (userVote != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "✓ You have voted",
-                                fontSize = 14.sp,
-                                color = Color(0xFF4CAF50),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Group: ${group.groupId?.take(8) ?: ""}",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "${currentVotes.values.sum()}/${group.numMembers} voted",
+                        fontSize = 14.sp,
+                        color = if (currentVotes.values.sum() == group.numMembers) 
+                            Color(0xFF4CAF50) else Color.Gray
+                    )
                 }
-            }
 
-            // Restaurant list or loading indicator
-            when {
-                isLoadingRestaurants -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                userLocation == null -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Getting your location...",
-                                fontSize = 16.sp,
-                                color = Color.Gray
-                            )
-                            if (!locationPermissionGranted) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        locationPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        )
-                                    }
-                                ) {
-                                    Text("Grant Location Permission")
-                                }
-                            }
-                        }
-                    }
-                }
-                restaurants.isEmpty() -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "No restaurants found nearby",
-                                fontSize = 16.sp,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    userLocation?.let { (lat, lon) ->
-                                        restaurantViewModel.searchRestaurants(
-                                            latitude = lat,
-                                            longitude = lon,
-                                            radius = 5000
-                                        )
-                                    }
-                                }
-                            ) {
-                                Text("Retry")
-                            }
-                        }
-                    }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(restaurants) { restaurant ->
-                            // Generate a deterministic ID if restaurantId is null
-                            val effectiveId = restaurant.restaurantId ?: generateDeterministicId(restaurant)
-
-                            RestaurantCard(
-                                restaurant = restaurant.copy(restaurantId = effectiveId),
-                                isSelected = selectedRestaurantForVote?.let {
-                                    it.restaurantId == effectiveId ||
-                                            (it.name == restaurant.name && it.location == restaurant.location)
-                                } ?: false,
-                                hasVoted = userVote != null,
-                                voteCount = currentVotes[effectiveId] ?: 0,
-                                onClick = {
-                                    if (userVote == null) {
-                                        selectedRestaurantForVote = restaurant.copy(restaurantId = effectiveId)
-                                        android.util.Log.d("VoteRestaurantScreen", "Selected restaurant: ${restaurant.name} with ID: $effectiveId")
-                                    }
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Vote button
-                    Button(
-                        onClick = {
-                            selectedRestaurantForVote?.let { restaurant ->
-                                val restId = restaurant.restaurantId ?: generateDeterministicId(restaurant)
-
-                                android.util.Log.d("VoteRestaurantScreen", "Voting for restaurant: ${restaurant.name} with ID: $restId")
-
-                                groupViewModel.voteForRestaurant(
-                                    restId,
-                                    restaurant.copy(restaurantId = restId)
-                                )
-                                selectedRestaurantForVote = null
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        enabled = selectedRestaurantForVote != null && userVote == null,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFFD54F),
-                            disabledContainerColor = Color.Gray
-                        )
-                    ) {
-                        if (groupViewModel.isLoading.collectAsState().value) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.Black
-                            )
-                        } else {
-                            Text(
-                                text = if (userVote != null) "Already Voted" else "Submit Vote",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                    }
+                if (userVote != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "✓ You have voted",
+                        fontSize = 14.sp,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
     }
 }
 
-// Helper function to generate a deterministic ID based on restaurant properties
+@Composable
+private fun VoteScreenBody(
+    groupViewModel: GroupViewModel,
+    restaurantViewModel: RestaurantViewModel,
+    selectedRestaurantForVote: Restaurant?,
+    userLocation: Pair<Double, Double>?,
+    locationPermissionGranted: Boolean,
+    locationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>,
+    onRestaurantSelected: (Restaurant?) -> Unit,
+    onVoteSubmitted: () -> Unit
+) {
+    val restaurants by restaurantViewModel.restaurants.collectAsState()
+    val isLoadingRestaurants by restaurantViewModel.isLoading.collectAsState()
+
+    when {
+        isLoadingRestaurants -> LoadingState()
+        userLocation == null -> LocationLoadingState(locationPermissionGranted, locationPermissionLauncher)
+        restaurants.isEmpty() -> EmptyRestaurantsState(restaurantViewModel, userLocation)
+        else -> RestaurantListWithVoteButton(
+            restaurants = restaurants,
+            selectedRestaurantForVote = selectedRestaurantForVote,
+            groupViewModel = groupViewModel,
+            onRestaurantSelected = onRestaurantSelected,
+            onVoteSubmitted = onVoteSubmitted
+        )
+    }
+}
+
+@Composable
+private fun LoadingState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun LocationLoadingState(
+    locationPermissionGranted: Boolean,
+    locationPermissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Getting your location...",
+                fontSize = 16.sp,
+                color = Color.Gray
+            )
+            if (!locationPermissionGranted) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        locationPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    }
+                ) {
+                    Text("Grant Location Permission")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyRestaurantsState(
+    restaurantViewModel: RestaurantViewModel,
+    userLocation: Pair<Double, Double>?
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "No restaurants found nearby",
+                fontSize = 16.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    userLocation?.let { (lat, lon) ->
+                        restaurantViewModel.searchRestaurants(
+                            latitude = lat,
+                            longitude = lon,
+                            radius = 5000
+                        )
+                    }
+                }
+            ) {
+                Text("Retry")
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestaurantListWithVoteButton(
+    restaurants: List<Restaurant>,
+    selectedRestaurantForVote: Restaurant?,
+    groupViewModel: GroupViewModel,
+    onRestaurantSelected: (Restaurant?) -> Unit,
+    onVoteSubmitted: () -> Unit,
+    modifier: Modifier = Modifier  // Add modifier parameter
+) {
+    val currentVotes by groupViewModel.currentVotes.collectAsState()
+    val userVote by groupViewModel.userVote.collectAsState()
+
+    Column(modifier = modifier) {  // Wrap in Column and apply modifier
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(restaurants) { restaurant ->
+                val effectiveId = restaurant.restaurantId ?: generateDeterministicId(restaurant)
+                RestaurantCard(
+                    restaurant = restaurant.copy(restaurantId = effectiveId),
+                    isSelected = selectedRestaurantForVote?.let {
+                        it.restaurantId == effectiveId ||
+                                (it.name == restaurant.name && it.location == restaurant.location)
+                    } ?: false,
+                    hasVoted = userVote != null,
+                    voteCount = currentVotes[effectiveId] ?: 0,
+                    onClick = {
+                        if (userVote == null) {
+                            onRestaurantSelected(restaurant.copy(restaurantId = effectiveId))
+                        }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        VoteButton(
+            selectedRestaurantForVote = selectedRestaurantForVote,
+            userVote = userVote,
+            groupViewModel = groupViewModel,
+            onVoteSubmitted = onVoteSubmitted
+        )
+    }
+}
+
+@Composable
+private fun VoteButton(
+    selectedRestaurantForVote: Restaurant?,
+    userVote: String?,
+    groupViewModel: GroupViewModel,
+    onVoteSubmitted: () -> Unit
+) {
+    Button(
+        onClick = {
+            selectedRestaurantForVote?.let { restaurant ->
+                val restId = restaurant.restaurantId ?: generateDeterministicId(restaurant)
+                groupViewModel.voteForRestaurant(
+                    restId,
+                    restaurant.copy(restaurantId = restId)
+                )
+                onVoteSubmitted()
+            }
+        },
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        enabled = selectedRestaurantForVote != null && userVote == null,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFD54F),
+            disabledContainerColor = Color.Gray
+        )
+    ) {
+        if (groupViewModel.isLoading.collectAsState().value) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                color = Color.Black
+            )
+        } else {
+            Text(
+                text = if (userVote != null) "Already Voted" else "Submit Vote",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+        }
+    }
+}
+
 fun generateDeterministicId(restaurant: Restaurant): String {
-    // Create a deterministic ID based on name and location
     val combined = "${restaurant.name}_${restaurant.location}".replace(" ", "").toLowerCase()
     return combined.hashCode().toString()
 }
@@ -416,10 +499,7 @@ fun RestaurantCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(
-                enabled = !hasVoted,
-                onClick = onClick
-            ),
+            .clickable(enabled = !hasVoted, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Color(0xFFE3F2FD) else Color.White
         ),
@@ -431,87 +511,11 @@ fun RestaurantCard(
         } else null
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Restaurant image
-            restaurant.getMainPhotoUrl()?.let { photoUrl ->
-                AsyncImage(
-                    model = photoUrl,
-                    contentDescription = restaurant.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            // Restaurant info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = restaurant.name,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    restaurant.rating?.let { rating ->
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = Color(0xFFFFC107),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = restaurant.getRatingString(),
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-
-                    restaurant.priceLevel?.let {
-                        Text(
-                            text = restaurant.getPriceLevelString(),
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = restaurant.location,
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                if (voteCount > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$voteCount vote${if (voteCount != 1) "s" else ""}",
-                        fontSize = 12.sp,
-                        color = Color(0xFF4CAF50),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            // Selection indicator
+            RestaurantImage(restaurant)
+            RestaurantInfo(restaurant, voteCount)
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
@@ -520,6 +524,82 @@ fun RestaurantCard(
                     modifier = Modifier.size(32.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RestaurantImage(restaurant: Restaurant) {
+    restaurant.getMainPhotoUrl()?.let { photoUrl ->
+        AsyncImage(
+            model = photoUrl,
+            contentDescription = restaurant.name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.LightGray)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+    }
+}
+
+@Composable
+private fun RowScope.RestaurantInfo(restaurant: Restaurant, voteCount: Int) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = restaurant.name,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        RestaurantRatingAndPrice(restaurant)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = restaurant.location,
+            fontSize = 12.sp,
+            color = Color.Gray,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (voteCount > 0) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "$voteCount vote${if (voteCount != 1) "s" else ""}",
+                fontSize = 12.sp,
+                color = Color(0xFF4CAF50),
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun RestaurantRatingAndPrice(restaurant: Restaurant) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        restaurant.rating?.let { rating ->
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "Rating",
+                tint = Color(0xFFFFC107),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = restaurant.getRatingString(),
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        restaurant.priceLevel?.let {
+            Text(
+                text = restaurant.getPriceLevelString(),
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
         }
     }
 }

@@ -14,10 +14,7 @@ import com.example.cpen_321.ui.screens.profile.ProfileScreen
 import com.example.cpen_321.ui.viewmodels.AuthViewModel
 
 @Composable
-fun AppNavGraph(
-    navController: NavHostController
-) {
-    // Get shared AuthViewModel at top level
+fun AppNavGraph(navController: NavHostController) {
     val authViewModel: AuthViewModel = hiltViewModel()
 
     NavHost(
@@ -28,7 +25,6 @@ fun AppNavGraph(
             SplashScreen(navController = navController)
         }
 
-        // Auth Screen
         composable(NavRoutes.AUTH) {
             AuthScreen(
                 viewModel = authViewModel,
@@ -40,107 +36,68 @@ fun AppNavGraph(
             )
         }
 
-        // Home Screen
         composable(NavRoutes.HOME) {
-            HomeScreen(
-                navController = navController,
-                authViewModel = authViewModel
-            )
+            HomeScreen(navController = navController, authViewModel = authViewModel)
         }
 
-        // Waiting Room Screen
         composable(NavRoutes.WAITING_ROOM) {
-            WaitingRoomScreen(
-                navController = navController
-            )
+            WaitingRoomScreen(navController = navController)
         }
 
-        // Group Screen (generic - shows current user's active group)
         composable(NavRoutes.GROUP) {
-            GroupScreen(
-                navController = navController
-            )
+            GroupScreen(navController = navController)
         }
 
-        // Group Screen with ID parameter
         composable(
             route = "group/{groupId}",
-            arguments = listOf(
-                navArgument("groupId") { type = NavType.StringType }
-            )
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId")
-            if (groupId != null) {
-                GroupScreen(
-                    navController = navController,
-                    groupId = groupId
-                )
-            }
+            GroupScreenWithId(navController, backStackEntry.arguments?.getString("groupId"))
         }
 
-        // Vote Restaurant Screen (generic - uses current group)
         composable(NavRoutes.VOTE_RESTAURANT) {
-            VoteRestaurantScreen(
-                navController = navController
-            )
+            VoteRestaurantScreen(navController = navController)
         }
 
-        // Vote Restaurant Screen with group ID parameter
         composable(
             route = "vote_restaurant/{groupId}",
-            arguments = listOf(
-                navArgument("groupId") { type = NavType.StringType }
-            )
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val groupId = backStackEntry.arguments?.getString("groupId")
-            if (groupId != null) {
-                VoteRestaurantScreen(
-                    navController = navController,
-                    groupId = groupId
-                )
-            }
+            VoteRestaurantScreenWithId(navController, backStackEntry.arguments?.getString("groupId"))
         }
 
-        // Profile Config Screen
         composable(NavRoutes.PROFILE_CONFIG) {
-            ProfileConfigScreen(
-                navController = navController,
-                authViewModel = authViewModel
-            )
+            ProfileConfigScreen(navController = navController, authViewModel = authViewModel)
         }
 
-        // Profile Screen - UPDATED
         composable(NavRoutes.PROFILE) {
-            ProfileScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
+            ProfileScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // Preferences Screen - UPDATED
         composable(NavRoutes.PREFERENCES) {
-            PreferencesScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
+            PreferencesScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // Credibility Score Screen - UPDATED
         composable(NavRoutes.CREDIBILITY_SCORE) {
-            CredibilityScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
-            )
+            CredibilityScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // View Groups Screen
         composable(NavRoutes.VIEW_GROUPS) {
-            ViewGroupsScreen(
-                navController = navController
-            )
+            ViewGroupsScreen(navController = navController)
         }
+    }
+}
+
+@Composable
+private fun GroupScreenWithId(navController: NavHostController, groupId: String?) {
+    groupId?.let {
+        GroupScreen(navController = navController, groupId = it)
+    }
+}
+
+@Composable
+private fun VoteRestaurantScreenWithId(navController: NavHostController, groupId: String?) {
+    groupId?.let {
+        VoteRestaurantScreen(navController = navController, groupId = it)
     }
 }

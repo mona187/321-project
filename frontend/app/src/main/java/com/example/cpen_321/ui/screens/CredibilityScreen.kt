@@ -38,7 +38,6 @@ fun CredibilityScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
-    // Load user settings when screen opens
     LaunchedEffect(Unit) {
         viewModel.loadUserSettings()
     }
@@ -52,117 +51,157 @@ fun CredibilityScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Title box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .background(Color(0xFFFFF9C4))
-                        .border(2.dp, Color.Black),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Credibility Score",
-                        fontSize = 24.sp,
-                        color = Color.Black
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                // Loading or Progress bar
-                when {
-                    isLoading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    errorMessage != null -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                                .border(2.dp, Color.Red)
-                                .background(Color(0xFFFFEBEE)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = errorMessage ?: "Error loading score",
-                                fontSize = 16.sp,
-                                color = Color.Red,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                    else -> {
-                        // Get credibility score from userSettings (convert to percentage)
-                        val credibilityScore = userSettings?.credibilityScore?.toInt() ?: 0
-
-                        // Progress bar
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp)
-                                .border(2.dp, Color.Black)
-                        ) {
-                            // Filled portion (green)
-                            if (credibilityScore > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(credibilityScore / 100f)
-                                        .height(80.dp)
-                                        .background(Color(0xFF81C784))
-                                        .border(1.dp, Color.Black),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "$credibilityScore%",
-                                        fontSize = 20.sp,
-                                        color = Color.Black,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-
-                            // Empty portion (white)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp)
-                                    .background(Color.White)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Go Back button at bottom
-            Button(
-                onClick = onNavigateBack,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .padding(bottom = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F)
-                )
-            ) {
-                Text(
-                    text = "Go Back",
-                    color = Color.Black,
-                    fontSize = 20.sp
-                )
-            }
+            CredibilityContent(
+                isLoading = isLoading,
+                errorMessage = errorMessage,
+                credibilityScore = userSettings?.credibilityScore?.toInt() ?: 0
+            )
+            
+            BackButton(onNavigateBack = onNavigateBack)
         }
+    }
+}
+
+@Composable
+private fun CredibilityContent(
+    isLoading: Boolean,
+    errorMessage: String?,
+    credibilityScore: Int
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(modifier = Modifier.height(32.dp))
+        TitleBox()
+        Spacer(modifier = Modifier.height(32.dp))
+        CredibilityScoreDisplay(
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+            credibilityScore = credibilityScore
+        )
+    }
+}
+
+@Composable
+private fun TitleBox() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .background(Color(0xFFFFF9C4))
+            .border(2.dp, Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Credibility Score",
+            fontSize = 24.sp,
+            color = Color.Black
+        )
+    }
+}
+
+@Composable
+private fun CredibilityScoreDisplay(
+    isLoading: Boolean,
+    errorMessage: String?,
+    credibilityScore: Int
+) {
+    when {
+        isLoading -> LoadingIndicator()
+        errorMessage != null -> ErrorDisplay(errorMessage)
+        else -> ProgressBar(credibilityScore)
+    }
+}
+
+@Composable
+private fun LoadingIndicator() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun ErrorDisplay(errorMessage: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .border(2.dp, Color.Red)
+            .background(Color(0xFFFFEBEE)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = errorMessage,
+            fontSize = 16.sp,
+            color = Color.Red,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun ProgressBar(credibilityScore: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .border(2.dp, Color.Black)
+    ) {
+        if (credibilityScore > 0) {
+            FilledProgressPortion(credibilityScore)
+        }
+        EmptyProgressPortion()
+    }
+}
+
+@Composable
+private fun FilledProgressPortion(credibilityScore: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(credibilityScore / 100f)
+            .height(80.dp)
+            .background(Color(0xFF81C784))
+            .border(1.dp, Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$credibilityScore%",
+            fontSize = 20.sp,
+            color = Color.Black,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun EmptyProgressPortion() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .background(Color.White)
+    )
+}
+
+@Composable
+private fun BackButton(onNavigateBack: () -> Unit) {
+    Button(
+        onClick = onNavigateBack,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .padding(bottom = 16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFD54F)
+        )
+    ) {
+        Text(
+            text = "Go Back",
+            color = Color.Black,
+            fontSize = 20.sp
+        )
     }
 }

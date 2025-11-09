@@ -69,26 +69,12 @@ fun ViewGroupsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showLeaveDialog by remember { mutableStateOf(false) }
 
-    // Load group status when screen opens
-    LaunchedEffect(Unit) {
-        viewModel.loadGroupStatus()
-    }
-
-    // Show error messages in snackbar
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { error ->
-            snackbarHostState.showSnackbar(error)
-            viewModel.clearError()
-        }
-    }
-
-    // Show success messages in snackbar
-    LaunchedEffect(successMessage) {
-        successMessage?.let { success ->
-            snackbarHostState.showSnackbar(success)
-            viewModel.clearSuccess()
-        }
-    }
+    ViewGroupsEffects(
+        viewModel = viewModel,
+        errorMessage = errorMessage,
+        successMessage = successMessage,
+        snackbarHostState = snackbarHostState
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -99,70 +85,119 @@ fun ViewGroupsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when {
-                isLoading && currentGroup == null -> {
-                    LoadingContent()
-                }
-                currentGroup == null -> {
-                    NoGroupContent(navController = navController)
-                }
-                else -> {
-                    GroupContent(
-                        currentGroup = currentGroup!!,
-                        groupMembers = groupMembers,
-                        selectedRestaurant = selectedRestaurant,
-                        navController = navController,
-                        onLeaveClick = { showLeaveDialog = true }
-                    )
-                }
-            }
+            ViewGroupsContent(
+                currentGroup = currentGroup,
+                groupMembers = groupMembers,
+                selectedRestaurant = selectedRestaurant,
+                isLoading = isLoading,
+                navController = navController,
+                onLeaveClick = { showLeaveDialog = true }
+            )
 
-            // Show loading overlay when performing actions
             if (isLoading && currentGroup != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = Color(0xFFFFD54F)
-                    )
-                }
+                LoadingOverlay()
             }
         }
 
-        // Leave group confirmation dialog
         if (showLeaveDialog) {
-            AlertDialog(
-                onDismissRequest = { showLeaveDialog = false },
-                title = { Text("Leave Group") },
-                text = {
-                    Text("Are you sure you want to leave this group? You will lose your vote and have to join a new waiting room.")
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showLeaveDialog = false
-                            viewModel.leaveGroup(
-                                onSuccess = {
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
-                    ) {
-                        Text("Leave", color = Color(0xFFFF6B6B))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showLeaveDialog = false }) {
-                        Text("Cancel")
-                    }
+            LeaveGroupDialog(
+                onDismiss = { showLeaveDialog = false },
+                onConfirm = {
+                    showLeaveDialog = false
+                    viewModel.leaveGroup(
+                        onSuccess = { navController.popBackStack() }
+                    )
                 }
             )
         }
     }
+}
+
+@Composable
+private fun ViewGroupsEffects(
+    viewModel: GroupViewModel,
+    errorMessage: String?,
+    successMessage: String?,
+    snackbarHostState: SnackbarHostState
+) {
+    LaunchedEffect(Unit) {
+        viewModel.loadGroupStatus()
+    }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { success ->
+            snackbarHostState.showSnackbar(success)
+            viewModel.clearSuccess()
+        }
+    }
+}
+
+@Composable
+private fun ViewGroupsContent(
+    currentGroup: com.example.cpen_321.data.model.Group?,
+    groupMembers: List<GroupMember>,
+    selectedRestaurant: com.example.cpen_321.data.model.Restaurant?,
+    isLoading: Boolean,
+    navController: NavController,
+    onLeaveClick: () -> Unit
+) {
+    when {
+        isLoading && currentGroup == null -> LoadingContent()
+        currentGroup == null -> NoGroupContent(navController = navController)
+        else -> GroupContent(
+            currentGroup = currentGroup,
+            groupMembers = groupMembers,
+            selectedRestaurant = selectedRestaurant,
+            navController = navController,
+            onLeaveClick = onLeaveClick
+        )
+    }
+}
+
+@Composable
+private fun LoadingOverlay() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.3f)),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(48.dp),
+            color = Color(0xFFFFD54F)
+        )
+    }
+}
+
+@Composable
+private fun LeaveGroupDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Leave Group") },
+        text = {
+            Text("Are you sure you want to leave this group? You will lose your vote and have to join a new waiting room.")
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Leave", color = Color(0xFFFF6B6B))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -257,187 +292,234 @@ private fun GroupContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top section with group info
+        GroupInfoSection(
+            currentGroup = currentGroup,
+            groupMembers = groupMembers,
+            selectedRestaurant = selectedRestaurant
+        )
+
+        GroupActionButtons(
+            currentGroup = currentGroup,
+            navController = navController,
+            onLeaveClick = onLeaveClick
+        )
+    }
+}
+
+@Composable
+private fun GroupInfoSection(
+    currentGroup: com.example.cpen_321.data.model.Group,
+    groupMembers: List<GroupMember>,
+    selectedRestaurant: com.example.cpen_321.data.model.Restaurant?
+) {
+    Column {  // Remove modifier = Modifier.weight(1f)
+        Spacer(modifier = Modifier.height(16.dp))
+        GroupHeaderCard(
+            currentGroup = currentGroup,
+            selectedRestaurant = selectedRestaurant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        MembersSection(groupMembers = groupMembers)
+    }
+}
+
+@Composable
+private fun GroupHeaderCard(
+    currentGroup: com.example.cpen_321.data.model.Group,
+    selectedRestaurant: com.example.cpen_321.data.model.Restaurant?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFF9C4)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
         Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Group header card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFFF9C4)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Group - Room ${currentGroup.roomId}",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "${currentGroup.numMembers} members",
-                        fontSize = 16.sp,
-                        color = Color.Gray
-                    )
-
-                    // Show selected restaurant if available
-                    if (currentGroup.restaurantSelected && selectedRestaurant != null) {
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Restaurant,
-                                contentDescription = null,
-                                tint = Color(0xFF4CAF50),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Selected: ${selectedRestaurant.name}",
-                                fontSize = 16.sp,
-                                color = Color(0xFF4CAF50),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Voting in progress...",
-                            fontSize = 14.sp,
-                            color = Color(0xFFFF9800),
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Members section header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Group Members",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                val votedCount = groupMembers.count { it.hasVoted }
-                Text(
-                    text = "$votedCount/${groupMembers.size} voted",
-                    fontSize = 14.sp,
-                    color = if (votedCount == groupMembers.size) Color(0xFF4CAF50) else Color.Gray
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Members list
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(groupMembers) { member ->
-                    MemberCard(member = member)
-                }
-            }
-        }
-
-        // Bottom buttons
-        Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Group - Room ${currentGroup.roomId}",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
 
-            // View/Vote button
-            Button(
-                onClick = {
-                    currentGroup.groupId?.let { groupId ->
-                        if (currentGroup.restaurantSelected) {
-                            // Restaurant already selected → View Details
-                            navController.navigate("group")
-                        } else {
-                            // Restaurant not selected → Vote Now
-                            navController.navigate("vote_restaurant/$groupId")
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFD54F)
-                )
-            ) {
-                Text(
-                    text = if (currentGroup.restaurantSelected) "View Details" else "Vote Now",
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "${currentGroup.numMembers} members",
+                fontSize = 16.sp,
+                color = Color.Gray
+            )
 
-            // Leave group button
-            Button(
-                onClick = onLeaveClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF6B6B)
-                )
-            ) {
-                Text(
-                    text = "Leave Group",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Go back button
-            Button(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE0E0E0)
-                )
-            ) {
-                Text(
-                    text = "Go Back",
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            RestaurantSelectionStatus(
+                currentGroup = currentGroup,
+                selectedRestaurant = selectedRestaurant
+            )
         }
+    }
+}
+
+@Composable
+private fun RestaurantSelectionStatus(
+    currentGroup: com.example.cpen_321.data.model.Group,
+    selectedRestaurant: com.example.cpen_321.data.model.Restaurant?
+) {
+    if (currentGroup.restaurantSelected && selectedRestaurant != null) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Restaurant,
+                contentDescription = null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Selected: ${selectedRestaurant.name}",
+                fontSize = 16.sp,
+                color = Color(0xFF4CAF50),
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    } else {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Voting in progress...",
+            fontSize = 14.sp,
+            color = Color(0xFFFF9800),
+            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+        )
+    }
+}
+
+@Composable
+private fun MembersSection(groupMembers: List<GroupMember>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Group Members",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        val votedCount = groupMembers.count { it.hasVoted }
+        Text(
+            text = "$votedCount/${groupMembers.size} voted",
+            fontSize = 14.sp,
+            color = if (votedCount == groupMembers.size) Color(0xFF4CAF50) else Color.Gray
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(groupMembers) { member ->
+            MemberCard(member = member)
+        }
+    }
+}
+
+@Composable
+private fun GroupActionButtons(
+    currentGroup: com.example.cpen_321.data.model.Group,
+    navController: NavController,
+    onLeaveClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ViewOrVoteButton(
+            currentGroup = currentGroup,
+            navController = navController
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = onLeaveClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF6B6B)
+            )
+        ) {
+            Text(
+                text = "Leave Group",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFE0E0E0)
+            )
+        ) {
+            Text(
+                text = "Go Back",
+                color = Color.Black,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun ViewOrVoteButton(
+    currentGroup: com.example.cpen_321.data.model.Group,
+    navController: NavController
+) {
+    Button(
+        onClick = {
+            currentGroup.groupId?.let { groupId ->
+                if (currentGroup.restaurantSelected) {
+                    navController.navigate("group")
+                } else {
+                    navController.navigate("vote_restaurant/$groupId")
+                }
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFFFD54F)
+        )
+    ) {
+        Text(
+            text = if (currentGroup.restaurantSelected) "View Details" else "Vote Now",
+            color = Color.Black,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -459,84 +541,100 @@ private fun MemberCard(member: GroupMember) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                // Profile picture or placeholder
-                if (member.profilePicture != null) {
-                    AsyncImage(
-                        model = member.profilePicture,
-                        contentDescription = "Profile picture",
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFD54F)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Default profile",
-                            modifier = Modifier.size(32.dp),
-                            tint = Color.White
-                        )
-                    }
-                }
+            MemberInfo(member = member)
+            VoteStatusIndicator(hasVoted = member.hasVoted)
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.width(12.dp))
+@Composable
+private fun MemberInfo(member: GroupMember) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()  // Use fillMaxWidth instead of weight
+    ) {
+        MemberProfilePicture(
+            profilePicture = member.profilePicture,
+            memberName = member.name
+        )
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = member.name,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.Black
-                    )
+        Spacer(modifier = Modifier.width(12.dp))
 
-                    Spacer(modifier = Modifier.height(4.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = member.name,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
 
-                    Text(
-                        text = "Credibility: ${String.format("%.1f", member.credibilityScore)}",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Vote status indicator
-            if (member.hasVoted) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Has voted",
-                    tint = Color(0xFF4CAF50),
-                    modifier = Modifier.size(32.dp)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE0E0E0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "?",
-                        fontSize = 18.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            Text(
+                text = "Credibility: ${String.format("%.1f", member.credibilityScore)}",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
+@Composable
+private fun MemberProfilePicture(
+    profilePicture: String?,
+    memberName: String
+) {
+    if (profilePicture != null) {
+        AsyncImage(
+            model = profilePicture,
+            contentDescription = "Profile picture",
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color.LightGray),
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFFFD54F)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = "Default profile",
+                modifier = Modifier.size(32.dp),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun VoteStatusIndicator(hasVoted: Boolean) {
+    if (hasVoted) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = "Has voted",
+            tint = Color(0xFF4CAF50),
+            modifier = Modifier.size(32.dp)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFE0E0E0)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "?",
+                fontSize = 18.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
