@@ -16,7 +16,6 @@ import com.example.cpen_321.ui.viewmodels.AuthViewModel
 @Composable
 fun AppNavGraph(navController: NavHostController) {
     val authViewModel: AuthViewModel = hiltViewModel()
-
     NavHost(
         navController = navController,
         startDestination = NavRoutes.SPLASH_SCREEN
