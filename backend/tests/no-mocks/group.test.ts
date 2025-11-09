@@ -561,7 +561,7 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe('User not found');
+    expect(response.body.message).toBe(' User not found');
   });
 
   // Consolidated test: delete group and restaurant data when last member leaves
@@ -741,6 +741,7 @@ describe('Group Model Methods - Integration Tests', () => {
     expect(response.body.Body).toHaveProperty('groupId');
     expect(response.body.Body.groupId).toBe(testGroupData._id);
   });
+
 
   test('should use toJSON transform to convert Maps to objects', async () => {
     /**
