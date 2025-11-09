@@ -145,11 +145,11 @@ class GroupViewModel @Inject constructor(
      */
     // GroupViewModel.kt - Add detailed logging in voteForRestaurant
     fun voteForRestaurant(restaurantId: String, restaurant: Restaurant) {
-        viewModelScope.launch {
+        viewModelScope.launch viewScopeLaunch@ {
             val groupId = _currentGroup.value?.groupId
             if (groupId == null) {
                 Log.e("VoteDebug", "ERROR: groupId is null!")
-                return@launch
+                return@viewScopeLaunch
             }
 
             _isLoading.value = true
@@ -188,8 +188,8 @@ class GroupViewModel @Inject constructor(
      * Leave current group
      */
     fun leaveGroup(onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            val groupId = _currentGroup.value?.groupId ?: return@launch
+        viewModelScope.launch viewScopeLaunch@{
+            val groupId = _currentGroup.value?.groupId ?: return@viewScopeLaunch
 
             _isLoading.value = true
 
@@ -243,8 +243,8 @@ class GroupViewModel @Inject constructor(
 
 
     private fun loadGroupMembers(memberIds: List<String>) {
-        viewModelScope.launch {
-            if (memberIds.isEmpty()) return@launch
+        viewModelScope.launch viewScopeLaunch@{
+            if (memberIds.isEmpty()) return@viewScopeLaunch
 
             when (val result = userRepository.getUserProfiles(memberIds)) {
                 is ApiResult.Success -> {
@@ -355,9 +355,6 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Update member vote status
-     */
     private fun updateMemberVoteStatus() {
         val votes = _currentGroup.value?.votes ?: emptyMap()
         _groupMembers.value = _groupMembers.value.map { member ->
