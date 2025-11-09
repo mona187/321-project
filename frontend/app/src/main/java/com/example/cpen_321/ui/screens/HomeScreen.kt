@@ -71,11 +71,8 @@ fun HomeScreen(
 
     // Check if user has an active group
     LaunchedEffect(Unit) {
-        try {
-            groupViewModel.loadGroupStatus()
-        } catch (e: Exception) {
-            // No active group, that's fine
-        }
+        groupViewModel.loadGroupStatus()
+        //Deleted catch, ViewModel already handles exception cases
     }
 
     Scaffold(

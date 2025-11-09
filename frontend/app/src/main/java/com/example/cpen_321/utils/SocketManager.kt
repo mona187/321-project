@@ -69,8 +69,10 @@ class SocketManager private constructor() {
             Log.d(TAG, "Initiating socket connection...")
         } catch (e: URISyntaxException) {
             Log.e(TAG, "Invalid socket URL", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Socket connection error", e)
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Invalid socket configuration", e)
+        } catch (e: IllegalStateException) {
+            Log.e(TAG, "Socket in invalid state", e)
         }
     }
 

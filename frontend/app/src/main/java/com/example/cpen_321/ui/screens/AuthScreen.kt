@@ -344,19 +344,32 @@ private fun handleGoogleSignIn(
                     } else {
                         viewModel.signInWithGoogle(idToken)
                     }
-                } catch (retryException: Exception) {
+                } catch (retryException: androidx.credentials.exceptions.GetCredentialException) {
                     Log.e("AuthScreen", "❌ Retry failed: ${retryException.message}")
                     snackbarHostState.showSnackbar(
                         "Please add a Google account: Settings → Accounts → Add Account → Google",
                         duration = SnackbarDuration.Long
                     )
+                } catch (retryException: java.io.IOException) {
+                    Log.e("AuthScreen", "❌ Network error during retry: ${retryException.message}")
+                    snackbarHostState.showSnackbar(
+                        "Network error. Please check your connection and try again.",
+                        duration = SnackbarDuration.Long
+                    )
                 }
             }
 
-        } catch (e: Exception) {
-            Log.e("AuthScreen", "❌ Sign-in error: ${e.message}", e)
+        } catch (e: androidx.credentials.exceptions.GetCredentialException) {
+            Log.e("AuthScreen", "❌ Credential error: ${e.message}", e)
             snackbarHostState.showSnackbar(
                 "Sign-in failed: ${e.message ?: "Unknown error"}",
+                duration = SnackbarDuration.Long
+            )
+
+        } catch (e: java.io.IOException) {
+            Log.e("AuthScreen", "❌ Network error: ${e.message}", e)
+            snackbarHostState.showSnackbar(
+                "Network error. Please check your connection and try again.",
                 duration = SnackbarDuration.Long
             )
         }

@@ -1,6 +1,7 @@
 package com.example.cpen_321.data.model
 
 import com.google.gson.annotations.SerializedName
+import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,7 +41,7 @@ data class Room(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)?.time ?: 0L
-        } catch (e: Exception) {
+        } catch (e: ParseException) {
             // If parsing fails, try to parse as Long (backwards compatibility)
             try {
                 completionTime.toLong()
@@ -58,7 +59,7 @@ data class Room(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)
-        } catch (e: Exception) {
+        } catch (e: ParseException) {
             null
         }
     }
@@ -105,7 +106,7 @@ data class RoomStatusResponse(
             val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
             format.timeZone = TimeZone.getTimeZone("UTC")
             format.parse(completionTime)?.time ?: 0L
-        } catch (e: Exception) {
+        } catch (e: ParseException) {
             // If parsing fails, try to parse as Long (backwards compatibility)
             try {
                 completionTime.toLong()

@@ -14,6 +14,8 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.FileNotFoundException
+import java.io.IOException
 
 /**
  * Helper object for image encoding with compression
@@ -42,7 +44,7 @@ object Base64ImageHelper {
             inputStream?.close()
 
             if (originalBitmap == null) {
-                return@withContext Result.failure(Exception("Failed to decode image"))
+                return@withContext Result.failure(IOException("Failed to decode image"))
             }
 
             // 2. Compress image
@@ -71,16 +73,22 @@ object Base64ImageHelper {
             )
 
             Result.success(result)
-        } catch (e: Exception) {
-            android.util.Log.e("Base64ImageHelper", "Failed to encode image", e)
+        } catch (e: FileNotFoundException) {
+            android.util.Log.e("Base64ImageHelper", "Image file not found", e)
             Result.failure(e)
+        } catch (e: IOException) {
+            android.util.Log.e("Base64ImageHelper", "IO error reading/encoding image", e)
+            Result.failure(e)
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("Base64ImageHelper", "Out of memory processing image", e)
+            Result.failure(Exception("Image too large to process", e))
         } finally {
             // Clean up bitmaps AFTER everything is done
             try {
                 originalBitmap?.recycle()
                 compressedBitmap?.recycle()
-            } catch (e: Exception) {
-                android.util.Log.w("Base64ImageHelper", "Error recycling bitmaps", e)
+            } catch (e: IllegalStateException) {
+                android.util.Log.w("Base64ImageHelper", "Bitmap already recycled", e)
             }
         }
     }
@@ -126,13 +134,16 @@ object Base64ImageHelper {
             val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
             
             if (bitmap == null) {
-                Result.failure(Exception("Failed to decode Base64 to Bitmap"))
+                Result.failure(IOException("Failed to decode Base64 to Bitmap"))
             } else {
                 Result.success(bitmap)
             }
-        } catch (e: Exception) {
-            android.util.Log.e("Base64ImageHelper", "Failed to decode Base64", e)
+        } catch (e: IllegalArgumentException) {
+            android.util.Log.e("Base64ImageHelper", "Invalid Base64 string", e)
             Result.failure(e)
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e("Base64ImageHelper", "Out of memory decoding Base64", e)
+            Result.failure(Exception("Image too large to decode", e))
         }
     }
 

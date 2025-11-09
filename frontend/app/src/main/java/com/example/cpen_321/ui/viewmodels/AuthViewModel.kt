@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -302,8 +303,10 @@ class AuthViewModel @Inject constructor(
                     is ApiResult.Loading -> {
                     }
                 }
-            } catch (e: Exception) {
-                android.util.Log.w("AuthViewModel", "Failed to sync profile picture: ${e.message}")
+            } catch (e: IOException) {
+                android.util.Log.w("AuthViewModel", "Network error syncing profile picture: ${e.message}")
+            } catch (e: IllegalStateException) {
+                android.util.Log.w("AuthViewModel", "Invalid state while syncing profile picture: ${e.message}")
             }
         }
     }

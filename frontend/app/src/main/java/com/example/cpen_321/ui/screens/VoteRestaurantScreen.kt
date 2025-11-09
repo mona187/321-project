@@ -36,7 +36,6 @@ import com.example.cpen_321.ui.viewmodels.RestaurantViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -86,6 +85,8 @@ fun VoteRestaurantScreen(
                     }
                 } catch (e: SecurityException) {
                     android.util.Log.e("VoteRestaurantScreen", "Location permission error", e)
+                } catch (e: IllegalArgumentException) {
+                    android.util.Log.e("VoteRestaurantScreen", "Invalid location provider", e)
                 }
             }
         }
@@ -172,8 +173,10 @@ fun VoteRestaurantScreen(
 
                 android.util.Log.d("VoteRestaurantScreen", "✅ Navigation command executed!")
 
-            } catch (e: Exception) {
-                android.util.Log.e("VoteRestaurantScreen", "❌ Navigation error: ${e.message}", e)
+            } catch (e: IllegalArgumentException) {
+                android.util.Log.e("VoteRestaurantScreen", "❌ Invalid navigation route: ${e.message}", e)
+            } catch (e: IllegalStateException) {
+                android.util.Log.e("VoteRestaurantScreen", "❌ Navigation state error: ${e.message}", e)
             }
         } ?: run {
             android.util.Log.d("VoteRestaurantScreen", "⚠️ selectedRestaurant is NULL")

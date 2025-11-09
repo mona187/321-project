@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.text.ParseException
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 
 /**
@@ -295,13 +297,9 @@ class MatchViewModel @Inject constructor(
             _roomMembers.value = emptyList()
             loadRoomMembers(members)
 
-            try {
-                val expiresAtMillis = parseIso8601ToMillis(expiresAt)
-                if (expiresAtMillis != null) {
-                    startTimer(expiresAtMillis)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse expiration time", e)
+            val expiresAtMillis = parseIso8601ToMillis(expiresAt)
+            if (expiresAtMillis != null) {
+                startTimer(expiresAtMillis)
             }
 
             if (status == "matched") {
@@ -322,8 +320,11 @@ class MatchViewModel @Inject constructor(
                 format.timeZone = java.util.TimeZone.getTimeZone("UTC")
                 format.parse(dateString)?.time
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parsing date: $dateString", e)
+        } catch (e: DateTimeParseException) {
+            Log.e(TAG, "Error parsing date with Java 8+ API: $dateString", e)
+            null
+        } catch (e: ParseException) {
+            Log.e(TAG, "Error parsing date with SimpleDateFormat: $dateString", e)
             null
         }
     }

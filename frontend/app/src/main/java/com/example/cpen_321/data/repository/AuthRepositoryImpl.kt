@@ -167,8 +167,6 @@ class AuthRepositoryImpl(
                 ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
             } catch (e: JsonSyntaxException) {
                 ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }

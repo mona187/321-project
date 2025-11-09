@@ -60,9 +60,6 @@ suspend fun <T> safeApiCall(apiCall: suspend () -> Response<ApiResponse<T>>, cus
         } catch (e: JsonSyntaxException) {
             // Handle errors in parsing the JSON response
             ApiResult.Error("Parsing error: ${e.localizedMessage}", code = null)
-        } catch (e: Exception) {
-            // Handle any other unexpected exceptions
-            ApiResult.Error("An unexpected error occurred: ${e.localizedMessage}", code = null)
         }
     }
 }
@@ -113,9 +110,6 @@ suspend fun safeAuthApiCall(authApiCall: suspend () -> Response<AuthResponse>, c
         } catch (e: JsonSyntaxException) {
             // Handle errors in parsing the JSON response
             ApiResult.Error("Parsing error: ${e.localizedMessage}", code = null)
-        } catch (e: Exception) {
-            // Handle any other unexpected exceptions
-            ApiResult.Error("An unexpected error occurred: ${e.localizedMessage}", code = null)
         }
     }
 }
@@ -158,8 +152,6 @@ suspend fun safeMessageApiCall(messageApiCall: suspend () -> Response<MessageRes
             ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
         } catch (e: JsonSyntaxException) {
             ApiResult.Error("Parsing error: ${e.localizedMessage}")
-        } catch (e: Exception) {
-            ApiResult.Error("Unexpected error: ${e.localizedMessage}")
         }
     }
 }
