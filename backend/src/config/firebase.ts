@@ -107,11 +107,14 @@ export const sendMulticastNotification = async (
 
     // Log any failures safely
     if (response.failureCount > 0) {
-      response.responses.forEach((resp, idx) => {
+      // Use numeric for loop to prevent object injection from forEach index
+      for (let i = 0; i < response.responses.length; i++) {
+        const resp = response.responses[i];
         if (!resp.success) {
           // Validate index and token safely
-          if (Number.isInteger(idx) && idx >= 0 && idx < tokens.length) {
-            const rawToken = tokens[idx];
+          if (i >= 0 && i < tokens.length) {
+            // Use safe array access with validated numeric index
+            const rawToken = tokens[i];
             if (typeof rawToken === 'string' && rawToken.length > 0) {
               const tokenSafe = String(rawToken);
               const errorMessage = resp.error?.message || String(resp.error);
@@ -119,7 +122,7 @@ export const sendMulticastNotification = async (
             }
           }
         }
-      });
+      }
     }
 
     return response;

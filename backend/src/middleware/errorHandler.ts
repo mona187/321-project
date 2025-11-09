@@ -14,17 +14,35 @@ export class AppError extends Error {
 }
 
 // Allowed route params whitelist for safety
-const ALLOWED_PARAMS = ['id', 'userId', 'postId', 'commentId']; // adjust to your routes
+const ALLOWED_PARAMS = ['id', 'userId', 'roomId', 'groupId', 'restaurantId', 'ids']; // All valid route parameters
 
 // Helper function to safely extract required route parameters
 export function requireParam(req: Request, paramName: string): string {
+  // Validate paramName is a safe string
+  if (!paramName || typeof paramName !== 'string' || paramName.length === 0) {
+    throw new AppError('Invalid parameter name', 400);
+  }
+  
+  // Whitelist check to prevent object injection
   if (!ALLOWED_PARAMS.includes(paramName)) {
     throw new AppError(`Invalid parameter requested: ${paramName}`, 400);
   }
 
+  // Use Object.prototype.hasOwnProperty.call() to safely check for parameter
+  // This prevents prototype pollution attacks
+  if (!Object.prototype.hasOwnProperty.call(req.params, paramName)) {
+    throw new AppError(`Missing required parameter: ${paramName}`, 400);
+  }
+
+  // Safely access the parameter value using hasOwnProperty check
   const value = req.params[paramName];
   if (!value) {
     throw new AppError(`Missing required parameter: ${paramName}`, 400);
+  }
+  
+  // Ensure value is a string to prevent object injection
+  if (typeof value !== 'string') {
+    throw new AppError(`Invalid parameter type for: ${paramName}`, 400);
   }
 
   return value;
