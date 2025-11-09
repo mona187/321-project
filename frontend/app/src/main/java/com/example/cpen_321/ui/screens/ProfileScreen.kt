@@ -48,6 +48,7 @@ import com.example.cpen_321.ui.viewmodels.UserViewModel
 import com.example.cpen_321.utils.Base64ImageHelper
 import com.example.cpen_321.utils.rememberBase64ImagePainter
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.testTag
 
 private const val TAG = "ProfileScreen"
 
@@ -339,7 +340,8 @@ fun ProfileScreen(
                     label = { Text("Name:") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
+                        .height(80.dp)
+                        .testTag("name"),
                     enabled = !isLoading,
                     singleLine = true
                 )
@@ -353,7 +355,8 @@ fun ProfileScreen(
                     label = { Text("Bio:") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp),
+                        .height(150.dp)
+                        .testTag("bio"),
                     maxLines = 5,
                     enabled = !isLoading
                 )
@@ -371,7 +374,8 @@ fun ProfileScreen(
                     label = { Text("Phone Number:") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
+                        .height(80.dp)
+                        .testTag("contactNumber"),
                     enabled = !isLoading,
                     singleLine = true,
                     isError = contactNumberError.isNotEmpty(),
