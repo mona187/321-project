@@ -1,0 +1,3097 @@
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import org.jetbrains.kotlin.gradle.dsl.JvmTarget\r\nimport java.util.Properties\r\n\r\nplugins {\r\n    alias(libs.plugins.android.application)\r\n    alias(libs.plugins.kotlin.android)\r\n    alias(libs.plugins.kotlin.compose)\r\n    id(\"com.google.dagger.hilt.android\")\r\n    kotlin(\"kapt\")\r\n    id(\"com.google.gms.google-services\")\r\n}\r\n\r\n// \uD83D\uDC47 ADD THIS SECTION - Read from local.properties \uD83D\uDC47\r\nval localProperties = Properties().apply {\r\n    val localPropertiesFile = rootProject.file(\"local.properties\")\r\n    if (localPropertiesFile.exists()) {\r\n        localPropertiesFile.inputStream().use { stream ->\r\n            load(stream)\r\n        }\r\n    }\r\n}\r\n\r\n// Helper function to get property with fallback\r\nfun getLocalProperty(key: String, defaultValue: String = \"\"): String {\r\n    return localProperties.getProperty(key) ?: System.getenv(key) ?: defaultValue\r\n}\r\n\r\nandroid {\r\n    namespace = \"com.example.cpen_321\"\r\n    compileSdk = 36\r\n\r\n    // \uD83D\uDC47 ADD SIGNING CONFIGS HERE \uD83D\uDC47\r\n    signingConfigs {\r\n        create(\"release\") {\r\n            val keystorePath = getLocalProperty(\"RELEASE_KEYSTORE_PATH\", \"\")\r\n            if (keystorePath.isNotEmpty()) {\r\n                // Use rootProject.file() to handle paths correctly\r\n                storeFile = rootProject.file(keystorePath)\r\n                storePassword = getLocalProperty(\"RELEASE_KEYSTORE_PASSWORD\", \"\")\r\n                keyAlias = getLocalProperty(\"RELEASE_KEY_ALIAS\", \"\")\r\n                keyPassword = getLocalProperty(\"RELEASE_KEY_PASSWORD\", \"\")\r\n            }\r\n        }\r\n    }\r\n\r\n    defaultConfig {\r\n        applicationId = \"com.example.cpen_321\"\r\n        minSdk = 24\r\n        targetSdk = 33\r\n        versionCode = 1\r\n        versionName = \"1.0\"\r\n\r\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\r\n\r\n        // \uD83D\uDC47 CHANGED - Now reads from local.properties \uD83D\uDC47\r\n        buildConfigField(\r\n            \"String\",\r\n            \"GOOGLE_CLIENT_ID\",\r\n            \"\\\"${getLocalProperty(\"GOOGLE_CLIENT_ID\", \"1066689966317-k0pgjdvova4h643qnsudps6hnelmvm61.apps.googleusercontent.com\")}\\\"\"\r\n        )\r\n        buildConfigField(\r\n            \"String\",\r\n            \"API_BASE_URL\",\r\n            \"\\\"${getLocalProperty(\"API_BASE_URL\", \"http://3.135.231.73:3000/\")}\\\"\"\r\n        )\r\n        buildConfigField(\r\n            \"String\",\r\n            \"IMAGE_BASE_URL\",\r\n            \"\\\"${getLocalProperty(\"IMAGE_BASE_URL\", \"http://3.135.231.73:3000/\")}\\\"\"\r\n        )\r\n    }\r\n\r\n    buildTypes {\r\n        release {\r\n            // \uD83D\uDC47 ADD THIS LINE \uD83D\uDC47\r\n            signingConfig = signingConfigs.getByName(\"release\")\r\n            isMinifyEnabled = false\r\n            proguardFiles(\r\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\r\n                \"proguard-rules.pro\"\r\n            )\r\n        }\r\n    }\r\n\r\n    compileOptions {\r\n        sourceCompatibility = JavaVersion.VERSION_11\r\n        targetCompatibility = JavaVersion.VERSION_11\r\n    }\r\n\r\n    kotlinOptions {\r\n        jvmTarget = \"11\"\r\n    }\r\n\r\n    buildFeatures {\r\n        compose = true\r\n        buildConfig = true\r\n    }\r\n}\r\n\r\ndependencies {\r\n    implementation(\"com.jakewharton.threetenabp:threetenabp:1.4.7\")\r\n    implementation(platform(\"androidx.compose:compose-bom:2025.10.00\"))\r\n    implementation(\"androidx.compose.material:material-icons-extended\")\r\n    implementation(\"androidx.hilt:hilt-navigation-compose:1.3.0\")\r\n    implementation(\"androidx.navigation:navigation-compose:2.8.0\")\r\n    implementation(\"androidx.datastore:datastore-preferences:1.1.1\")\r\n    implementation(\"androidx.datastore:datastore-core:1.1.1\")\r\n    implementation(\"io.coil-kt:coil-compose:2.7.0\")\r\n    implementation(\"com.google.dagger:hilt-android:2.57.2\")\r\n    kapt(\"com.google.dagger:hilt-compiler:2.57.2\")\r\n\r\n    // Retrofit & OkHttp\r\n    implementation(\"com.squareup.retrofit2:retrofit:2.11.0\")\r\n    implementation(\"com.squareup.retrofit2:converter-gson:2.11.0\")\r\n    implementation(\"com.squareup.okhttp3:okhttp:4.12.0\")\r\n    implementation(\"com.squareup.okhttp3:logging-interceptor:4.12.0\")\r\n    implementation(\"com.google.code.gson:gson:2.10.1\")\r\n\r\n    // Socket.IO client\r\n    implementation(\"io.socket:socket.io-client:2.1.2\")\r\n\r\n    // Security\r\n    implementation(\"androidx.security:security-crypto:1.1.0-alpha06\")\r\n\r\n    // Google Sign-In & Credentials\r\n    implementation(\"com.google.android.gms:play-services-auth:21.0.0\")\r\n    implementation(\"com.google.android.libraries.identity.googleid:googleid:1.1.0\")\r\n    implementation(\"androidx.credentials:credentials:1.2.0\")\r\n    implementation(\"androidx.credentials:credentials-play-services-auth:1.2.0\")\r\n\r\n    // Firebase\r\n    implementation(platform(\"com.google.firebase:firebase-bom:34.4.0\"))\r\n\r\n    // AndroidX & Compose\r\n    implementation(libs.androidx.core.ktx)\r\n    implementation(libs.androidx.lifecycle.runtime.ktx)\r\n    implementation(libs.androidx.activity.compose)\r\n    implementation(platform(libs.androidx.compose.bom))\r\n    implementation(libs.androidx.compose.ui)\r\n    implementation(libs.androidx.compose.ui.graphics)\r\n    implementation(libs.androidx.compose.ui.tooling.preview)\r\n    implementation(libs.androidx.compose.material3)\r\n\r\n    // Testing\r\n    implementation(libs.androidx.espresso.core)\r\n    testImplementation(libs.junit)\r\n    androidTestImplementation(libs.androidx.junit)\r\n    androidTestImplementation(libs.androidx.espresso.core)\r\n    androidTestImplementation(platform(libs.androidx.compose.bom))\r\n    androidTestImplementation(libs.androidx.compose.ui.test.junit4)\r\n    debugImplementation(libs.androidx.compose.ui.tooling)\r\n    debugImplementation(libs.androidx.compose.ui.test.manifest)\r\n}\r\n\r\nkapt {\r\n    correctErrorTypes = true\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision 34aaa133b06c7e1ce9f23c9dd7eb4dfb16ea2e39)
++++ b/app/build.gradle.kts	(date 1762367253473)
+@@ -50,7 +50,8 @@
+         versionCode = 1
+         versionName = "1.0"
+ 
+-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
++        testInstrumentationRunner = "com.example.cpen_321.HiltTestRunner"
++        testInstrumentationRunnerArguments["clearPackageData"] = "false"
+ 
+         // 👇 CHANGED - Now reads from local.properties 👇
+         buildConfigField(
+@@ -95,6 +96,28 @@
+         compose = true
+         buildConfig = true
+     }
++
++    sourceSets {
++        getByName("androidTest") {
++            java.srcDirs("src/androidTest/java")
++        }
++    }
++
++    // 👇 NEW - Test Options for E2E Testing 👇
++    testOptions {
++        animationsDisabled = true
++        unitTests.isReturnDefaultValues = true
++    }
++
++    // 👇 NEW - Packaging Options 👇
++    packaging {
++        resources {
++            excludes += "/META-INF/{AL2.0,LGPL2.1}"
++            excludes += "META-INF/LICENSE.md"      // ADD THIS
++            excludes += "META-INF/LICENSE-notice.md" // ADD THIS
++            excludes += "META-INF/NOTICE.md"       // ADD THIS
++        }
++    }
+ }
+ 
+ dependencies {
+@@ -141,17 +164,76 @@
+     implementation(libs.androidx.compose.ui.tooling.preview)
+     implementation(libs.androidx.compose.material3)
+ 
+-    // Testing
+-    implementation(libs.androidx.espresso.core)
+-    testImplementation(libs.junit)
+-    androidTestImplementation(libs.androidx.junit)
+-    androidTestImplementation(libs.androidx.espresso.core)
+-    androidTestImplementation(platform(libs.androidx.compose.bom))
+-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+-    debugImplementation(libs.androidx.compose.ui.tooling)
+-    debugImplementation(libs.androidx.compose.ui.test.manifest)
++    // ========== TESTING DEPENDENCIES ==========
++    // Unit Testing
++    testImplementation("junit:junit:4.13.2")
++    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
++    testImplementation("io.mockk:mockk:1.13.8")
++
++    // Android Instrumented Testing
++    androidTestImplementation("androidx.test.ext:junit:1.1.5")
++    androidTestImplementation("androidx.test:runner:1.5.2")
++    androidTestImplementation("androidx.test:rules:1.5.0")
++    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
++
++    // Compose Testing
++    androidTestImplementation(platform("androidx.compose:compose-bom:2023.10.01"))
++    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
++    debugImplementation("androidx.compose.ui:ui-tooling")
++    debugImplementation("androidx.compose.ui:ui-test-manifest")
++
++    // UI Automator for system-level interactions
++    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
++
++    // Hilt Testing
++    androidTestImplementation("com.google.dagger:hilt-android-testing:2.48.1")
++    kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.48.1")
++
++    // Coroutines Testing
++    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
++
++    // MockK for Android Tests (optional)
++    androidTestImplementation("io.mockk:mockk-android:1.13.8")
++//    // Unit Testing
++//    testImplementation(libs.junit)
++//    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
++//
++//    // Android Instrumentation Testing - Core
++//    androidTestImplementation(libs.androidx.junit)
++//
++//    // Force Espresso 3.5.0 (Compose requires this version)
++//    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.0") {
++//        version {
++//            strictly("3.5.0")
++//        }
++//    }
++//
++//    androidTestImplementation("androidx.test:core:1.5.0")
++//    androidTestImplementation("androidx.test:core-ktx:1.5.0")
++//    androidTestImplementation("androidx.test:runner:1.5.0")
++//    androidTestImplementation("androidx.test:rules:1.5.0")
++//
++//    // UI Automator for cross-app E2E testing
++//    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
++//
++//    // Compose Testing
++//    androidTestImplementation(platform(libs.androidx.compose.bom))
++//    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
++//    debugImplementation(libs.androidx.compose.ui.tooling)
++//    debugImplementation(libs.androidx.compose.ui.test.manifest)
++//
++//    // Hilt Testing
++//    androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
++//    kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
++//
++//    // Coroutines Testing
++//    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
++//
++//    // Navigation Testing
++//    androidTestImplementation("androidx.navigation:navigation-testing:2.8.0")
+ }
+ 
++// 👇 NEW - Kapt Configuration 👇
+ kapt {
+     correctErrorTypes = true
+ }
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/ExampleInstrumentedTest.kt
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/ExampleInstrumentedTest.kt b/app/src/androidTest/java/com/example/cpen_321/ExampleInstrumentedTest.kt
+deleted file mode 100644
+--- a/app/src/androidTest/java/com/example/cpen_321/ExampleInstrumentedTest.kt	(revision 34aaa133b06c7e1ce9f23c9dd7eb4dfb16ea2e39)
++++ /dev/null	(revision 34aaa133b06c7e1ce9f23c9dd7eb4dfb16ea2e39)
+@@ -1,24 +0,0 @@
+-package com.example.cpen_321
+-
+-import androidx.test.platform.app.InstrumentationRegistry
+-import androidx.test.ext.junit.runners.AndroidJUnit4
+-
+-import org.junit.Test
+-import org.junit.runner.RunWith
+-
+-import org.junit.Assert.*
+-
+-/**
+- * Instrumented test, which will execute on an Android device.
+- *
+- * See [testing documentation](http://d.android.com/tools/testing).
+- */
+-@RunWith(AndroidJUnit4::class)
+-class ExampleInstrumentedTest {
+-    @Test
+-    fun useAppContext() {
+-        // Context of the app under test.
+-        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+-        assertEquals("com.example.cpen_321", appContext.packageName)
+-    }
+-}
+\ No newline at end of file
+Index: .idea/studiobot.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/studiobot.xml b/.idea/studiobot.xml
+new file mode 100644
+--- /dev/null	(date 1762322737325)
++++ b/.idea/studiobot.xml	(date 1762322737325)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="StudioBotProjectSettings">
++    <option name="shareContext" value="OptedIn" />
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/E2ETestSuite.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/E2ETestSuite.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/E2ETestSuite.kt
+new file mode 100644
+--- /dev/null	(date 1762215325288)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/E2ETestSuite.kt	(date 1762215325288)
+@@ -0,0 +1,27 @@
++package com.example.cpen_321.e2e
++
++import com.example.cpen_321.e2e.group.LeaveRematchE2ETest
++import com.example.cpen_321.e2e.group.ViewGroupE2ETest
++import com.example.cpen_321.e2e.group.ViewRestaurantE2ETest
++import com.example.cpen_321.e2e.group.VoteRestaurantE2ETest
++import com.example.cpen_321.e2e.matchmaking.ExitWaitingRoomE2ETest
++import com.example.cpen_321.e2e.matchmaking.JoinWaitingRoomE2ETest
++import com.example.cpen_321.e2e.profile.AddProfileInformationE2ETest
++import com.example.cpen_321.e2e.profile.SetPreferencesE2ETest
++import com.example.cpen_321.e2e.profile.UpdateProfileInformationE2ETest
++import org.junit.runner.RunWith
++import org.junit.runners.Suite
++
++@RunWith(Suite::class)
++@Suite.SuiteClasses(
++    SetPreferencesE2ETest::class,
++    AddProfileInformationE2ETest::class,
++    UpdateProfileInformationE2ETest::class,
++    JoinWaitingRoomE2ETest::class,
++    ExitWaitingRoomE2ETest::class,
++    ViewRestaurantE2ETest::class,
++    VoteRestaurantE2ETest::class,
++    ViewGroupE2ETest::class,
++    LeaveRematchE2ETest::class
++)
++class E2ETestSuite
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewRestaurantE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewRestaurantE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewRestaurantE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368965290)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewRestaurantE2ETest.kt	(date 1762368965290)
+@@ -0,0 +1,249 @@
++package com.example.cpen_321.e2e.group
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import androidx.test.uiautomator.UiSelector
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.grantLocationPermission
++import com.example.cpen_321.e2e.utils.TestHelpers.revokeLocationPermission
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import androidx.compose.ui.semantics.ProgressBarRangeInfo
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for View Restaurant Choice Use Case
++ *
++ * Use Case: View Restaurant Choice
++ *
++ * Main success scenario:
++ * 1. User is asked to accept location permissions for accessing local restaurants
++ * 2. App presents user with restaurant choices based on their preferences
++ *
++ * Failure scenarios:
++ * 1.a User does not provide access to location
++ *     1.a.1 User will not receive list of restaurants
++ *     1.a.2 User must go into phone settings and enable location for this app
++ *     1.a.3 User then goes back into app
++ * 1.b Internet connection error, restaurants not able to be retrieved
++ *     1.b.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class ViewRestaurantE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++    private val packageName = "com.example.cpen_321"
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++        device.grantLocationPermission(packageName)
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    @Test
++    fun testViewRestaurantChoice_MainSuccessScenario() {
++        device.revokeLocationPermission(packageName)
++        Thread.sleep(1000)
++
++        navigateToVotingScreen()
++
++        val permissionDialog = device.wait(
++            androidx.test.uiautomator.Until.hasObject(
++                androidx.test.uiautomator.By.text("Allow")
++            ),
++            5000
++        )
++
++        if (permissionDialog) {
++            val allowButton = device.findObject(
++                UiSelector()
++                    .textMatches("(?i)allow.*")
++                    .className("android.widget.Button")
++            )
++
++            if (allowButton.exists()) {
++                allowButton.click()
++                device.waitForIdle()
++            }
++        } else {
++            device.grantLocationPermission(packageName)
++        }
++
++        Thread.sleep(1000)
++
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++
++        val restaurantCount = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().size
++
++        assert(restaurantCount > 0) { "At least one restaurant should be displayed" }
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    @Test
++    fun testViewRestaurantChoice_NoLocationAccess() {
++        device.revokeLocationPermission(packageName)
++        Thread.sleep(1000)
++
++        navigateToVotingScreen()
++
++        composeTestRule.waitForText(
++            ScreenObjects.LOCATION_PERMISSION,
++            timeoutMillis = 10000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.LOCATION_PERMISSION)
++
++        val noRestaurants = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isEmpty()
++
++        assert(noRestaurants) { "No restaurants should be visible without permission" }
++
++        device.grantLocationPermission(packageName)
++        Thread.sleep(1000)
++
++        composeTestRule.activityRule.scenario.recreate()
++
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.RESTAURANT_OPTION, substring = true)
++    }
++
++    @Test
++    fun testViewRestaurantChoice_ConnectionError() {
++        device.grantLocationPermission(packageName)
++
++        device.enableAirplaneMode()
++        Thread.sleep(1000)
++
++        navigateToVotingScreen()
++
++        composeTestRule.waitForText(
++            ScreenObjects.CONNECTION_ERROR,
++            timeoutMillis = 15000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        val hasLoadingOrError = composeTestRule.onAllNodes(
++            hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate) or
++                    hasText(ScreenObjects.LOADING_RESTAURANTS) or
++                    hasText(ScreenObjects.CONNECTION_ERROR, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isNotEmpty()
++
++        assert(hasLoadingOrError) { "Should show loading or error state" }
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testViewRestaurantChoice_PermissionDeniedPermanently() {
++        device.revokeLocationPermission(packageName)
++
++        navigateToVotingScreen()
++
++        composeTestRule.waitForText(
++            ScreenObjects.LOCATION_PERMISSION,
++            timeoutMillis = 5000
++        )
++
++        composeTestRule.assertTextExists(ScreenObjects.LOCATION_PERMISSION)
++
++        val noRestaurants = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isEmpty()
++
++        assert(noRestaurants) { "No restaurants without permission" }
++    }
++
++    @Test
++    fun testViewRestaurantChoice_RestaurantsMatchPreferences() {
++        device.grantLocationPermission(packageName)
++
++        navigateToVotingScreen()
++
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++
++        val restaurantNodes = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes()
++
++        assert(restaurantNodes.isNotEmpty()) { "Restaurants should be displayed" }
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    private fun navigateToVotingScreen() {
++        try {
++            composeTestRule.waitForText(
++                ScreenObjects.VOTE_RESTAURANT_TITLE,
++                timeoutMillis = 3000
++            )
++        } catch (e: Exception) {
++            android.util.Log.d("E2E_Test", "Navigate to voting screen")
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewGroupE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewGroupE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewGroupE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368988789)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/group/ViewGroupE2ETest.kt	(date 1762368988789)
+@@ -0,0 +1,300 @@
++package com.example.cpen_321.e2e.group
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Tests for View Group History and View Group Details Use Cases
++ *
++ * Use Case: View Group History
++ * Main success scenario:
++ * 1. User presses "View Active Group" button on "HomeScreen"
++ * 2. User is taken to "ViewGroupsScreen"
++ * 3. Screen displays message based on if user is in group or not:
++ *    - If user is in a group, screen displays group details
++ *    - If user is not in a group, screen displays message "No active groups"
++ *
++ * Use Case: View Group Details
++ * Preconditions: Group has completed voting and restaurant is selected
++ * Main success scenario:
++ * 1. User is on "ViewGroupsScreen"
++ * 2. User clicks on "View Details" Button
++ * 3. User is taken to "GroupScreen", user can see selected restaurant (name, location),
++ *    members in group (how many members, name, credibility score, phone number)
++ *
++ * Failure scenarios:
++ * 3.a Internet connection error
++ *     3.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class ViewGroupE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToHomeScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToHomeScreen() {
++        composeTestRule.waitForText(ScreenObjects.WELCOME_PREFIX, substring = true, timeoutMillis = 5000)
++    }
++
++    @Test
++    fun testViewGroupHistory_WithActiveGroup() {
++        composeTestRule.assertTextExists(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE, timeoutMillis = 5000)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true) or
++                    hasText("Restaurant", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.MEMBER_PREFIX, substring = true) or
++                    hasText("Member", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNodeWithText(ScreenObjects.LEAVE_GROUP, useUnmergedTree = true)
++            .assertExists()
++    }
++
++    @Test
++    fun testViewGroupHistory_NoActiveGroup() {
++        val viewGroupButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.VIEW_ACTIVE_GROUP) or
++                    hasText(ScreenObjects.CURRENT_GROUPS),
++            useUnmergedTree = true
++        )
++
++        if (viewGroupButton.fetchSemanticsNodes().isNotEmpty()) {
++            viewGroupButton.onFirst().performClick()
++        }
++
++        composeTestRule.waitForText(
++            ScreenObjects.NO_ACTIVE_GROUPS,
++            timeoutMillis = 5000
++        )
++
++        composeTestRule.assertTextExists(ScreenObjects.NO_ACTIVE_GROUPS)
++
++        composeTestRule.onNodeWithText(
++            ScreenObjects.GO_TO_HOME,
++            substring = true,
++            useUnmergedTree = true
++        ).assertExists()
++
++        val noRestaurantInfo = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isEmpty()
++
++        assert(noRestaurantInfo) { "No restaurant info should be shown" }
++    }
++
++    @Test
++    fun testViewGroupHistory_ConnectionError() {
++        device.enableAirplaneMode()
++
++        val viewGroupButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.VIEW_ACTIVE_GROUP) or
++                    hasText(ScreenObjects.CURRENT_GROUPS),
++            useUnmergedTree = true
++        )
++
++        if (viewGroupButton.fetchSemanticsNodes().isNotEmpty()) {
++            viewGroupButton.onFirst().performClick()
++        }
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testViewGroupDetails_MainSuccessScenario() {
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE, timeoutMillis = 5000)
++
++        val viewDetailsButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.VIEW_DETAILS),
++            useUnmergedTree = true
++        )
++
++        if (viewDetailsButton.fetchSemanticsNodes().isNotEmpty()) {
++            viewDetailsButton.onFirst().performClick()
++
++            composeTestRule.waitForText(ScreenObjects.GROUP_TITLE, timeoutMillis = 3000)
++        }
++
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true) or
++                    hasText("Restaurant", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.LOCATION_PREFIX, substring = true) or
++                    hasText("Location", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.MEMBER_PREFIX, substring = true) or
++                    hasText("Member", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        val memberDetailsPresent = composeTestRule.onAllNodes(
++            hasText("Name:", substring = true) or
++                    hasText("Credibility Score:", substring = true) or
++                    hasText("Phone Number:", substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isNotEmpty()
++
++        assert(memberDetailsPresent) { "Member details should be displayed" }
++
++        composeTestRule.onNodeWithText(
++            ScreenObjects.CLOSE_GROUP,
++            substring = true,
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    @Test
++    fun testViewGroupDetails_ConnectionError() {
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE, timeoutMillis = 5000)
++
++        device.enableAirplaneMode()
++
++        val viewDetailsButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.VIEW_DETAILS),
++            useUnmergedTree = true
++        )
++
++        if (viewDetailsButton.fetchSemanticsNodes().isNotEmpty()) {
++            viewDetailsButton.onFirst().performClick()
++
++            composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++            composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++        }
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testViewGroupDetails_VerifyAllMemberInfo() {
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE)
++
++        val memberNodes = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.MEMBER_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes()
++
++        if (memberNodes.isNotEmpty()) {
++            assert(memberNodes.size >= 1) { "At least one member should be displayed" }
++
++            composeTestRule.onNode(
++                hasText("Name:", substring = true),
++                useUnmergedTree = true
++            ).assertExists()
++
++            composeTestRule.onNode(
++                hasText("Credibility Score:", substring = true),
++                useUnmergedTree = true
++            ).assertExists()
++
++            composeTestRule.onNode(
++                hasText("Phone Number:", substring = true),
++                useUnmergedTree = true
++            ).assertExists()
++        }
++    }
++
++    @Test
++    fun testViewGroupDetails_ScrollThroughMembers() {
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE)
++
++        composeTestRule.onRoot(useUnmergedTree = true)
++            .performTouchInput {
++                swipeUp()
++            }
++
++        Thread.sleep(500)
++
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++
++        composeTestRule.onRoot(useUnmergedTree = true)
++            .performTouchInput {
++                swipeDown()
++            }
++    }
++
++    @Test
++    fun testViewGroupDetails_NavigateBackToHome() {
++        composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.GROUP_TITLE)
++
++        device.pressBack()
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING, timeoutMillis = 5000)
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++    }
++}
+\ No newline at end of file
+Index: .idea/deploymentTargetSelector.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"deploymentTargetSelector\">\r\n    <selectionStates>\r\n      <SelectionState runConfigName=\"app\">\r\n        <option name=\"selectionMode\" value=\"DIALOG\" />\r\n        <DropdownSelection timestamp=\"2025-10-22T01:03:19.197853300Z\">\r\n          <Target type=\"DEFAULT_BOOT\">\r\n            <handle>\r\n              <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=C:\\Users\\dli9g\\.android\\avd\\Test_apk.avd\" />\r\n            </handle>\r\n          </Target>\r\n        </DropdownSelection>\r\n        <DialogSelection>\r\n          <targets>\r\n            <Target type=\"DEFAULT_BOOT\">\r\n              <handle>\r\n                <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=C:\\Users\\dli9g\\.android\\avd\\Pixel_7_API_33.avd\" />\r\n              </handle>\r\n            </Target>\r\n            <Target type=\"DEFAULT_BOOT\">\r\n              <handle>\r\n                <DeviceId pluginId=\"LocalEmulator\" identifier=\"path=C:\\Users\\dli9g\\.android\\avd\\Test_apk.avd\" />\r\n              </handle>\r\n            </Target>\r\n          </targets>\r\n        </DialogSelection>\r\n      </SelectionState>\r\n    </selectionStates>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/deploymentTargetSelector.xml b/.idea/deploymentTargetSelector.xml
+--- a/.idea/deploymentTargetSelector.xml	(revision 34aaa133b06c7e1ce9f23c9dd7eb4dfb16ea2e39)
++++ b/.idea/deploymentTargetSelector.xml	(date 1762215090208)
+@@ -3,7 +3,7 @@
+   <component name="deploymentTargetSelector">
+     <selectionStates>
+       <SelectionState runConfigName="app">
+-        <option name="selectionMode" value="DIALOG" />
++        <option name="selectionMode" value="DROPDOWN" />
+         <DropdownSelection timestamp="2025-10-22T01:03:19.197853300Z">
+           <Target type="DEFAULT_BOOT">
+             <handle>
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/utils/ScreenObjects.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/utils/ScreenObjects.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/ScreenObjects.kt
+new file mode 100644
+--- /dev/null	(date 1762278718153)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/ScreenObjects.kt	(date 1762278718153)
+@@ -0,0 +1,112 @@
++package com.example.cpen_321.e2e.utils
++
++/**
++ * Screen element constants matching actual implementations
++ */
++object ScreenObjects {
++
++    // Common
++    const val GO_BACK = "Go Back"
++    const val LOADING = "Loading"
++
++    // Home Screen
++    const val WELCOME_PREFIX = "Welcome"
++    const val START_MATCHMAKING = "Start Matchmaking"
++    const val VIEW_ACTIVE_GROUP = "View Active Group"
++    const val CURRENT_GROUPS = "Current Groups"
++    const val CREDIBILITY_SCORE_PREFIX = "Credibility Score:"
++
++    // ProfileConfigScreen
++    const val PROFILE_BUTTON = "Profile"
++    const val PREFERENCES_BUTTON = "Preferences"
++    const val CREDIBILITY_SCORE_BUTTON = "Credibility Score"
++    const val LOGOUT_BUTTON = "Logout"
++    const val DELETE_ACCOUNT = "Delete Account"
++
++    // ProfileScreen
++    const val CHANGE_PROFILE_PICTURE = "Change Profile Picture"
++    const val NAME_LABEL = "Name:"
++    const val BIO_LABEL = "Bio:"
++    const val PHONE_NUMBER_LABEL = "Phone Number:"
++    const val SAVE_PROFILE = "Save Profile"
++    const val PHONE_ERROR_MIN = "Phone number must be at least 10 digits"
++    const val PHONE_ERROR_DIGITS = "Phone number must contain only digits"
++    const val PHONE_ERROR_MAX = "Phone number must be no more than 15 digits"
++    const val PROCESSING = "Processing..."
++
++    // PreferencesScreen
++    const val PREFERENCES_TITLE = "Preferences (Select)"
++    const val MAX_MONEY_PREFIX = "Max amount of money to spend:"
++    const val SEARCH_RADIUS_PREFIX = "Search radius:"
++    const val SAVE_PREFERENCES = "Save Preferences"
++    const val LOADING_PREFERENCES = "Loading preferences..."
++
++    // Cuisine Options
++    const val SUSHI = "Sushi"
++    const val ITALIAN = "Italian"
++    const val PIZZA = "Pizza"
++    const val JAPANESE = "Japanese"
++    const val EUROPEAN = "European"
++    const val KOREAN = "Korean"
++    const val MIDDLE_EASTERN = "Middle Eastern"
++    const val CHINESE = "Chinese"
++
++    // Success/Error Messages
++    const val SETTINGS_UPDATED = "Settings updated successfully"
++    const val CONNECTION_ERROR = "try again"
++    const val IMAGE_SELECTED = "Image selected - click Save to apply changes"
++    const val FAILED_TO_LOAD_IMAGE = "Failed to load image"
++
++    // WaitingRoomScreen
++    const val WAITING_ROOM_TITLE = "Waiting Room"
++    const val FINDING_GROUP = "Finding your perfect dining group..."
++    const val LEAVE_ROOM = "Leave Waiting Room"
++    const val TIME_REMAINING = "Time remaining"
++    const val FINISHING_SOON = "Finishing soon!"
++    const val MEMBERS_IN_ROOM = "members in room"
++    const val GROUP_READY = "Group Ready!"
++    const val PREPARING_GROUP = "Preparing your group..."
++    const val LOADING_MEMBERS = "Loading members..."
++
++    // Leave Dialog
++    const val LEAVE_CONFIRM_TITLE = "Leave Waiting Room?"
++    const val STAY_BUTTON = "Stay"
++    const val LEAVE_BUTTON = "Leave"
++
++    // Room Failure Dialog
++    const val UNABLE_TO_CREATE_GROUP = "Unable to Create Group"
++    const val TIMER_EXPIRED = "The waiting room timer expired"
++    const val TRY_AGAIN = "Try Again"
++
++    // VoteRestaurantScreen
++    const val VOTE_RESTAURANT_TITLE = "Restaurant Voting"
++    const val SELECT_RESTAURANT = "Select a restaurant to vote"
++    const val RESTAURANT_OPTION = "Restaurant Option" // ADD THIS
++    const val LOCATION_PERMISSION = "Location permission required"
++    const val GRANT_PERMISSION = "Grant Permission"
++    const val LOADING_RESTAURANTS = "Loading restaurants..."
++    const val NO_RESTAURANTS = "No restaurants found"
++    const val VOTE_RECORDED = "Vote recorded"
++    const val CHANGE_VOTE = "Change vote"
++
++    // ViewGroupsScreen / GroupScreen
++    const val NO_ACTIVE_GROUPS = "No active groups"
++    const val GROUP_TITLE = "Group"
++    const val LEAVE_GROUP = "Leave Group"
++    const val LEAVE_GROUP_CONFIRM = "Are you sure you want to leave this group?"
++    const val RESTAURANT_NAME_PREFIX = "Restaurant:"
++    const val LOCATION_PREFIX = "Location:"
++    const val MEMBER_PREFIX = "Member"
++    const val CLOSE_GROUP = "Close Group"
++    const val GO_TO_HOME = "Go to Home"
++    const val VIEW_DETAILS = "View Details" // ADD THIS
++
++    // Semantic descriptions
++    const val PROFILE_PICTURE_DESCRIPTION = "Profile Picture"
++    const val TIMER_DESCRIPTION = "Timer"
++    const val DEFAULT_AVATAR_DESCRIPTION = "Default avatar"
++
++    // ContentDescriptions for testing
++    const val BUDGET_SLIDER = "Budget Slider"
++    const val RADIUS_SLIDER = "Radius Slider"
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/group/VoteRestaurantE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/group/VoteRestaurantE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/group/VoteRestaurantE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368940093)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/group/VoteRestaurantE2ETest.kt	(date 1762368940093)
+@@ -0,0 +1,286 @@
++package com.example.cpen_321.e2e.group
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.*
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.grantLocationPermission
++import com.example.cpen_321.e2e.utils.TestHelpers.revokeLocationPermission
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Vote on Restaurant Use Case
++ *
++ * Use Case: Vote on Restaurant
++ *
++ * Main success scenario:
++ * 1. User is taken to "VoteRestaurantScreen"
++ * 2. User selects a choice from list of restaurants presented
++ * 3. User confirms their vote by selecting "Submit Vote" button
++ * 4. Number of votes is updated to include their vote
++ * 5. User waits for other users in group to vote
++ *
++ * Failure scenarios:
++ * 2.a List of restaurants is not provided because user did not provide location permissions
++ *     2.a.1 User will not receive list of restaurants
++ *     2.a.2 User must go into phone settings and enable location for this app
++ *     2.a.3 User then goes back into app and list of restaurants is provided
++ * 2.b Internet connection error, restaurants not able to be retrieved
++ *     2.b.1 Screen is waiting for response, user is prompted to try again at a later time
++ * 3.a Internet connection error
++ *     3.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class VoteRestaurantE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++    private val packageName = "com.example.cpen_321"
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToVotingScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++        device.grantLocationPermission(packageName)
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToVotingScreen() {
++        try {
++            composeTestRule.waitForText(
++                ScreenObjects.VOTE_RESTAURANT_TITLE,
++                timeoutMillis = 5000
++            )
++        } catch (e: Exception) {
++            android.util.Log.d("E2E_Test", "Navigate to voting screen via matchmaking")
++        }
++    }
++
++    @Test
++    fun testVoteRestaurant_MainSuccessScenario() {
++        composeTestRule.assertTextExists(ScreenObjects.VOTE_RESTAURANT_TITLE, substring = true)
++        composeTestRule.assertTextExists(ScreenObjects.SELECT_RESTAURANT, substring = true)
++
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onAllNodes(
++            hasClickAction() and hasAnyDescendant(
++                hasText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++            ),
++            useUnmergedTree = true
++        ).onFirst().performClick()
++
++        composeTestRule.onNodeWithContentDescription("Thumbs Up", useUnmergedTree = true)
++            .assertExists()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.VOTE_RECORDED, timeoutMillis = 5000)
++        composeTestRule.assertTextExists(ScreenObjects.VOTE_RECORDED)
++
++        composeTestRule.onNode(
++            hasContentDescription("Vote Count") or
++                    hasText("vote", substring = true, ignoreCase = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.assertTextExists(ScreenObjects.VOTE_RESTAURANT_TITLE, substring = true)
++    }
++
++    @Test
++    fun testVoteRestaurant_NoLocationPermission() {
++        device.revokeLocationPermission(packageName)
++        Thread.sleep(1000)
++
++        composeTestRule.activityRule.scenario.recreate()
++
++        composeTestRule.waitForText(
++            ScreenObjects.LOCATION_PERMISSION,
++            timeoutMillis = 10000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.LOCATION_PERMISSION)
++
++        composeTestRule.onNodeWithText(
++            ScreenObjects.GRANT_PERMISSION,
++            useUnmergedTree = true
++        ).assertExists()
++
++        device.grantLocationPermission(packageName)
++
++        composeTestRule.activityRule.scenario.recreate()
++
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.RESTAURANT_OPTION, substring = true)
++    }
++
++    @Test
++    fun testVoteRestaurant_ConnectionErrorLoadingRestaurants() {
++        device.enableAirplaneMode()
++
++        composeTestRule.activityRule.scenario.recreate()
++
++        composeTestRule.waitForText(
++            ScreenObjects.CONNECTION_ERROR,
++            timeoutMillis = 15000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        val restaurantsVisible = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isEmpty()
++
++        assert(restaurantsVisible) { "No restaurants should be visible without connection" }
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testVoteRestaurant_ConnectionErrorSubmittingVote() {
++        composeTestRule.waitForText(
++            ScreenObjects.RESTAURANT_OPTION,
++            substring = true,
++            timeoutMillis = 10000
++        )
++
++        composeTestRule.onAllNodes(
++            hasClickAction() and hasAnyDescendant(
++                hasText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++            ),
++            useUnmergedTree = true
++        ).onFirst().performClick()
++
++        device.enableAirplaneMode()
++
++        composeTestRule.onNodeWithContentDescription("Thumbs Up", useUnmergedTree = true)
++            .performClick()
++
++        composeTestRule.waitForText(
++            ScreenObjects.CONNECTION_ERROR,
++            timeoutMillis = 15000
++        )
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testVoteRestaurant_ThumbsDown() {
++        composeTestRule.waitForText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++
++        composeTestRule.onAllNodes(
++            hasClickAction() and hasAnyDescendant(
++                hasText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++            ),
++            useUnmergedTree = true
++        ).onFirst().performClick()
++
++        composeTestRule.onNodeWithContentDescription("Thumbs Down", useUnmergedTree = true)
++            .assertExists()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.VOTE_RECORDED, timeoutMillis = 5000)
++        composeTestRule.assertTextExists(ScreenObjects.VOTE_RECORDED)
++    }
++
++    @Test
++    fun testVoteRestaurant_ChangeVote() {
++        composeTestRule.waitForText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++
++        composeTestRule.onAllNodes(
++            hasClickAction() and hasAnyDescendant(
++                hasText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++            ),
++            useUnmergedTree = true
++        ).onFirst().performClick()
++
++        composeTestRule.onNodeWithContentDescription("Thumbs Up", useUnmergedTree = true)
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.VOTE_RECORDED, timeoutMillis = 5000)
++
++        val changeVoteButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.CHANGE_VOTE, substring = true),
++            useUnmergedTree = true
++        )
++
++        if (changeVoteButton.fetchSemanticsNodes().isNotEmpty()) {
++            changeVoteButton.onFirst().performClick()
++
++            composeTestRule.onNodeWithContentDescription("Thumbs Down", useUnmergedTree = true)
++                .performClick()
++
++            composeTestRule.waitForText(ScreenObjects.VOTE_RECORDED)
++        }
++    }
++
++    @Test
++    fun testVoteRestaurant_SwipeBetweenRestaurants() {
++        composeTestRule.waitForText(ScreenObjects.RESTAURANT_OPTION, substring = true)
++
++        composeTestRule.onRoot(useUnmergedTree = true)
++            .performTouchInput {
++                swipeLeft()
++            }
++
++        Thread.sleep(500)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_OPTION, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++}
+\ No newline at end of file
+Index: gradle/libs.versions.toml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>[versions]\r\nagp = \"8.13.0\"\r\nkotlin = \"2.0.21\"\r\ncoreKtx = \"1.17.0\"\r\njunit = \"4.13.2\"\r\njunitVersion = \"1.3.0\"\r\nespressoCore = \"3.7.0\"\r\nlifecycleRuntimeKtx = \"2.9.4\"\r\nactivityCompose = \"1.11.0\"\r\ncomposeBom = \"2024.09.00\"\r\ngoogleid = \"1.1.1\"\r\n\r\n[libraries]\r\nandroidx-core-ktx = { group = \"androidx.core\", name = \"core-ktx\", version.ref = \"coreKtx\" }\r\njunit = { group = \"junit\", name = \"junit\", version.ref = \"junit\" }\r\nandroidx-junit = { group = \"androidx.test.ext\", name = \"junit\", version.ref = \"junitVersion\" }\r\nandroidx-espresso-core = { group = \"androidx.test.espresso\", name = \"espresso-core\", version.ref = \"espressoCore\" }\r\nandroidx-lifecycle-runtime-ktx = { group = \"androidx.lifecycle\", name = \"lifecycle-runtime-ktx\", version.ref = \"lifecycleRuntimeKtx\" }\r\nandroidx-activity-compose = { group = \"androidx.activity\", name = \"activity-compose\", version.ref = \"activityCompose\" }\r\nandroidx-compose-bom = { group = \"androidx.compose\", name = \"compose-bom\", version.ref = \"composeBom\" }\r\nandroidx-compose-ui = { group = \"androidx.compose.ui\", name = \"ui\" }\r\nandroidx-compose-ui-graphics = { group = \"androidx.compose.ui\", name = \"ui-graphics\" }\r\nandroidx-compose-ui-tooling = { group = \"androidx.compose.ui\", name = \"ui-tooling\" }\r\nandroidx-compose-ui-tooling-preview = { group = \"androidx.compose.ui\", name = \"ui-tooling-preview\" }\r\nandroidx-compose-ui-test-manifest = { group = \"androidx.compose.ui\", name = \"ui-test-manifest\" }\r\nandroidx-compose-ui-test-junit4 = { group = \"androidx.compose.ui\", name = \"ui-test-junit4\" }\r\nandroidx-compose-material3 = { group = \"androidx.compose.material3\", name = \"material3\" }\r\ngoogleid = { group = \"com.google.android.libraries.identity.googleid\", name = \"googleid\", version.ref = \"googleid\" }\r\n\r\n[plugins]\r\nandroid-application = { id = \"com.android.application\", version.ref = \"agp\" }\r\nkotlin-android = { id = \"org.jetbrains.kotlin.android\", version.ref = \"kotlin\" }\r\nkotlin-compose = { id = \"org.jetbrains.kotlin.plugin.compose\", version.ref = \"kotlin\" }\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/gradle/libs.versions.toml b/gradle/libs.versions.toml
+--- a/gradle/libs.versions.toml	(revision 34aaa133b06c7e1ce9f23c9dd7eb4dfb16ea2e39)
++++ b/gradle/libs.versions.toml	(date 1762147187245)
+@@ -9,6 +9,7 @@
+ activityCompose = "1.11.0"
+ composeBom = "2024.09.00"
+ googleid = "1.1.1"
++uiTest = "1.9.4"
+ 
+ [libraries]
+ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+@@ -26,6 +27,7 @@
+ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+ androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+ googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
++androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test", version.ref = "uiTest" }
+ 
+ [plugins]
+ android-application = { id = "com.android.application", version.ref = "agp" }
+Index: app/src/androidTest/java/com/example/cpen_321/HiltTestRunner.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/HiltTestRunner.kt b/app/src/androidTest/java/com/example/cpen_321/HiltTestRunner.kt
+new file mode 100644
+--- /dev/null	(date 1762323578576)
++++ b/app/src/androidTest/java/com/example/cpen_321/HiltTestRunner.kt	(date 1762323578576)
+@@ -0,0 +1,12 @@
++package com.example.cpen_321
++
++import android.app.Application
++import android.content.Context
++import androidx.test.runner.AndroidJUnitRunner
++import dagger.hilt.android.testing.HiltTestApplication
++
++class HiltTestRunner : AndroidJUnitRunner() {
++    override fun newApplication(cl: ClassLoader?, className: String?, context: Context?): Application {
++        return super.newApplication(cl, HiltTestApplication::class.java.name, context)
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/group/LeaveRematchE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/group/LeaveRematchE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/group/LeaveRematchE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762369015753)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/group/LeaveRematchE2ETest.kt	(date 1762369015753)
+@@ -0,0 +1,229 @@
++package com.example.cpen_321.e2e.group
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Leave/Rematch Use Case
++ *
++ * Use Case: Leave/Rematch
++ *
++ * Main success scenario:
++ * 1. User is on "ViewGroupsScreen"
++ * 2. User presses "Leave Group" button
++ * 3. Confirmation message is given, two choices "stay" or "leave"
++ * 4. User presses "leave", user has left the group
++ * 5. User can rematch by pressing "Start Matchmaking" button in "HomeScreen"
++ *
++ * Failure scenarios:
++ * 4.a User clicks on stay
++ *     4.a.1 User stays in waiting room and does not exit the room
++ * 4.b Internet connection error
++ *     4.b.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class LeaveRematchE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToViewGroupsScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToViewGroupsScreen() {
++        try {
++            composeTestRule.waitForText(ScreenObjects.VIEW_ACTIVE_GROUP, timeoutMillis = 5000)
++            composeTestRule.clickButton(ScreenObjects.VIEW_ACTIVE_GROUP)
++            composeTestRule.waitForText(ScreenObjects.GROUP_TITLE, timeoutMillis = 5000)
++        } catch (e: Exception) {
++            android.util.Log.d("E2E_Test", "Navigate to ViewGroupsScreen")
++        }
++    }
++
++    @Test
++    fun testLeaveRematch_MainSuccessScenario() {
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true) or
++                    hasText(ScreenObjects.MEMBER_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++
++        composeTestRule.waitForText(ScreenObjects.LEAVE_GROUP_CONFIRM, substring = true)
++        composeTestRule.assertTextExists(ScreenObjects.STAY_BUTTON)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING, timeoutMillis = 5000)
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.assertTextExists(ScreenObjects.WELCOME_PREFIX, substring = true)
++
++        composeTestRule.onNodeWithText(ScreenObjects.START_MATCHMAKING)
++            .assertIsEnabled()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE, timeoutMillis = 10000)
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++    }
++
++    @Test
++    fun testLeaveRematch_UserClicksStay() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON)
++
++        composeTestRule.clickButton(ScreenObjects.STAY_BUTTON)
++
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_GROUP)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true) or
++                    hasText(ScreenObjects.MEMBER_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    @Test
++    fun testLeaveRematch_ConnectionError() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++
++        device.enableAirplaneMode()
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testLeaveRematch_CancelThenLeave() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.STAY_BUTTON)
++
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++    }
++
++    @Test
++    fun testLeaveRematch_MultipleRematchCycles() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++    }
++
++    @Test
++    fun testLeaveRematch_BackButtonDismissesDialog() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON)
++
++        device.pressBack()
++
++        composeTestRule.assertTextExists(ScreenObjects.GROUP_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_GROUP)
++    }
++
++    @Test
++    fun testLeaveRematch_VerifyGroupDataCleared() {
++        val hadRestaurantInfo = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.RESTAURANT_NAME_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isNotEmpty()
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_GROUP)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.waitForText(ScreenObjects.CURRENT_GROUPS, timeoutMillis = 3000)
++
++        val currentGroupsButton = composeTestRule.onAllNodes(
++            hasText(ScreenObjects.CURRENT_GROUPS) or
++                    hasText(ScreenObjects.VIEW_ACTIVE_GROUP),
++            useUnmergedTree = true
++        )
++
++        if (currentGroupsButton.fetchSemanticsNodes().isNotEmpty()) {
++            currentGroupsButton.onFirst().performClick()
++
++            composeTestRule.waitForText(ScreenObjects.NO_ACTIVE_GROUPS, timeoutMillis = 5000)
++            composeTestRule.assertTextExists(ScreenObjects.NO_ACTIVE_GROUPS)
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/ExitWaitingRoomE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/ExitWaitingRoomE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/ExitWaitingRoomE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368866225)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/ExitWaitingRoomE2ETest.kt	(date 1762368866225)
+@@ -0,0 +1,183 @@
++package com.example.cpen_321.e2e.matchmaking
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Exit Waiting Room Use Case
++ *
++ * Use Case: Exit Waiting Room
++ *
++ * Main success scenario:
++ * 1. User is in "WaitingRoomScreen" and clicks on "Leave Room" button
++ * 2. Screen prompts user with a confirmation message, with options to stay or leave
++ * 3. User clicks on leave, user is taken out of waiting room
++ *
++ * Failure scenarios:
++ * 3.a User clicks on stay
++ *     3.a.1 User stays in waiting room and does not exit the room
++ * 3.b Internet connection error
++ *     3.b.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class ExitWaitingRoomE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToWaitingRoom()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToWaitingRoom() {
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING, timeoutMillis = 5000)
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE, timeoutMillis = 10000)
++    }
++
++    @Test
++    fun testExitWaitingRoom_MainSuccessScenario() {
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++
++        composeTestRule.waitForText(ScreenObjects.LEAVE_CONFIRM_TITLE, timeoutMillis = 3000)
++
++        composeTestRule.assertTextExists(ScreenObjects.STAY_BUTTON)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING, timeoutMillis = 5000)
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.assertTextExists(ScreenObjects.WELCOME_PREFIX, substring = true)
++    }
++
++    @Test
++    fun testExitWaitingRoom_UserClicksStay() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON, timeoutMillis = 3000)
++
++        composeTestRule.clickButton(ScreenObjects.STAY_BUTTON)
++
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_ROOM)
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.TIME_REMAINING, substring = true) or
++                    hasText(":", substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNode(
++            hasContentDescription(ScreenObjects.DEFAULT_AVATAR_DESCRIPTION) or
++                    hasContentDescription(ScreenObjects.PROFILE_PICTURE_DESCRIPTION),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    @Test
++    fun testExitWaitingRoom_ConnectionError() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++
++        device.enableAirplaneMode()
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testExitWaitingRoom_CancelThenLeave() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.STAY_BUTTON)
++
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++    }
++
++    @Test
++    fun testExitWaitingRoom_DialogDismissalWithBackButton() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.STAY_BUTTON)
++
++        device.pressBack()
++
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_ROOM)
++    }
++
++    @Test
++    fun testExitWaitingRoom_VerifyCleanupAfterLeave() {
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE, timeoutMillis = 10000)
++
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.LEAVE_ROOM)
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/profile/UpdateProfileInformationE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/profile/UpdateProfileInformationE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/UpdateProfileInformationE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368825676)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/UpdateProfileInformationE2ETest.kt	(date 1762368825676)
+@@ -0,0 +1,273 @@
++package com.example.cpen_321.e2e.profile
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForSnackbar
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Update Profile Information Use Case
++ *
++ * Use Case: Update Profile Information
++ *
++ * Main success scenario:
++ * 1. User is on "ProfileConfigScreen" and clicks on "Profile" button
++ * 2. User is brought to "ProfileScreen"
++ * 3. User can change profile picture by clicking on "Change Profile Picture" button
++ * 4. User can change name by clicking on "Name" textfield and typing the updated name
++ * 5. User can change bio by clicking on "Bio" textfield and typing the updated bio
++ * 6. User can change phone number by clicking on "Phone Number" textfield and typing updated number
++ * 7. User presses "Save Profile" button to save profile
++ * 8. The screen refreshes and "Settings updated successfully" message is printed
++ *
++ * Failure scenarios:
++ * 6. Phone number entered is less than 10 digits
++ *    6.a.1 The screen prints an error message "Phone number must be at least 10 digits"
++ *    6.a.2 User is prompted to enter phone number again
++ * 8. Internet connection error
++ *    8.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class UpdateProfileInformationE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToProfileScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToProfileScreen() {
++        composeTestRule.waitForText("Welcome", substring = true, timeoutMillis = 5000)
++
++        composeTestRule.onAllNodesWithContentDescription("Profile", useUnmergedTree = true)
++            .onLast()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.PROFILE_BUTTON, timeoutMillis = 3000)
++        composeTestRule.clickButton(ScreenObjects.PROFILE_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.CHANGE_PROFILE_PICTURE, timeoutMillis = 3000)
++    }
++
++    @Test
++    fun testUpdateProfileInformation_MainSuccessScenario() {
++        composeTestRule.onNodeWithText(ScreenObjects.CHANGE_PROFILE_PICTURE)
++            .assertExists()
++
++        composeTestRule.onAllNodes(
++            hasText(ScreenObjects.NAME_LABEL),
++            useUnmergedTree = true
++        ).onFirst().assertExists()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Jane Smith")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Updated bio content")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("7781234567")
++
++        composeTestRule.onAllNodes(
++            hasText(ScreenObjects.PHONE_ERROR_MIN),
++            useUnmergedTree = true
++        ).assertCountEquals(0)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsEnabled()
++            .performClick()
++
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED, timeoutMillis = 10000)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testUpdateProfileInformation_InvalidPhoneNumber() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Test User")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("12345")
++
++        composeTestRule.waitForText(ScreenObjects.PHONE_ERROR_MIN, timeoutMillis = 3000)
++        composeTestRule.assertTextExists(ScreenObjects.PHONE_ERROR_MIN)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsNotEnabled()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("7781234567")
++
++        Thread.sleep(500)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsEnabled()
++            .performClick()
++
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testUpdateProfileInformation_PhoneNumberNonNumeric() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("123abc456")
++
++        composeTestRule.waitForText(ScreenObjects.PHONE_ERROR_MIN, timeoutMillis = 3000)
++    }
++
++    @Test
++    fun testUpdateProfileInformation_ConnectionError() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Updated Name")
++
++        device.enableAirplaneMode()
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testUpdateProfileInformation_OnlyUpdateSingleField() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Just updated the bio")
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .performClick()
++
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testUpdateProfileInformation_GoBackWithoutSaving() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Unsaved Name")
++
++        composeTestRule.clickButton(ScreenObjects.GO_BACK)
++
++        composeTestRule.waitForText(ScreenObjects.PROFILE_BUTTON)
++        composeTestRule.assertTextExists(ScreenObjects.PREFERENCES_BUTTON)
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/JoinWaitingRoomE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/JoinWaitingRoomE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/JoinWaitingRoomE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368902896)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/matchmaking/JoinWaitingRoomE2ETest.kt	(date 1762368902896)
+@@ -0,0 +1,254 @@
++package com.example.cpen_321.e2e.matchmaking
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import androidx.compose.ui.semantics.ProgressBarRangeInfo
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Request Matches (Join Waiting Room) Use Case
++ *
++ * Use Case: Request Matches (Join Waiting Room)
++ *
++ * Main success scenario:
++ * 1. User is on "HomeScreen" and clicks on "Start Matchmaking" button
++ * 2. User is brought into "WaitingRoomScreen" which shows current users and timer
++ * 3. If max number of users has joined or waiting room timer ends and minimum number
++ *    of users have joined, screen takes user to GroupScreen
++ *
++ * Failure scenarios:
++ * User has not set preferences
++ *    1.a.1 User is brought to "PreferencesScreen" and must set their preferences
++ *    1.a.2 Once preferences are set, user is taken to "HomeScreen" and can restart matchmaking
++ * Internet connection error
++ *    2.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ * Number of users joined was not enough or timer expired before users joined
++ *    3.a.1 Users can restart matchmaking by leaving waiting room
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class JoinWaitingRoomE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToHomeScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToHomeScreen() {
++        composeTestRule.waitForText(ScreenObjects.WELCOME_PREFIX, timeoutMillis = 5000)
++    }
++
++    @Test
++    fun testJoinWaitingRoom_MainSuccessScenario() {
++        composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE, timeoutMillis = 10000)
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.FINDING_GROUP)
++
++        composeTestRule.onNode(
++            hasContentDescription(ScreenObjects.TIMER_DESCRIPTION) or
++                    hasText(ScreenObjects.TIME_REMAINING, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNode(
++            hasContentDescription(ScreenObjects.DEFAULT_AVATAR_DESCRIPTION) or
++                    hasContentDescription(ScreenObjects.PROFILE_PICTURE_DESCRIPTION),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onNodeWithText(
++            ScreenObjects.MEMBERS_IN_ROOM,
++            substring = true,
++            useUnmergedTree = true
++        ).assertExists()
++
++        val groupReadyAppeared = try {
++            composeTestRule.waitForText(ScreenObjects.GROUP_READY, timeoutMillis = 60000)
++            true
++        } catch (e: Exception) {
++            false
++        }
++
++        if (groupReadyAppeared) {
++            composeTestRule.assertTextExists(ScreenObjects.GROUP_READY)
++            composeTestRule.assertTextExists(ScreenObjects.PREPARING_GROUP)
++
++            composeTestRule.waitForText(
++                ScreenObjects.VOTE_RESTAURANT_TITLE,
++                timeoutMillis = 10000
++            )
++        } else {
++            android.util.Log.d("E2E_Test",
++                "Group formation requires multi-device setup or backend simulation")
++        }
++    }
++
++    @Test
++    fun testJoinWaitingRoom_PreferencesNotSet() {
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++
++        val onPreferencesScreen = try {
++            composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE, timeoutMillis = 5000)
++            true
++        } catch (e: Exception) {
++            false
++        }
++
++        if (onPreferencesScreen) {
++            composeTestRule.assertTextExists(ScreenObjects.PREFERENCES_TITLE)
++
++            composeTestRule.clickButton(ScreenObjects.SUSHI)
++            composeTestRule.clickButton(ScreenObjects.ITALIAN)
++
++            composeTestRule.onAllNodes(
++                hasProgressBarRangeInfo(ProgressBarRangeInfo(current = 0f, range = 0f..200f)),
++                useUnmergedTree = true
++            ).onFirst().performTouchInput {
++                swipeRight(startX = 0f, endX = width.toFloat() * 0.5f)
++            }
++
++            composeTestRule.clickButton(ScreenObjects.SAVE_PREFERENCES)
++
++            composeTestRule.waitForText(ScreenObjects.WELCOME_PREFIX, timeoutMillis = 10000)
++            composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++
++            composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++            composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++            composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        } else {
++            composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++        }
++    }
++
++    @Test
++    fun testJoinWaitingRoom_InternetConnectionError() {
++        device.enableAirplaneMode()
++
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING, timeoutMillis = 5000)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testJoinWaitingRoom_NotEnoughUsers() {
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++
++        val timerExpired = try {
++            composeTestRule.waitForText(
++                ScreenObjects.UNABLE_TO_CREATE_GROUP,
++                timeoutMillis = 35000
++            )
++            true
++        } catch (e: Exception) {
++            false
++        }
++
++        if (timerExpired) {
++            composeTestRule.assertTextExists(ScreenObjects.UNABLE_TO_CREATE_GROUP)
++            composeTestRule.assertTextExists(ScreenObjects.TIMER_EXPIRED, substring = true)
++
++            composeTestRule.clickButton(ScreenObjects.TRY_AGAIN)
++
++            composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++            composeTestRule.assertTextExists(ScreenObjects.START_MATCHMAKING)
++        } else {
++            android.util.Log.d("E2E_Test",
++                "Timer expiration test requires backend configuration or longer wait")
++        }
++    }
++
++    @Test
++    fun testJoinWaitingRoom_VerifyTimerCountdown() {
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++
++        val initialTimerExists = composeTestRule.onAllNodes(
++            hasText(":", substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isNotEmpty()
++
++        assert(initialTimerExists) { "Timer should be displayed" }
++
++        Thread.sleep(3000)
++
++        val timerStillExists = composeTestRule.onAllNodes(
++            hasText(":", substring = true),
++            useUnmergedTree = true
++        ).fetchSemanticsNodes().isNotEmpty()
++
++        assert(timerStillExists) { "Timer should still be counting" }
++    }
++
++    @Test
++    fun testJoinWaitingRoom_MultipleAttempts() {
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.LEAVE_ROOM)
++
++        composeTestRule.waitForText(ScreenObjects.LEAVE_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.LEAVE_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.START_MATCHMAKING)
++
++        composeTestRule.clickButton(ScreenObjects.START_MATCHMAKING)
++        composeTestRule.waitForText(ScreenObjects.WAITING_ROOM_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.WAITING_ROOM_TITLE)
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestSetup.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestSetup.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestSetup.kt
+new file mode 100644
+--- /dev/null	(date 1762306010790)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestSetup.kt	(date 1762306010790)
+@@ -0,0 +1,257 @@
++package com.example.cpen_321.e2e.utils
++
++import android.content.Context
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import androidx.compose.ui.test.junit4.ComposeTestRule
++import androidx.compose.ui.test.*
++
++/**
++ * Common test setup and utilities for E2E tests
++ */
++object TestSetup {
++
++    /**
++     * Get application context
++     */
++    fun getContext(): Context {
++        return InstrumentationRegistry.getInstrumentation().targetContext
++    }
++
++    /**
++     * Get instrumentation
++     */
++    fun getInstrumentation() = InstrumentationRegistry.getInstrumentation()
++
++    /**
++     * Get UiDevice instance
++     */
++    fun getDevice(): UiDevice {
++        return UiDevice.getInstance(getInstrumentation())
++    }
++
++    /**
++     * Package name for the app under test
++     */
++    const val PACKAGE_NAME = "com.example.cpen_321"
++
++    /**
++     * Default timeout for operations (milliseconds)
++     */
++    const val DEFAULT_TIMEOUT = 5000L
++
++    /**
++     * Long timeout for network operations (milliseconds)
++     */
++    const val NETWORK_TIMEOUT = 15000L
++
++    /**
++     * Timeout for waiting room operations (milliseconds)
++     */
++    const val WAITING_ROOM_TIMEOUT = 35000L
++
++    /**
++     * Setup function to run before each test
++     */
++    fun beforeEachTest(device: UiDevice) {
++        // Ensure network is enabled
++        device.executeShellCommand("cmd connectivity airplane-mode disable")
++        Thread.sleep(2000)
++
++        // Wake up device
++        if (!device.isScreenOn) {
++            device.wakeUp()
++        }
++
++        // Unlock device if locked (swipe up)
++        if (!device.isScreenOn) {
++            device.wakeUp()
++            device.waitForIdle()
++            device.swipe(
++                device.displayWidth / 2,
++                device.displayHeight - 100,
++                device.displayWidth / 2,
++                100,
++                10
++            )
++        }
++
++        // Wait for device to be idle
++        device.waitForIdle()
++    }
++
++    /**
++     * Cleanup function to run after each test
++     */
++    fun afterEachTest(device: UiDevice) {
++        // Restore network
++        device.executeShellCommand("cmd connectivity airplane-mode disable")
++
++        // Clear any dialogs by pressing back multiple times
++        repeat(3) {
++            try {
++                device.pressBack()
++                Thread.sleep(300)
++            } catch (e: Exception) {
++                // Ignore
++            }
++        }
++
++        // Return to home screen
++        device.pressHome()
++        device.waitForIdle()
++    }
++
++    /**
++     * Grant all necessary permissions for the app
++     */
++    fun grantAllPermissions(device: UiDevice) {
++        val permissions = listOf(
++            "android.permission.ACCESS_FINE_LOCATION",
++            "android.permission.ACCESS_COARSE_LOCATION",
++            "android.permission.READ_EXTERNAL_STORAGE",
++            "android.permission.WRITE_EXTERNAL_STORAGE",
++            "android.permission.CAMERA"
++        )
++
++        permissions.forEach { permission ->
++            try {
++                device.executeShellCommand("pm grant $PACKAGE_NAME $permission")
++            } catch (e: Exception) {
++                android.util.Log.w("TestSetup", "Could not grant permission: $permission")
++            }
++        }
++
++        Thread.sleep(1000)
++    }
++
++    /**
++     * Revoke all permissions for the app
++     */
++    fun revokeAllPermissions(device: UiDevice) {
++        val permissions = listOf(
++            "android.permission.ACCESS_FINE_LOCATION",
++            "android.permission.ACCESS_COARSE_LOCATION",
++            "android.permission.READ_EXTERNAL_STORAGE",
++            "android.permission.WRITE_EXTERNAL_STORAGE",
++            "android.permission.CAMERA"
++        )
++
++        permissions.forEach { permission ->
++            try {
++                device.executeShellCommand("pm revoke $PACKAGE_NAME $permission")
++            } catch (e: Exception) {
++                android.util.Log.w("TestSetup", "Could not revoke permission: $permission")
++            }
++        }
++
++        Thread.sleep(1000)
++    }
++
++    /**
++     * Clear app data (use with caution - will reset app state)
++     */
++    fun clearAppData(device: UiDevice) {
++        device.executeShellCommand("pm clear $PACKAGE_NAME")
++        Thread.sleep(2000)
++    }
++
++    /**
++     * Force stop the app
++     */
++    fun forceStopApp(device: UiDevice) {
++        device.executeShellCommand("am force-stop $PACKAGE_NAME")
++        Thread.sleep(1000)
++    }
++
++    /**
++     * Launch the app
++     */
++    fun launchApp(device: UiDevice) {
++        val context = getContext()
++        val intent = context.packageManager.getLaunchIntentForPackage(PACKAGE_NAME)
++        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
++        context.startActivity(intent)
++        device.wait(
++            androidx.test.uiautomator.Until.hasObject(
++                androidx.test.uiautomator.By.pkg(PACKAGE_NAME)
++            ),
++            DEFAULT_TIMEOUT
++        )
++    }
++
++    /**
++     * Take a screenshot (for debugging failed tests)
++     */
++    fun takeScreenshot(device: UiDevice, testName: String) {
++        val screenshotFile = java.io.File(
++            getContext().getExternalFilesDir(null),
++            "screenshots/$testName-${System.currentTimeMillis()}.png"
++        )
++        screenshotFile.parentFile?.mkdirs()
++        device.takeScreenshot(screenshotFile)
++        android.util.Log.d("TestSetup", "Screenshot saved: ${screenshotFile.absolutePath}")
++    }
++
++    /**
++     * Check if app is in foreground
++     */
++    fun isAppInForeground(device: UiDevice): Boolean {
++        return device.currentPackageName == PACKAGE_NAME
++    }
++
++    /**
++     * Wait for app to be in foreground
++     */
++    fun waitForAppInForeground(device: UiDevice, timeoutMillis: Long = DEFAULT_TIMEOUT): Boolean {
++        return device.wait(
++            androidx.test.uiautomator.Until.hasObject(
++                androidx.test.uiautomator.By.pkg(PACKAGE_NAME)
++            ),
++            timeoutMillis
++        )
++    }
++
++
++    /**
++     * Check if user is authenticated
++     * @return true if on home screen (authenticated), false if on auth screen
++     */
++    fun isUserAuthenticated(composeTestRule: ComposeTestRule): Boolean {
++        return try {
++            // Wait briefly for screen to load
++            composeTestRule.waitUntil(timeoutMillis = 3000) {
++                composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                    .fetchSemanticsNodes().isNotEmpty() ||
++                        composeTestRule.onAllNodesWithText("Welcome to", substring = true)
++                            .fetchSemanticsNodes().isNotEmpty()
++            }
++
++            // Check if we're on home screen
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        } catch (e: Exception) {
++            false
++        }
++    }
++
++    /**
++     * Skip test if user is not authenticated
++     */
++    fun requireAuthentication(composeTestRule: ComposeTestRule) {
++        val isAuthenticated = isUserAuthenticated(composeTestRule)
++        org.junit.Assume.assumeTrue(
++            """
++            ❌ TEST SKIPPED: User not authenticated
++            
++            To run this test:
++            1. Run: ./gradlew installDebug
++            2. Open app on emulator
++            3. Login with Google
++            4. Keep app installed
++            5. Run: ./gradlew connectedDebugAndroidTest
++            """.trimIndent(),
++            isAuthenticated
++        )
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestHelpers.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestHelpers.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestHelpers.kt
+new file mode 100644
+--- /dev/null	(date 1762319101362)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/utils/TestHelpers.kt	(date 1762319101362)
+@@ -0,0 +1,124 @@
++package com.example.cpen_321.e2e.utils
++
++import androidx.compose.ui.semantics.ProgressBarRangeInfo
++import androidx.compose.ui.semantics.SemanticsProperties
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.ComposeTestRule
++import androidx.test.uiautomator.UiDevice
++
++/**
++ * Test helper functions for E2E tests
++ */
++object TestHelpers {
++
++    /**
++     * Wait for text to appear on screen
++     */
++    fun ComposeTestRule.waitForText(
++        text: String,
++        timeoutMillis: Long = 5000,
++        substring: Boolean = true
++    ) {
++        waitUntil(timeoutMillis) {
++            onAllNodesWithText(text, substring = substring, ignoreCase = true, useUnmergedTree = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++    }
++
++    /**
++     * Assert text exists on screen
++     */
++    fun ComposeTestRule.assertTextExists(text: String, substring: Boolean = true) {
++        onNodeWithText(text, substring = substring, ignoreCase = true, useUnmergedTree = true)
++            .assertExists()
++    }
++
++    /**
++     * Click button with text - UPDATED to be more robust
++     */
++    fun ComposeTestRule.clickButton(text: String) {
++        // Wait for button to exist
++        waitUntil(timeoutMillis = 5000) {
++            onAllNodesWithText(text, substring = true, useUnmergedTree = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        // Click it
++        onNodeWithText(text, substring = true, useUnmergedTree = true)
++            .assertIsDisplayed()
++            .assertHasClickAction()
++            .performClick()
++    }
++
++    /**
++     * Grant location permission via ADB
++     */
++    fun UiDevice.grantLocationPermission(packageName: String) {
++        executeShellCommand(
++            "pm grant $packageName android.permission.ACCESS_FINE_LOCATION"
++        )
++        executeShellCommand(
++            "pm grant $packageName android.permission.ACCESS_COARSE_LOCATION"
++        )
++    }
++
++    /**
++     * Revoke location permission via ADB
++     */
++    fun UiDevice.revokeLocationPermission(packageName: String) {
++        executeShellCommand(
++            "pm revoke $packageName android.permission.ACCESS_FINE_LOCATION"
++        )
++        executeShellCommand(
++            "pm revoke $packageName android.permission.ACCESS_COARSE_LOCATION"
++        )
++    }
++
++    /**
++     * Enable airplane mode to simulate network error
++     */
++    fun UiDevice.enableAirplaneMode() {
++        executeShellCommand("cmd connectivity airplane-mode enable")
++        Thread.sleep(1000)
++    }
++
++    /**
++     * Disable airplane mode
++     */
++    fun UiDevice.disableAirplaneMode() {
++        executeShellCommand("cmd connectivity airplane-mode disable")
++        Thread.sleep(2000)
++    }
++
++    /**
++     * Wait for snackbar message
++     */
++    fun ComposeTestRule.waitForSnackbar(message: String, timeoutMillis: Long = 5000) {
++        waitForText(message, timeoutMillis)
++    }
++
++    /**
++     * Verify loading indicator exists
++     */
++    fun ComposeTestRule.assertLoadingExists() {
++        onNode(
++            hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate),
++            useUnmergedTree = true
++        ).assertExists()
++    }
++
++    /**
++     * Click slider and adjust value
++     */
++    fun ComposeTestRule.adjustSlider(contentDescription: String, percentage: Float) {
++        onNodeWithContentDescription(contentDescription, useUnmergedTree = true)
++            .performTouchInput {
++                val width = this.width.toFloat()
++                val targetX = width * percentage
++                val centerY = this.height.toFloat() / 2
++                down(1, androidx.compose.ui.geometry.Offset(0f, centerY))
++                moveTo(1, androidx.compose.ui.geometry.Offset(targetX, centerY))
++                up(1)
++            }
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/profile/SetPreferencesE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/profile/SetPreferencesE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/SetPreferencesE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368781802)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/SetPreferencesE2ETest.kt	(date 1762368781802)
+@@ -0,0 +1,208 @@
++package com.example.cpen_321.e2e.profile
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForSnackbar
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import androidx.compose.ui.semantics.ProgressBarRangeInfo
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Set Preferences Use Case
++ *
++ * Tests the main success scenario and failure scenarios according to:
++ * Feature: Profile Creation
++ * Use Case: Set Preferences
++ *
++ * Main success scenario:
++ * 1. User is on "ProfileConfigScreen" and clicks on "Preferences" button
++ * 2. User is brought into "PreferencesScreen"
++ * 3. User selects 0 or more preferences
++ * 4. User drags "Max amount of money to spend" scrollbar to desired amount
++ * 5. User drags "Search radius" scrollbar to desired amount
++ * 6. User clicks "Save Preferences" to save preferences
++ * 7. The screen refreshes and "Settings updated successfully" message is printed
++ *
++ * Failure scenarios:
++ * 7. Internet connection error
++ *    7.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class SetPreferencesE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToProfileConfig()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToProfileConfig() {
++        composeTestRule.waitForText("Welcome", substring = true, timeoutMillis = 5000)
++
++        composeTestRule.onAllNodesWithContentDescription("Profile", useUnmergedTree = true)
++            .onLast()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.PROFILE_BUTTON, timeoutMillis = 3000)
++    }
++
++    @Test
++    fun testSetPreferences_MainSuccessScenario() {
++        composeTestRule.assertTextExists(ScreenObjects.PREFERENCES_BUTTON)
++        composeTestRule.clickButton(ScreenObjects.PREFERENCES_BUTTON)
++
++        composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE)
++        composeTestRule.assertTextExists(ScreenObjects.PREFERENCES_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.SUSHI)
++        composeTestRule.clickButton(ScreenObjects.ITALIAN)
++        composeTestRule.clickButton(ScreenObjects.PIZZA)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SUSHI, useUnmergedTree = true)
++            .assertExists()
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.MAX_MONEY_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onAllNodes(
++            hasProgressBarRangeInfo(ProgressBarRangeInfo(current = 0f, range = 0f..200f)),
++            useUnmergedTree = true
++        ).onFirst()
++            .performTouchInput {
++                val width = this.width.toFloat()
++                val targetX = width * 0.375f
++                swipeRight(startX = 0f, endX = targetX)
++            }
++
++        composeTestRule.onNode(
++            hasText(ScreenObjects.SEARCH_RADIUS_PREFIX, substring = true),
++            useUnmergedTree = true
++        ).assertExists()
++
++        composeTestRule.onAllNodes(
++            hasProgressBarRangeInfo(ProgressBarRangeInfo(current = 0f, range = 1f..50f)),
++            useUnmergedTree = true
++        ).onFirst()
++            .performTouchInput {
++                val width = this.width.toFloat()
++                val targetX = width * 0.5f
++                swipeRight(startX = 0f, endX = targetX)
++            }
++
++        composeTestRule.clickButton(ScreenObjects.SAVE_PREFERENCES)
++
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED, timeoutMillis = 10000)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testSetPreferences_WithZeroSelections() {
++        composeTestRule.clickButton(ScreenObjects.PREFERENCES_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE)
++
++        composeTestRule.onAllNodes(
++            hasProgressBarRangeInfo(ProgressBarRangeInfo(current = 0f, range = 0f..200f)),
++            useUnmergedTree = true
++        ).onFirst()
++            .performTouchInput { swipeRight(startX = 0f, endX = width.toFloat() * 0.5f) }
++
++        composeTestRule.clickButton(ScreenObjects.SAVE_PREFERENCES)
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testSetPreferences_InternetConnectionError() {
++        composeTestRule.clickButton(ScreenObjects.PREFERENCES_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.SUSHI)
++        composeTestRule.clickButton(ScreenObjects.KOREAN)
++
++        device.enableAirplaneMode()
++
++        composeTestRule.clickButton(ScreenObjects.SAVE_PREFERENCES)
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++
++    @Test
++    fun testSetPreferences_SelectAndDeselectPreferences() {
++        composeTestRule.clickButton(ScreenObjects.PREFERENCES_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.SUSHI)
++        composeTestRule.clickButton(ScreenObjects.ITALIAN)
++        composeTestRule.clickButton(ScreenObjects.JAPANESE)
++        composeTestRule.clickButton(ScreenObjects.CHINESE)
++
++        composeTestRule.clickButton(ScreenObjects.ITALIAN)
++        composeTestRule.clickButton(ScreenObjects.CHINESE)
++
++        composeTestRule.clickButton(ScreenObjects.SAVE_PREFERENCES)
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testSetPreferences_GoBackWithoutSaving() {
++        composeTestRule.clickButton(ScreenObjects.PREFERENCES_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.PREFERENCES_TITLE)
++
++        composeTestRule.clickButton(ScreenObjects.PIZZA)
++        composeTestRule.clickButton(ScreenObjects.GO_BACK)
++
++        composeTestRule.waitForText(ScreenObjects.PROFILE_BUTTON)
++        composeTestRule.assertTextExists(ScreenObjects.PREFERENCES_BUTTON)
++    }
++}
+\ No newline at end of file
+Index: app/src/androidTest/java/com/example/cpen_321/e2e/profile/AddProfileInformationE2ETest.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/androidTest/java/com/example/cpen_321/e2e/profile/AddProfileInformationE2ETest.kt b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/AddProfileInformationE2ETest.kt
+new file mode 100644
+--- /dev/null	(date 1762368201666)
++++ b/app/src/androidTest/java/com/example/cpen_321/e2e/profile/AddProfileInformationE2ETest.kt	(date 1762368201666)
+@@ -0,0 +1,199 @@
++package com.example.cpen_321.e2e.profile
++
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createAndroidComposeRule
++import androidx.test.ext.junit.runners.AndroidJUnit4
++import androidx.test.platform.app.InstrumentationRegistry
++import androidx.test.uiautomator.UiDevice
++import com.example.cpen_321.MainActivity
++import com.example.cpen_321.e2e.utils.ScreenObjects
++import com.example.cpen_321.e2e.utils.TestHelpers.assertTextExists
++import com.example.cpen_321.e2e.utils.TestHelpers.clickButton
++import com.example.cpen_321.e2e.utils.TestHelpers.disableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.enableAirplaneMode
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForSnackbar
++import com.example.cpen_321.e2e.utils.TestHelpers.waitForText
++import dagger.hilt.android.testing.HiltAndroidRule
++import dagger.hilt.android.testing.HiltAndroidTest
++import org.junit.After
++import org.junit.Before
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++
++/**
++ * E2E Test for Add Profile Information Use Case
++ *
++ * Main success scenario:
++ * 1. User is on "ProfileConfigScreen" and clicks on "Profile" button
++ * 2. User is brought to "ProfileScreen"
++ * 3. User adds profile picture by clicking on "Change Profile Picture" button
++ * 4. User adds name by clicking on "Name" textfield and typing the updated name
++ * 5. User adds bio by clicking on "Bio" textfield and typing the updated bio
++ * 6. User adds phone number by clicking on "Phone Number" textfield and typing the updated phone number
++ * 7. User presses "Save Profile" button to save profile
++ * 8. The screen refreshes and "Settings updated successfully" message is printed
++ *
++ * Failure scenarios:
++ * 6. Phone number entered is less than 10 digits
++ *    6.a.1 The screen prints an error message "Phone number must be at least 10 digits"
++ *    6.a.2 User is prompted to enter phone number again
++ * 8. Internet connection error
++ *    8.a.1 Screen is waiting for response, user is prompted to try again at a later time
++ */
++@HiltAndroidTest
++@RunWith(AndroidJUnit4::class)
++class AddProfileInformationE2ETest {
++
++    @get:Rule(order = 0)
++    val hiltRule = HiltAndroidRule(this)
++
++    @get:Rule(order = 1)
++    val composeTestRule = createAndroidComposeRule<MainActivity>()
++
++    private lateinit var device: UiDevice
++
++    @Before
++    fun setup() {
++        hiltRule.inject()
++        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
++        device.disableAirplaneMode()
++
++        // Wait for home screen
++        composeTestRule.waitUntil(timeoutMillis = 10000) {
++            composeTestRule.onAllNodesWithText("Start Matchmaking", substring = true)
++                .fetchSemanticsNodes().isNotEmpty()
++        }
++
++        navigateToProfileScreen()
++    }
++
++    @After
++    fun tearDown() {
++        device.disableAirplaneMode()
++
++        // Navigate home
++        try {
++            composeTestRule.onNodeWithContentDescription("Home").performClick()
++            composeTestRule.waitForIdle()
++        } catch (e: Exception) {
++            // Already at home
++        }
++    }
++
++    private fun navigateToProfileScreen() {
++        composeTestRule.waitForText("Welcome", substring = true, timeoutMillis = 5000)
++
++        composeTestRule.onAllNodesWithContentDescription("Profile", useUnmergedTree = true)
++            .onLast()
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.PROFILE_BUTTON, timeoutMillis = 3000)
++        composeTestRule.clickButton(ScreenObjects.PROFILE_BUTTON)
++        composeTestRule.waitForText(ScreenObjects.CHANGE_PROFILE_PICTURE, timeoutMillis = 3000)
++    }
++
++    @Test
++    fun testAddProfileInformation_MainSuccessScenario() {
++        composeTestRule.onNodeWithText(ScreenObjects.CHANGE_PROFILE_PICTURE)
++            .assertExists()
++            .performClick()
++
++        Thread.sleep(500)
++        device.pressBack()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("John Doe")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.BIO_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Food enthusiast and social eater")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("6041234567")
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsEnabled()
++            .performClick()
++
++        composeTestRule.waitForSnackbar(ScreenObjects.SETTINGS_UPDATED, timeoutMillis = 10000)
++        composeTestRule.assertTextExists(ScreenObjects.SETTINGS_UPDATED)
++    }
++
++    @Test
++    fun testAddProfileInformation_InvalidPhoneNumber() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Test User")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("123")
++
++        composeTestRule.waitForText(ScreenObjects.PHONE_ERROR_MIN, timeoutMillis = 3000)
++        composeTestRule.assertTextExists(ScreenObjects.PHONE_ERROR_MIN)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsNotEnabled()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextClearance()
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("6041234567")
++
++        Thread.sleep(500)
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .assertIsEnabled()
++    }
++
++    @Test
++    fun testAddProfileInformation_ConnectionError() {
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.NAME_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("Test User")
++
++        composeTestRule.onNode(
++            hasSetTextAction() and hasAnyAncestor(hasText(ScreenObjects.PHONE_NUMBER_LABEL)),
++            useUnmergedTree = true
++        ).performTextInput("6041234567")
++
++        device.enableAirplaneMode()
++
++        composeTestRule.onNodeWithText(ScreenObjects.SAVE_PROFILE)
++            .performClick()
++
++        composeTestRule.waitForText(ScreenObjects.CONNECTION_ERROR, timeoutMillis = 15000)
++        composeTestRule.assertTextExists(ScreenObjects.CONNECTION_ERROR)
++
++        device.disableAirplaneMode()
++    }
++}
+\ No newline at end of file

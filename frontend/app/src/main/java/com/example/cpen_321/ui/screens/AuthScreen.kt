@@ -1,5 +1,6 @@
 package com.example.cpen_321.ui.screens
 
+import android.content.Context
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -24,6 +25,7 @@ import com.example.cpen_321.ui.viewmodels.AuthViewModel
 import com.example.cpen_321.ui.viewmodels.AuthState
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -65,6 +67,24 @@ fun AuthScreen(
     }
 
     // Main Content with beige background
+    AuthScreenMainContent ( viewModel = viewModel,
+                            snackBarHostState = snackBarHostState,
+                            isLoading = isLoading,
+                            context = context)
+
+    // Error Alert Dialog
+    AuthScreenErrorHandle(viewModel = viewModel, errorMessage = errorMessage)
+}
+
+// =================== AuthScreen Helpers ===============
+
+@Composable
+fun AuthScreenMainContent(
+    viewModel: AuthViewModel = hiltViewModel(),
+    snackBarHostState: SnackbarHostState,
+    isLoading: Boolean,
+    context: Context
+) {
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackBarHostState) }
     ) { paddingValues ->
@@ -128,8 +148,14 @@ fun AuthScreen(
             }
         }
     }
+}
 
-    // Error Alert Dialog
+@Composable
+fun AuthScreenErrorHandle(
+    viewModel: AuthViewModel = hiltViewModel(),
+    errorMessage: String?
+) {
+
     errorMessage?.let { message ->
         Dialog(onDismissRequest = { viewModel.clearError() }) {
             Card(

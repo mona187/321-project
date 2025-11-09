@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.cpen_321.data.model.Group
 import com.example.cpen_321.data.model.GroupMember
 import com.example.cpen_321.data.model.Restaurant
-import com.example.cpen_321.data.model.UserProfile
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.repository.GroupRepository
 import com.example.cpen_321.data.repository.UserRepository
@@ -15,21 +14,21 @@ import com.example.cpen_321.utils.JsonUtils.getJSONObjectSafe
 import com.example.cpen_321.utils.JsonUtils.getStringSafe
 import com.example.cpen_321.utils.SocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import javax.inject.Inject
 
-/**
- * ViewModel for group management and voting
- */
+/** ViewModel for group management and voting */
 @HiltViewModel
-class GroupViewModel @Inject constructor(
-    private val groupRepository: GroupRepository,
-    private val userRepository: UserRepository,
-    private val socketManager: SocketManager
+class GroupViewModel
+@Inject
+constructor(
+        private val groupRepository: GroupRepository,
+        private val userRepository: UserRepository,
+        private val socketManager: SocketManager
 ) : ViewModel() {
 
     // Current group
@@ -72,25 +71,15 @@ class GroupViewModel @Inject constructor(
         setupSocketListeners()
     }
 
-
     private fun setupSocketListeners() {
-        socketManager.onVoteUpdate { data ->
-            handleVoteUpdate(data)
-        }
+        socketManager.onVoteUpdate { data -> handleVoteUpdate(data) }
 
-        socketManager.onRestaurantSelected { data ->
-            handleRestaurantSelected(data)
-        }
+        socketManager.onRestaurantSelected { data -> handleRestaurantSelected(data) }
 
-        socketManager.onMemberLeft { data ->
-            handleMemberLeft(data)
-        }
+        socketManager.onMemberLeft { data -> handleMemberLeft(data) }
     }
 
-    /**
-     * Load group status
-     * UPDATED: Properly handles 404 "Not in a group" as a normal state
-     */
+    /** Load group status UPDATED: Properly handles 404 "Not in a group" as a normal state */
     fun loadGroupStatus() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -102,9 +91,7 @@ class GroupViewModel @Inject constructor(
                     _currentGroup.value = group
 
                     // Subscribe to group updates via socket
-                    group.groupId?.let { groupId ->
-                        socketManager.subscribeToGroup(groupId)
-                    }
+                    group.groupId?.let { groupId -> socketManager.subscribeToGroup(groupId) }
 
                     // Load group members
                     loadGroupMembers(group.getAllMembers())
@@ -121,7 +108,9 @@ class GroupViewModel @Inject constructor(
                 is ApiResult.Error -> {
                     // IMPORTANT: Check if this is a 404 "not in group" error
                     // If so, treat it as a normal state, not an error
-                    if (result.code == 404 && result.message.contains("not in a group", ignoreCase = true)) {
+                    if (result.code == 404 &&
+                                    result.message.contains("not in a group", ignoreCase = true)
+                    ) {
                         // User is not in a group - this is a normal state, not an error
                         _currentGroup.value = null
                         clearGroupState()
@@ -140,87 +129,84 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Vote for a restaurant
-     */
+    /** Vote for a restaurant */
     // GroupViewModel.kt - Add detailed logging in voteForRestaurant
     fun voteForRestaurant(restaurantId: String, restaurant: Restaurant) {
         viewModelScope.launch {
             val groupId = _currentGroup.value?.groupId
             if (groupId == null) {
                 Log.e("VoteDebug", "ERROR: groupId is null!")
-                return@launch
-            }
+            } else {
+                _isLoading.value = true
+                _errorMessage.value = null
 
-            _isLoading.value = true
-            _errorMessage.value = null
+                when (val result =
+                                groupRepository.voteForRestaurant(groupId, restaurantId, restaurant)
+                ) {
+                    is ApiResult.Success -> {
+                        Log.d("VoteDebug", "✅ Vote API Success")
+                        Log.d("VoteDebug", "Returned votes: ${result.data}")
 
-            when (val result = groupRepository.voteForRestaurant(groupId, restaurantId, restaurant)) {
-                is ApiResult.Success -> {
-                    Log.d("VoteDebug", "✅ Vote API Success")
-                    Log.d("VoteDebug", "Returned votes: ${result.data}")
+                        // ✅ CRITICAL: Update votes immediately
+                        _currentVotes.value = result.data
+                        _userVote.value = restaurantId
 
-                    // ✅ CRITICAL: Update votes immediately
-                    _currentVotes.value = result.data
-                    _userVote.value = restaurantId
+                        // ✅ Force UI update by creating new map instance
+                        _currentVotes.value = result.data.toMap()
 
-                    // ✅ Force UI update by creating new map instance
-                    _currentVotes.value = result.data.toMap()
+                        _successMessage.value = "Vote submitted successfully"
 
-                    _successMessage.value = "Vote submitted successfully"
-
-                    // ✅ Don't call loadGroupStatus() here - it causes race condition
-                    // The socket event will update other users
-                    // loadGroupStatus()  // ← REMOVE THIS
+                        // ✅ Don't call loadGroupStatus() here - it causes race condition
+                        // The socket event will update other users
+                        // loadGroupStatus()  // ← REMOVE THIS
+                    }
+                    is ApiResult.Error -> {
+                        Log.e("VoteDebug", "❌ Vote API Error: ${result.message}")
+                        _errorMessage.value = result.message
+                    }
+                    is ApiResult.Loading -> {}
                 }
-                is ApiResult.Error -> {
-                    Log.e("VoteDebug", "❌ Vote API Error: ${result.message}")
-                    _errorMessage.value = result.message
-                }
-                is ApiResult.Loading -> {}
-            }
 
-            _isLoading.value = false
+                _isLoading.value = false
+            }
         }
     }
 
-    /**
-     * Leave current group
-     */
+    /** Leave current group */
     fun leaveGroup(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val groupId = _currentGroup.value?.groupId ?: return@launch
+            val groupId = _currentGroup.value?.groupId // ?: return@viewScopeLaunch
+            if (groupId == null) {
+                Log.e("LeaveDebug", "groupId is NULL")
+            } else {
+                _isLoading.value = true
 
-            _isLoading.value = true
+                when (val result = groupRepository.leaveGroup(groupId)) {
+                    is ApiResult.Success -> {
+                        // Unsubscribe from group updates
+                        socketManager.unsubscribeFromGroup(groupId)
 
-            when (val result = groupRepository.leaveGroup(groupId)) {
-                is ApiResult.Success -> {
-                    // Unsubscribe from group updates
-                    socketManager.unsubscribeFromGroup(groupId)
+                        // Clear state
+                        clearGroupState()
 
-                    // Clear state
-                    clearGroupState()
+                        _successMessage.value = "Left group successfully"
 
-                    _successMessage.value = "Left group successfully"
-
-                    onSuccess()
+                        onSuccess()
+                    }
+                    is ApiResult.Error -> {
+                        _errorMessage.value = result.message
+                    }
+                    is ApiResult.Loading -> {
+                        // Ignore
+                    }
                 }
-                is ApiResult.Error -> {
-                    _errorMessage.value = result.message
-                }
-                is ApiResult.Loading -> {
-                    // Ignore
-                }
+
+                _isLoading.value = false
             }
-
-            _isLoading.value = false
         }
     }
 
-
-    /**
-     * Subscribe to group socket channel (for external use)
-     */
+    /** Subscribe to group socket channel (for external use) */
     fun subscribeToGroup(groupId: String) {
         Log.d("SocketDebug", "=== SUBSCRIBING TO GROUP ===")
         Log.d("SocketDebug", "groupId: $groupId")
@@ -233,45 +219,43 @@ class GroupViewModel @Inject constructor(
         Log.d("SocketDebug", "Subscription command sent with userId: $userId")
     }
 
-    /**
-     * Unsubscribe from group socket channel (for external use)
-     */
+    /** Unsubscribe from group socket channel (for external use) */
     fun unsubscribeFromGroup(groupId: String) {
         val userId = _currentGroup.value?.members?.firstOrNull()
         socketManager.unsubscribeFromGroup(groupId, userId)
     }
 
-
     private fun loadGroupMembers(memberIds: List<String>) {
         viewModelScope.launch {
-            if (memberIds.isEmpty()) return@launch
+            if (memberIds.isEmpty()) {
+                Log.e("LoadDebug", "memberIds is empty")
+            } else {
 
-            when (val result = userRepository.getUserProfiles(memberIds)) {
-                is ApiResult.Success -> {
-                    val profiles = result.data
-                    val votes = _currentGroup.value?.votes ?: emptyMap()
+                when (val result = userRepository.getUserProfiles(memberIds)) {
+                    is ApiResult.Success -> {
+                        val profiles = result.data
+                        val votes = _currentGroup.value?.votes ?: emptyMap()
 
-                    val members = profiles.map { profile ->
-                        GroupMember(
-                            userId = profile.userId,
-                            name = profile.name,
-                            credibilityScore = 100.0,
-                            phoneNumber = profile.contactNumber,
-                            profilePicture = profile.profilePicture,
-                            hasVoted = votes.containsKey(profile.userId)
-                        )
+                        val members =
+                                profiles.map { profile ->
+                                    GroupMember(
+                                            userId = profile.userId,
+                                            name = profile.name,
+                                            credibilityScore = 100.0,
+                                            phoneNumber = profile.contactNumber,
+                                            profilePicture = profile.profilePicture,
+                                            hasVoted = votes.containsKey(profile.userId)
+                                    )
+                                }
+
+                        _groupMembers.value = members
                     }
-
-                    _groupMembers.value = members
-                }
-                is ApiResult.Error -> {
-                }
-                is ApiResult.Loading -> {
+                    is ApiResult.Error -> {}
+                    is ApiResult.Loading -> {}
                 }
             }
         }
     }
-
 
     private fun handleVoteUpdate(data: JSONObject) {
         Log.d("SocketDebug", "🔔 VOTE_UPDATE EVENT RECEIVED")
@@ -304,7 +288,6 @@ class GroupViewModel @Inject constructor(
         }
     }
 
-
     private fun handleRestaurantSelected(data: JSONObject) {
         viewModelScope.launch {
             android.util.Log.d("GroupViewModel", "═══════════════════════════════════")
@@ -319,11 +302,8 @@ class GroupViewModel @Inject constructor(
             android.util.Log.d("GroupViewModel", "restaurantName: $restaurantName")
             android.util.Log.d("GroupViewModel", "votes: $votes")
 
-            val restaurant = Restaurant(
-                restaurantId = restaurantId,
-                name = restaurantName,
-                location = ""
-            )
+            val restaurant =
+                    Restaurant(restaurantId = restaurantId, name = restaurantName, location = "")
 
             android.util.Log.d("GroupViewModel", "🏪 Created restaurant object: $restaurant")
 
@@ -332,16 +312,13 @@ class GroupViewModel @Inject constructor(
             android.util.Log.d("GroupViewModel", "✅ _selectedRestaurant.value SET!")
             android.util.Log.d("GroupViewModel", "Current value: ${_selectedRestaurant.value}")
 
-            _currentGroup.value = _currentGroup.value?.copy(
-                restaurantSelected = true,
-                restaurant = restaurant
-            )
+            _currentGroup.value =
+                    _currentGroup.value?.copy(restaurantSelected = true, restaurant = restaurant)
 
             _successMessage.value = "Restaurant selected: $restaurantName"
             android.util.Log.d("GroupViewModel", "═══════════════════════════════════")
         }
     }
-
 
     private fun handleMemberLeft(data: JSONObject) {
         viewModelScope.launch {
@@ -349,22 +326,17 @@ class GroupViewModel @Inject constructor(
 
             _groupMembers.value = _groupMembers.value.filter { it.userId != userId }
 
-            _currentGroup.value = _currentGroup.value?.copy(
-                numMembers = _groupMembers.value.size
-            )
+            _currentGroup.value = _currentGroup.value?.copy(numMembers = _groupMembers.value.size)
         }
     }
 
-    /**
-     * Update member vote status
-     */
     private fun updateMemberVoteStatus() {
         val votes = _currentGroup.value?.votes ?: emptyMap()
-        _groupMembers.value = _groupMembers.value.map { member ->
-            member.copy(hasVoted = votes.containsKey(member.userId))
-        }
+        _groupMembers.value =
+                _groupMembers.value.map { member ->
+                    member.copy(hasVoted = votes.containsKey(member.userId))
+                }
     }
-
 
     private fun clearGroupState() {
         _currentGroup.value = null
@@ -375,16 +347,12 @@ class GroupViewModel @Inject constructor(
         _timeRemaining.value = 0L
     }
 
-    /**
-     * Clear error message
-     */
+    /** Clear error message */
     fun clearError() {
         _errorMessage.value = null
     }
 
-    /**
-     * Clear success message
-     */
+    /** Clear success message */
     fun clearSuccess() {
         _successMessage.value = null
     }

@@ -6,6 +6,7 @@ import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.GroupRecommendationsRequest
 import com.example.cpen_321.data.network.dto.LocationDto
 import com.example.cpen_321.data.network.dto.UserPreferenceDto
+import com.example.cpen_321.data.network.safeApiCall
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,120 +27,58 @@ class RestaurantRepositoryImpl : RestaurantRepository {
         cuisineTypes: List<String>?,
         priceLevel: Int?
     ): ApiResult<List<Restaurant>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Convert cuisineTypes list to comma-separated string
-                val cuisineTypesString = cuisineTypes?.joinToString(",")
+        // Convert cuisineTypes list to comma-separated string
+        val cuisineTypesString = cuisineTypes?.joinToString(",")
 
-                val response = restaurantAPI.searchRestaurants(
-                    latitude = latitude,
-                    longitude = longitude,
-                    radius = radius,
-                    cuisineTypes = cuisineTypesString,
-                    priceLevel = priceLevel
-                )
-
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        ApiResult.Success(apiResponse.body)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to search restaurants",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+        val response = safeApiCall(
+            apiCall = {restaurantAPI.searchRestaurants(
+                latitude = latitude,
+                longitude = longitude,
+                radius = radius,
+                cuisineTypes = cuisineTypesString,
+                priceLevel = priceLevel
+            )},
+            customErrorCode = "Failed to search restaurants"
+        )
+        return response;
     }
 
     override suspend fun getRestaurantDetails(restaurantId: String): ApiResult<Restaurant> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = restaurantAPI.getRestaurantDetails(restaurantId)
 
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        ApiResult.Success(apiResponse.body)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to get restaurant details",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+        val response = safeApiCall(
+            apiCall = {restaurantAPI.getRestaurantDetails(restaurantId)},
+            customErrorCode = "Failed to get restaurant details"
+        )
+        return response;
+
     }
 
     override suspend fun getGroupRecommendations(
         groupId: String,
         userPreferences: List<UserPreferenceData>
     ): ApiResult<List<Restaurant>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Convert UserPreferenceData to UserPreferenceDto
-                val userPreferenceDtos = userPreferences.map { pref ->
-                    UserPreferenceDto(
-                        cuisineTypes = pref.cuisineTypes,
-                        budget = pref.budget,
-                        location = LocationDto(
-                            coordinates = listOf(pref.longitude, pref.latitude)
-                        ),
-                        radiusKm = pref.radiusKm
-                    )
-                }
 
-                val request = GroupRecommendationsRequest(
-                    userPreferences = userPreferenceDtos
-                )
-
-                val response = restaurantAPI.getGroupRecommendations(groupId, request)
-
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        ApiResult.Success(apiResponse.body)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to get recommendations",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
+        // Convert UserPreferenceData to UserPreferenceDto
+        val userPreferenceDtos = userPreferences.map { pref ->
+            UserPreferenceDto(
+                cuisineTypes = pref.cuisineTypes,
+                budget = pref.budget,
+                location = LocationDto(
+                    coordinates = listOf(pref.longitude, pref.latitude)
+                ),
+                radiusKm = pref.radiusKm
+            )
         }
+
+        val request = GroupRecommendationsRequest(
+            userPreferences = userPreferenceDtos
+        )
+
+        val response =safeApiCall(
+         apiCall = {restaurantAPI.getGroupRecommendations(groupId, request)},
+            customErrorCode = "Failed to get recommendations"
+        )
+
+        return response;
     }
 }
