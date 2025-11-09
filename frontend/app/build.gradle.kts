@@ -67,7 +67,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            val hasKeystore = signingConfigs.findByName("release") != null
+            if (hasKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                println("No release keystore found. If this is not on the GitHub Action we have an issue.")
+            }
+//            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
