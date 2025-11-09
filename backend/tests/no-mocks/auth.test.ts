@@ -1530,6 +1530,140 @@ describe('AuthService - Direct Unit Tests (No Mocking)', () => {
     expect(updatedUser!.profilePicture).toContain('data:image'); // Should be Base64 data URI
   });
 
+  test('should update profile picture when user has undefined profile picture and Google provides one (covers authService line 112 !user.profilePicture branch)', async () => {
+    /**
+     * Covers authService.ts line 112: Profile picture update condition - !user.profilePicture branch
+     * Path: if (convertedProfilePicture && (!user.profilePicture || user.profilePicture === '')) -> update
+     * This tests the branch where user.profilePicture is undefined (not just empty string)
+     */
+    const existingUser = testUsers[1];
+    
+    // Set user profile picture to undefined (unset the field)
+    await User.findByIdAndUpdate(existingUser._id, { $unset: { profilePicture: '' } });
+    
+    const { AuthService } = require('../../src/services/authService');
+    const axios = require('axios');
+    
+    // Mock Google data with picture
+    const mockGoogleData = {
+      googleId: existingUser.googleId,
+      email: existingUser.email,
+      name: existingUser.name,
+      picture: 'https://lh3.googleusercontent.com/test-picture-undefined.jpg'
+    };
+    
+    // Mock axios to return a successful image response (so conversion succeeds)
+    const mockImageBuffer = Buffer.from('fake-image-data-for-undefined-test');
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: mockImageBuffer,
+      headers: { 'content-type': 'image/jpeg' }
+    });
+    
+    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
+    
+    const response = await request(app)
+      .post('/api/auth/signin')
+      .set('Authorization', `Bearer ${generateTestToken(existingUser._id, existingUser.email, existingUser.googleId)}`)
+      .send({ idToken: 'mock-google-token-with-picture-undefined' });
+
+    jest.restoreAllMocks();
+    
+    // Should successfully sign in
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was updated in database (should be Base64 data URI)
+    const updatedUser = await User.findById(existingUser._id);
+    expect(updatedUser!.profilePicture).toBeTruthy();
+    expect(updatedUser!.profilePicture).not.toBe('');
+    expect(updatedUser!.profilePicture).toContain('data:image'); // Should be Base64 data URI
+  });
+
+  test('should skip profile picture conversion when googleData.picture is missing (covers authService line 89 else branch)', async () => {
+    /**
+     * Covers authService.ts line 89: else branch when googleData.picture is falsy
+     * Path: if (googleData.picture) [FALSE] -> skip conversion, convertedProfilePicture remains ''
+     * This tests the branch where Google doesn't provide a picture
+     */
+    const existingUser = testUsers[2];
+    
+    // Set user profile picture to empty first
+    await User.findByIdAndUpdate(existingUser._id, { profilePicture: '' });
+    
+    const { AuthService } = require('../../src/services/authService');
+    
+    // Mock Google data WITHOUT picture (undefined/missing)
+    const mockGoogleData = {
+      googleId: existingUser.googleId,
+      email: existingUser.email,
+      name: existingUser.name
+      // picture is missing/undefined
+    };
+    
+    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
+    
+    const response = await request(app)
+      .post('/api/auth/signin')
+      .set('Authorization', `Bearer ${generateTestToken(existingUser._id, existingUser.email, existingUser.googleId)}`)
+      .send({ idToken: 'mock-google-token-no-picture' });
+
+    jest.restoreAllMocks();
+    
+    // Should successfully sign in
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was NOT updated (should remain empty since no picture was provided)
+    const updatedUser = await User.findById(existingUser._id);
+    expect(updatedUser!.profilePicture).toBe(''); // Should remain empty
+  });
+
+  test('should keep existing profile picture when user has one and Google provides picture (covers authService line 115)', async () => {
+    /**
+     * Covers authService.ts line 115: else if branch when user has existing profile picture
+     * Path: else if (user.profilePicture && user.profilePicture !== '') -> keep existing, don't update
+     * This tests the branch where user already has a custom profile picture and we keep it
+     */
+    const existingUser = testUsers[3];
+    
+    // Set user profile picture to a custom value
+    const customProfilePicture = 'https://example.com/custom-picture.jpg';
+    await User.findByIdAndUpdate(existingUser._id, { profilePicture: customProfilePicture });
+    
+    const { AuthService } = require('../../src/services/authService');
+    const axios = require('axios');
+    
+    // Mock Google data WITH picture
+    const mockGoogleData = {
+      googleId: existingUser.googleId,
+      email: existingUser.email,
+      name: existingUser.name,
+      picture: 'https://lh3.googleusercontent.com/google-picture.jpg'
+    };
+    
+    // Mock axios (even though it won't be called since we keep existing picture)
+    const mockImageBuffer = Buffer.from('fake-image-data');
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: mockImageBuffer,
+      headers: { 'content-type': 'image/jpeg' }
+    });
+    
+    jest.spyOn(AuthService.prototype, 'verifyGoogleToken').mockResolvedValueOnce(mockGoogleData);
+    
+    const response = await request(app)
+      .post('/api/auth/signin')
+      .set('Authorization', `Bearer ${generateTestToken(existingUser._id, existingUser.email, existingUser.googleId)}`)
+      .send({ idToken: 'mock-google-token-with-picture-existing' });
+
+    jest.restoreAllMocks();
+    
+    // Should successfully sign in
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was NOT updated (should keep the custom one)
+    const updatedUser = await User.findById(existingUser._id);
+    expect(updatedUser!.profilePicture).toBe(customProfilePicture); // Should keep existing custom picture
+    expect(updatedUser!.profilePicture).not.toContain('data:image'); // Should NOT be converted to Base64
+  });
+
   test('should find existing user and update status, or create new user when not found', async () => {
       /**
        * Tests findOrCreateUser method pattern

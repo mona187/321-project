@@ -23,12 +23,11 @@
 
 ### `src/app.ts` Line 26 (Health Check Endpoint)
 
-**Why it cannot be covered:**
-- Line 26 contains the health check endpoint handler: `app.get('/health', (_req, res) => { ... })`
-- This endpoint is actually **testable** via API tests, but may not be covered if tests don't hit it
-- **Note**: This should be testable and can be covered by adding a test for `GET /health`
-
-**Status**: Should be covered - can be tested via API
+**Status**: ⚠️ **NOT COVERED** - Health check endpoint `GET /health`
+- **Why it's not covered**: Tests don't currently hit this endpoint
+- **Can it be covered**: ✅ **YES** - This is testable via API test: `GET /health`
+- **Recommendation**: Add a test for the health check endpoint if needed, but it's a simple endpoint that returns status
+- **Percentage of total codebase:** <0.1% (simple health check endpoint)
 
 ---
 
@@ -74,13 +73,26 @@
 
 ### `authService.ts` Uncovered Lines
 
-**Lines 113-114**: Profile picture update condition
-- **Why it cannot be covered**: This branch (`if (convertedProfilePicture && (!user.profilePicture || user.profilePicture === ''))`) requires a specific scenario where:
-  - User already exists in database
-  - User has an empty or missing profile picture
-  - Google token provides a profile picture
-  - This is a rare edge case that may not occur in normal test flows
-- **Status**: Could potentially be covered with specific test setup, but represents <0.1% of codebase
+**Line 89**: Profile picture conversion check in `findOrCreateUser`
+- **Status**: ✅ **NOW COVERED** - Tests added in `no-mocks/auth.test.ts`:
+  - **True branch**: When `googleData.picture` exists - Covered by tests that provide a picture
+  - **False branch (else)**: When `googleData.picture` is missing/undefined - Test added to cover this path
+
+**Line 90**: Profile picture Base64 conversion call
+- **Status**: ✅ **COVERED** - Tested via API when Google provides a picture URL that gets converted to Base64
+
+**Lines 112-114**: Profile picture update condition branches
+- **Status**: ✅ **NOW COVERED** - Tests added in `no-mocks/auth.test.ts`:
+  - Line 112: `(!user.profilePicture || user.profilePicture === '')` - Both branches covered:
+    - `!user.profilePicture` (undefined/null) - Test with `$unset { profilePicture: '' }`
+    - `user.profilePicture === ''` (empty string) - Test with `profilePicture: ''`
+  - Line 113: Update path - Covered when user has empty/undefined profile picture and Google provides one
+
+**Line 115**: Profile picture keep existing branch
+- **Status**: ✅ **NOW COVERED** - Test added in `no-mocks/auth.test.ts`:
+  - **Branch**: `else if (user.profilePicture && user.profilePicture !== '')` 
+  - **Test**: When user has existing custom profile picture and Google provides one, we keep the existing custom picture
+  - This ensures the branch where we don't update the profile picture is covered
 
 **Lines 71-72**: `verifyGoogleToken` catch block
 - **Why it cannot be covered via API tests**: This catch block is covered by a **direct service test** (not API test)
@@ -156,13 +168,15 @@
   - Error path (lines 338-339) when room not found
 
 **Line 169**: Error handling in `leaveRoom`
-- **Why it cannot be covered**: This error path should be testable via API endpoint `POST /api/matching/leave/:roomId`
-- **Status**: Should be covered - can be tested via API
+- **Why it cannot be covered**: This is the catch block in `leaveRoom` method
+- **Status**: ⚠️ **NOT COVERED** - Should be testable via API endpoint `POST /api/matching/leave/:roomId` by triggering an error
+- **Can it be covered**: ✅ **YES** - Can be tested by mocking database operations to throw errors
 
 **Lines 260-304**: `createGroupFromRoom` private method
-- **Why it cannot be covered**: This is a private method called internally when a room becomes full
-- Should be testable via API by creating a scenario where a room reaches maximum capacity
-- **Status**: Should be covered - can be tested via API (triggered by room joining)
+- **Why it cannot be covered**: This is a private method called internally when a room becomes full (reaches MAX_MEMBERS)
+- **Status**: ⚠️ **NOT COVERED** - Should be testable via API by creating a scenario where a room reaches maximum capacity
+- **Can it be covered**: ✅ **YES** - Can be tested by joining enough users to fill a room (MAX_MEMBERS = 10)
+- **Note**: This requires coordinating multiple users joining the same room, which may be complex but is testable
 
 **Lines 349-384**: Background task `checkExpiredRooms`
 - **Why it cannot be covered**: This is a background task that runs on a schedule (via `setInterval` in `server.ts` line 59)
@@ -278,7 +292,21 @@
 - Error handling branches: ~1-2%
 - **Total: ~3-5% of codebase**
 
-**Current Coverage:** 84.43% statements, 82.88% branches, 81.97% functions, 84.37% lines
+**Current Coverage:** 87.25% statements, 90.47% branches, 82.24% functions, 86.84% lines
+
+**Justification Summary for Uncovered Code:**
+
+1. **Unreachable via API Tests (~4-6% of codebase):**
+   - `server.ts` (0%): Entry point, process handlers, background tasks
+   - Background tasks: `checkExpiredGroups` (lines 307-366), `checkExpiredRooms` (lines 349-384)
+   - Defensive code: Singleton patterns, unreachable error paths
+   - `optionalAuth` outer catch block (lines 111-113): Extremely rare error path
+
+2. **Testable but Not Yet Covered (~3-5% of codebase):**
+   - Error handling branches in services (restaurantService, matchingService)
+   - Edge cases (authService profile picture branches, matchingService createGroupFromRoom)
+   - Health check endpoint (app.ts line 26)
+   - Some notification service error paths
 
 **Target Coverage (excluding unreachable code):** ~95-96% is achievable with comprehensive API tests
 
