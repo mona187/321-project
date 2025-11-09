@@ -25,40 +25,23 @@ class GroupRepositoryImpl(
     private val groupAPI = RetrofitClient.groupAPI
 
     override suspend fun getGroupStatus(): ApiResult<Group> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = groupAPI.getGroupStatus()
+        val response =safeApiCall(
+            apiCall = {groupAPI.getGroupStatus()},
+            customErrorCode = "Failed to get group status"
+        ).also {
+            apiResult ->
+            if (apiResult is ApiResult.Success) {
+                val groupStatus = apiResult.data
 
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        // Save group ID locally if not already saved
-                        apiResponse.body.groupId?.let { groupId ->
-                            if (getCurrentGroupId() == null) {
-                                saveCurrentGroupId(groupId)
-                            }
-                        }
-
-                        ApiResult.Success(apiResponse.body)
-                    } else {
-                        ApiResult.Error("Empty response from server")
+                groupStatus.groupId?.let { newGroupId ->
+                    if (getCurrentGroupId() == null) {
+                        saveCurrentGroupId(newGroupId)
                     }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to get group status",
-                        code = response.code()
-                    )
                 }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
+
+        return response;
     }
 
     override suspend fun voteForRestaurant(
