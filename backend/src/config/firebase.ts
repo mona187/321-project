@@ -151,10 +151,15 @@ export const sendMulticastNotification = async (
         if (!resp.success) {
           // Use safe array access with explicit bounds checking and type validation
           if (Number.isInteger(idx) && idx >= 0 && idx < tokens.length) {
-            const token = tokens[idx];
-            if (token && typeof token === 'string') {
+            // Safely get token with validation to prevent object injection
+            const rawToken = tokens[idx];
+            // Validate token is a safe string (not an object that could be used for injection)
+            if (rawToken && typeof rawToken === 'string' && rawToken.length > 0) {
+              // Create a safe copy of the token string to prevent injection
+              const token = String(rawToken);
               const errorMessage = resp.error?.message || String(resp.error);
-              console.error(`Failed to send to token ${token}:`, errorMessage);
+              // Only log first 20 chars of token for security
+              console.error(`Failed to send to token ${token.substring(0, 20)}...:`, errorMessage);
             }
           }
         }

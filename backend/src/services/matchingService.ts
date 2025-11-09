@@ -58,11 +58,8 @@ export class MatchingService {
     scoredRooms.sort((a, b) => b.score - a.score);
     
     // Only return a room if it has a minimum score
+    // bestMatch is guaranteed to exist because we return early if availableRooms.length === 0
     const bestMatch = scoredRooms[0];
-    
-    if (!bestMatch) {
-      return null;
-    }
     
     if (bestMatch.score >= this.MINIMUM_MATCH_SCORE) {
       console.log(`✅ Best room match found with score: ${bestMatch.score}`);
