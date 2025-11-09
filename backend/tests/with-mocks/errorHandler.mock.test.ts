@@ -17,7 +17,7 @@
 
 import request from 'supertest';
 import express, { Request, Response, NextFunction } from 'express';
-import { errorHandler, AppError, notFoundHandler, asyncHandler } from '../../src/middleware/errorHandler';
+import { errorHandler, AppError, notFoundHandler, asyncHandler, requireParam } from '../../src/middleware/errorHandler';
 import User from '../../src/models/User';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 
@@ -743,6 +743,199 @@ describe('notFoundHandler - 404 Handler', () => {
     expect(response.body.error).toBe('AppError');
     expect(response.body.message).toContain('not found');
     expect(response.body.statusCode).toBe(404);
+  });
+});
+
+describe('requireParam - Parameter Validation', () => {
+  /**
+   * Tests for the requireParam function defensive checks
+   * Covers: errorHandler.ts lines 22-46
+   * These tests directly call requireParam with invalid inputs to test defensive checks
+   */
+
+  test('should throw AppError when paramName is empty string (covers errorHandler line 22-23)', () => {
+    /**
+     * Covers errorHandler.ts lines 22-23: paramName validation
+     * Path: requireParam -> if (!paramName || typeof paramName !== 'string' || paramName.length === 0) -> throw AppError
+     */
+    const mockReq = {
+      params: { id: '123' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, '');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, '');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Invalid parameter name');
+    }
+  });
+
+  test('should throw AppError when paramName is null (covers errorHandler line 22-23)', () => {
+    /**
+     * Covers errorHandler.ts lines 22-23: paramName validation
+     */
+    const mockReq = {
+      params: { id: '123' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, null as any);
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, null as any);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Invalid parameter name');
+    }
+  });
+
+  test('should throw AppError when paramName is not a string (covers errorHandler line 22-23)', () => {
+    /**
+     * Covers errorHandler.ts lines 22-23: paramName validation
+     */
+    const mockReq = {
+      params: { id: '123' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 123 as any);
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 123 as any);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Invalid parameter name');
+    }
+  });
+
+  test('should throw AppError when paramName is not in ALLOWED_PARAMS whitelist (covers errorHandler line 27-28)', () => {
+    /**
+     * Covers errorHandler.ts lines 27-28: Whitelist check
+     * Path: requireParam -> if (!ALLOWED_PARAMS.includes(paramName)) -> throw AppError
+     */
+    const mockReq = {
+      params: { maliciousParam: 'value' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 'maliciousParam');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 'maliciousParam');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Invalid parameter requested: maliciousParam');
+    }
+  });
+
+  test('should throw AppError when paramName is not in req.params (covers errorHandler line 33-34)', () => {
+    /**
+     * Covers errorHandler.ts lines 33-34: Missing parameter check
+     * Path: requireParam -> if (!Object.prototype.hasOwnProperty.call(req.params, paramName)) -> throw AppError
+     */
+    const mockReq = {
+      params: { otherParam: 'value' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 'groupId');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 'groupId');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Missing required parameter: groupId');
+    }
+  });
+
+  test('should throw AppError when param value is empty string (covers errorHandler line 39-40)', () => {
+    /**
+     * Covers errorHandler.ts lines 39-40: Falsy value check
+     * Path: requireParam -> if (!value) -> throw AppError
+     */
+    const mockReq = {
+      params: { groupId: '' }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 'groupId');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 'groupId');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Missing required parameter: groupId');
+    }
+  });
+
+  test('should throw AppError when param value is null (covers errorHandler line 39-40)', () => {
+    /**
+     * Covers errorHandler.ts lines 39-40: Falsy value check
+     */
+    const mockReq = {
+      params: { groupId: null }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 'groupId');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 'groupId');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Missing required parameter: groupId');
+    }
+  });
+
+  test('should throw AppError when param value is not a string (covers errorHandler line 44-45)', () => {
+    /**
+     * Covers errorHandler.ts lines 44-45: Type check
+     * Path: requireParam -> if (typeof value !== 'string') -> throw AppError
+     */
+    const mockReq = {
+      params: { groupId: 123 }
+    } as any;
+
+    expect(() => {
+      requireParam(mockReq, 'groupId');
+    }).toThrow(AppError);
+    
+    try {
+      requireParam(mockReq, 'groupId');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).statusCode).toBe(400);
+      expect((error as AppError).message).toBe('Invalid parameter type for: groupId');
+    }
+  });
+
+  test('should return value when all validations pass', () => {
+    /**
+     * Tests the happy path - all validations pass
+     */
+    const mockReq = {
+      params: { groupId: 'valid-group-id-123' }
+    } as any;
+
+    const result = requireParam(mockReq, 'groupId');
+    expect(result).toBe('valid-group-id-123');
   });
 });
 

@@ -270,6 +270,119 @@ describe('POST /api/group/vote/:groupId - External Failures', () => {
     expect(response.body.Body.Current_votes).toHaveProperty('rest-123', 1);
   });
 
+  test('should handle Socket.IO emission failure when restaurant selected (covers groupService line 248)', async () => {
+    /**
+     * Covers groupService.ts line 248 (catch block): emitRestaurantSelected error handling
+     * Path: All members vote -> restaurant selected -> emitRestaurantSelected throws -> catch block
+     * Scenario: All vote, restaurant selected, but socket emission fails
+     * Expected: Vote succeeds, socket error logged but doesn't crash
+     */
+    
+    const testGroup = await seedTestGroup(
+      'test-socket-restaurant-fail',
+      [testUsers[0]._id] // Single member group - one vote triggers restaurant selection
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock emitRestaurantSelected to throw error (covers line 248 catch block)
+    (socketManager.emitRestaurantSelected as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('WebSocket connection closed');
+    });
+
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-123',
+        restaurant: {
+          name: 'Test Restaurant',
+          location: '123 Test St',
+          restaurantId: 'rest-123'
+        }
+      });
+
+    // Vote should succeed despite socket failure
+    expect(response.status).toBe(200);
+    expect(response.body.Body.Current_votes).toHaveProperty('rest-123', 1);
+    // Verify restaurant was selected
+    const Group = (await import('../../src/models/Group')).default;
+    const updatedGroup = await Group.findById(testGroup._id);
+    expect(updatedGroup!.restaurantSelected).toBe(true);
+  });
+
+  test('should use "Selected Restaurant" fallback when restaurant name is missing (covers groupService line 127)', async () => {
+    /**
+     * Covers groupService.ts line 127: 'Selected Restaurant' fallback
+     * Path: group.restaurant?.name || 'Selected Restaurant'
+     * Scenario: Restaurant selected but restaurant object has no name (or restaurant is null)
+     * Expected: Fallback 'Selected Restaurant' is used in emitRestaurantSelected and notifyRestaurantSelected
+     */
+    const emitRestaurantSelectedSpy = jest.spyOn(socketManager, 'emitRestaurantSelected');
+    const notifyRestaurantSelectedSpy = jest.spyOn(notificationService, 'notifyRestaurantSelected');
+    
+    const testGroup = await seedTestGroup(
+      'test-restaurant-fallback',
+      [testUsers[0]._id] // Single member group - one vote triggers restaurant selection
+    );
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Vote without providing restaurant object (or with restaurant but no name)
+    // This will set restaurantSelected = true but group.restaurant will be null/undefined
+    const response = await request(app)
+      .post(`/api/group/vote/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        restaurantID: 'rest-no-name'
+        // No restaurant object provided - triggers fallback
+      });
+
+    // Vote should succeed
+    expect(response.status).toBe(200);
+    expect(response.body.Body.Current_votes).toHaveProperty('rest-no-name', 1);
+    
+    // Verify restaurant was selected
+    const Group = (await import('../../src/models/Group')).default;
+    const updatedGroup = await Group.findById(testGroup._id);
+    expect(updatedGroup!.restaurantSelected).toBe(true);
+    
+    // Verify fallback 'Selected Restaurant' was used
+    expect(emitRestaurantSelectedSpy).toHaveBeenCalledWith(
+      testGroup._id,
+      'rest-no-name',
+      'Selected Restaurant', // ← Fallback value
+      expect.any(Object)
+    );
+    
+    expect(notifyRestaurantSelectedSpy).toHaveBeenCalledWith(
+      expect.any(Array),
+      'Selected Restaurant', // ← Fallback value
+      testGroup._id
+    );
+    
+    emitRestaurantSelectedSpy.mockRestore();
+    notifyRestaurantSelectedSpy.mockRestore();
+  });
+
   test('should handle Firebase notification failure when restaurant selected', async () => {
     /**
      * Scenario: All vote, restaurant selected, but Firebase unavailable
@@ -561,6 +674,67 @@ describe('POST /api/group/leave/:groupId - External Failures', () => {
 
     expect(response.status).toBe(500);
     expect(response.body.message).toContain('connection closed');
+  });
+
+  test('should handle Socket.IO emission failure when restaurant auto-selected after member leaves (covers groupService line 248)', async () => {
+    /**
+     * Covers groupService.ts line 248 (catch block): emitRestaurantSelected error in leaveGroup
+     * Path: Member leaves -> all remaining voted -> restaurant auto-selected -> emitRestaurantSelected throws -> catch block
+     * Scenario: Member leaves, all remaining have voted, restaurant auto-selected, but socket emission fails
+     * Expected: Leave succeeds, socket error logged but doesn't crash
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    
+    const testGroup = await seedTestGroup(
+      'test-socket-leave-auto-select',
+      [testUsers[0]._id, testUsers[1]._id]
+    );
+
+    // Fetch group and set restaurant and votes so all members have voted
+    const group = await Group.findById(testGroup._id);
+    if (group) {
+      group.restaurant = {
+        name: 'Auto Selected Restaurant',
+        location: '123 Auto St',
+        restaurantId: 'auto-rest-123'
+      };
+      // Set votes so both members have voted for the same restaurant
+      group.votes.set(testUsers[0]._id.toString(), 'auto-rest-123');
+      group.votes.set(testUsers[1]._id.toString(), 'auto-rest-123');
+      group.restaurantVotes.set('auto-rest-123', 2); // Both members voted
+      await group.save();
+    }
+
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+    await User.findByIdAndUpdate(testUsers[1]._id, {
+      groupId: testGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock emitRestaurantSelected to throw error (covers line 248 catch block)
+    (socketManager.emitRestaurantSelected as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('WebSocket connection closed');
+    });
+
+    const response = await request(app)
+      .post(`/api/group/leave/${testGroup._id}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    // Leave should succeed despite socket failure
+    expect(response.status).toBe(200);
+    
+    // Verify restaurant was auto-selected
+    const updatedGroup = await Group.findById(testGroup._id);
+    expect(updatedGroup!.restaurantSelected).toBe(true);
   });
 
   test('should handle Socket.IO emission failure when member leaves', async () => {

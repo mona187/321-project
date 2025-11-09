@@ -1,0 +1,2781 @@
+
+> backend@1.0.0 test:coverage:no-mocks
+> jest tests/no-mocks --coverage
+
+  console.log
+    [dotenv@17.2.3] injecting env (3) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    Starting test suite...
+
+      at Object.<anonymous> (tests/setup.ts:9:11)
+
+  console.log
+    
+    🚀 Starting Restaurant Tests (No Mocking)...
+
+      at Object.<anonymous> (tests/no-mocks/restaurant.test.ts:23:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ SocketManager initialized
+
+      at SocketManager.log [as initialize] (src/utils/socketManager.ts:35:13)
+
+  console.log
+    ✅ Test Socket.IO server initialized on port 59807
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:28:15)
+
+  console.log
+    MongoDB Atlas connected successfully
+
+      at connectDatabase (src/config/database.ts:22:13)
+
+  console.log
+    
+    ✅ Test setup complete. Ready to run tests.
+
+      at Object.<anonymous> (tests/no-mocks/restaurant.test.ts:44:11)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantController.searchRestaurants (src/controllers/restaurant.controller.ts:30:51)
+      at searchRestaurants (src/routes/restaurant.routes.ts:14:30)
+      at fn (src/middleware/errorHandler.ts:58:15)
+      at src/middleware/errorHandler.ts:62:6
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:110:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:68:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:100:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at cors (node_modules/cors/lib/index.js:188:7)
+      at node_modules/cors/lib/index.js:224:17
+      at originCallback (node_modules/cors/lib/index.js:214:15)
+      at node_modules/cors/lib/index.js:219:13
+      at optionsCallback (node_modules/cors/lib/index.js:199:9)
+      at corsMiddleware (node_modules/cors/lib/index.js:204:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at Function.handle (node_modules/express/lib/application.js:177:15)
+      at Server.app (node_modules/express/lib/express.js:38:9)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantController.searchRestaurants (src/controllers/restaurant.controller.ts:30:51)
+      at searchRestaurants (src/routes/restaurant.routes.ts:14:30)
+      at fn (src/middleware/errorHandler.ts:58:15)
+      at src/middleware/errorHandler.ts:62:6
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:110:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:68:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:100:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at cors (node_modules/cors/lib/index.js:188:7)
+      at node_modules/cors/lib/index.js:224:17
+      at originCallback (node_modules/cors/lib/index.js:214:15)
+      at node_modules/cors/lib/index.js:219:13
+      at optionsCallback (node_modules/cors/lib/index.js:199:9)
+      at corsMiddleware (node_modules/cors/lib/index.js:204:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at Function.handle (node_modules/express/lib/application.js:177:15)
+      at Server.app (node_modules/express/lib/express.js:38:9)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantController.searchRestaurants (src/controllers/restaurant.controller.ts:30:51)
+      at searchRestaurants (src/routes/restaurant.routes.ts:14:30)
+      at fn (src/middleware/errorHandler.ts:58:15)
+      at src/middleware/errorHandler.ts:62:6
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:110:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:68:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:100:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at cors (node_modules/cors/lib/index.js:188:7)
+      at node_modules/cors/lib/index.js:224:17
+      at originCallback (node_modules/cors/lib/index.js:214:15)
+      at node_modules/cors/lib/index.js:219:13
+      at optionsCallback (node_modules/cors/lib/index.js:199:9)
+      at corsMiddleware (node_modules/cors/lib/index.js:204:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at Function.handle (node_modules/express/lib/application.js:177:15)
+      at Server.app (node_modules/express/lib/express.js:38:9)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantService.searchRestaurants [as getRecommendationsForGroup] (src/services/restaurantService.ts:177:36)
+      at RestaurantController.getRecommendationsForGroup [as getGroupRecommendations] (src/controllers/restaurant.controller.ts:87:55)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:69:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at param (node_modules/router/index.js:600:14)
+      at param (node_modules/router/index.js:610:14)
+      at processParams (node_modules/router/index.js:664:3)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:57:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/body-parser/lib/read.js:132:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantService.searchRestaurants [as getRecommendationsForGroup] (src/services/restaurantService.ts:177:36)
+      at RestaurantController.getRecommendationsForGroup [as getGroupRecommendations] (src/controllers/restaurant.controller.ts:87:55)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:69:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at param (node_modules/router/index.js:600:14)
+      at param (node_modules/router/index.js:610:14)
+      at processParams (node_modules/router/index.js:664:3)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:57:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/body-parser/lib/read.js:132:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+  console.warn
+    ⚠️  No Google Places API key - returning mock data
+
+      39 |       // If no API key, return mock data
+      40 |       if (!this.GOOGLE_PLACES_API_KEY) {
+    > 41 |         console.warn('⚠️  No Google Places API key - returning mock data');
+         |                 ^
+      42 |         return this.getMockRestaurants();
+      43 |       }
+      44 |
+
+      at RestaurantService.warn [as searchRestaurants] (src/services/restaurantService.ts:41:17)
+      at RestaurantService.searchRestaurants [as getRecommendationsForGroup] (src/services/restaurantService.ts:177:36)
+      at RestaurantController.getRecommendationsForGroup [as getGroupRecommendations] (src/controllers/restaurant.controller.ts:87:55)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at next (src/middleware/auth.middleware.ts:69:5)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at param (node_modules/router/index.js:600:14)
+      at param (node_modules/router/index.js:610:14)
+      at processParams (node_modules/router/index.js:664:3)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:57:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/body-parser/lib/read.js:132:5
+      at invokeCallback (node_modules/raw-body/index.js:238:16)
+      at done (node_modules/raw-body/index.js:227:7)
+      at IncomingMessage.onEnd (node_modules/raw-body/index.js:287:7)
+
+  console.error
+    Error: {
+      message: 'Service error for testing',
+      statusCode: 500,
+      stack: 'Error: Service error for testing\n' +
+        '    at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/restaurant.test.ts:488:30)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)',
+      timestamp: '2025-11-09T07:24:24.007Z',
+      path: '/api/restaurant/search',
+      method: 'GET'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at RestaurantController.next [as searchRestaurants] (src/controllers/restaurant.controller.ts:44:7)
+      at src/routes/restaurant.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.error
+    Error: {
+      message: 'Recommendations service error',
+      statusCode: 500,
+      stack: 'Error: Recommendations service error\n' +
+        '    at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/restaurant.test.ts:523:30)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)',
+      timestamp: '2025-11-09T07:24:24.011Z',
+      path: '/api/restaurant/recommendations/691041a79486912023ebaf3d',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at RestaurantController.next [as getGroupRecommendations] (src/controllers/restaurant.controller.ts:98:7)
+
+  console.log
+    Test suite completed.
+
+      at Object.<anonymous> (tests/setup.ts:14:11)
+
+  console.log
+    
+    🧹 Cleaning up after tests...
+
+      at Object.<anonymous> (tests/no-mocks/restaurant.test.ts:48:11)
+
+  console.warn
+    MongoDB disconnected. Attempting to reconnect...
+
+      28 |
+      29 |     mongoose.connection.on('disconnected', () => {
+    > 30 |       console.warn('MongoDB disconnected. Attempting to reconnect...');
+         |               ^
+      31 |     });
+      32 |
+      33 |     mongoose.connection.on('reconnected', () => {
+
+      at NativeConnection.<anonymous> (src/config/database.ts:30:15)
+      at NativeConnection.set (node_modules/mongoose/lib/connection.js:145:12)
+      at NativeConnection.onClose (node_modules/mongoose/lib/connection.js:1315:19)
+      at NativeConnection._close (node_modules/mongoose/lib/connection.js:1264:12)
+      at disconnectDatabase (src/config/database.ts:55:5)
+      at Object.<anonymous> (tests/no-mocks/restaurant.test.ts:54:3)
+
+  console.log
+    MongoDB disconnected successfully
+
+      at disconnectDatabase (src/config/database.ts:56:13)
+
+  console.log
+    ✅ HTTP server closed
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:44:15)
+
+  console.log
+    ✅ Socket.IO server closed
+
+      at tests/helpers/socket.helper.ts:40:15
+
+  console.log
+    ✅ Cleanup complete.
+
+      at Object.<anonymous> (tests/no-mocks/restaurant.test.ts:59:11)
+
+PASS tests/no-mocks/restaurant.test.ts
+  GET /api/restaurant/search - No Mocking
+    ✓ should return 200 and search results with valid coordinates (20 ms)
+    ✓ should return 400 when latitude is missing (2 ms)
+    ✓ should return 400 when longitude is missing (2 ms)
+    ✓ should accept optional query parameters (radius, cuisineTypes, priceLevel) (4 ms)
+    ✓ should work without authentication (optional auth) (5 ms)
+  GET /api/restaurant/:restaurantId - No Mocking
+    ✓ should return 200 and restaurant details for valid ID (2 ms)
+    ✓ should handle different restaurant IDs (3 ms)
+  POST /api/restaurant/recommendations/:groupId - No Mocking
+    ✓ should return 200 and recommendations with valid data (16 ms)
+    ✓ should return 401 without authentication token (3 ms)
+    ✓ should return 400 when userPreferences is missing (2 ms)
+    ✓ should return 400 when userPreferences is not an array (2 ms)
+    ✓ should handle empty userPreferences array (4 ms)
+    ✓ should calculate average preferences from multiple users (3 ms)
+  Error Handling - next(error) Coverage
+    ✓ should handle errors in searchRestaurants catch block and call next(error) (9 ms)
+    ✓ should handle errors in getGroupRecommendations catch block and call next(error) (4 ms)
+
+  console.log
+    [dotenv@17.2.3] injecting env (3) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    Starting test suite...
+
+      at Object.<anonymous> (tests/setup.ts:9:11)
+
+  console.log
+    
+    🚀 Starting Auth Tests (No Mocking - Controllable Scenarios)...
+
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:34:11)
+
+  console.log
+    MongoDB Atlas connected successfully
+
+      at connectDatabase (src/config/database.ts:22:13)
+
+  console.log
+    
+    ✅ Test setup complete. Ready to run tests.
+
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:42:11)
+
+  console.error
+    Error: {
+      message: 'Google token verification failed',
+      statusCode: 500,
+      stack: 'Error: Google token verification failed\n' +
+        '    at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/auth.test.ts:180:7)\n' +
+        '    at Promise.finally.completed (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)\n' +
+        '    at new Promise (<anonymous>)\n' +
+        '    at callAsyncCircusFn (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)\n' +
+        '    at _callCircusTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at _runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:947:3)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:849:7\n' +
+        '    at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:862:11)\n' +
+        '    at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:857:11)\n' +
+        '    at run (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:761:3)\n' +
+        '    at runAndTransformResultsToJestFormat (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)\n' +
+        '    at jestAdapter (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/runner.js:101:19)\n' +
+        '    at runTestInternal (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:275:16)\n' +
+        '    at runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:343:7)',
+      timestamp: '2025-11-09T07:24:24.232Z',
+      path: '/api/auth/signup',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at AuthController.next [as signUp] (src/controllers/auth.controller.ts:78:7)
+      at src/routes/auth.routes.ts:16:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    ✅ New user created: 691041a841b69cabba570752
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:107:17)
+
+  console.log
+    ✅ Keeping existing custom profile picture for user: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:116:17)
+
+  console.log
+    ✅ User logged in: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:119:15)
+
+  console.log
+    ✅ Keeping existing custom profile picture for user: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:116:17)
+
+  console.log
+    ✅ User logged in: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:119:15)
+
+  console.error
+    Error: {
+      message: 'Google token verification failed in signin',
+      statusCode: 500,
+      stack: 'Error: Google token verification failed in signin\n' +
+        '    at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/auth.test.ts:360:7)\n' +
+        '    at Promise.finally.completed (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)\n' +
+        '    at new Promise (<anonymous>)\n' +
+        '    at callAsyncCircusFn (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)\n' +
+        '    at _callCircusTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at _runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:947:3)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:849:7\n' +
+        '    at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:862:11)\n' +
+        '    at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:857:11)\n' +
+        '    at run (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:761:3)\n' +
+        '    at runAndTransformResultsToJestFormat (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)\n' +
+        '    at jestAdapter (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/runner.js:101:19)\n' +
+        '    at runTestInternal (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:275:16)\n' +
+        '    at runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:343:7)',
+      timestamp: '2025-11-09T07:24:24.281Z',
+      path: '/api/auth/signin',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at AuthController.next [as signIn] (src/controllers/auth.controller.ts:148:7)
+      at src/routes/auth.routes.ts:21:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    ✅ User logged in: 69103b50f0d1828080371c77
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:208:17)
+
+  console.log
+    ✅ New user created: 691041a841b69cabba570760
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:203:17)
+
+  console.log
+    ✅ New user created: 691041a841b69cabba570766
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:203:17)
+
+  console.log
+    ✅ New user created: 691041a841b69cabba57076b
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:203:17)
+
+  console.log
+    ✅ New user created: 691041a841b69cabba570770
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:203:17)
+
+  console.log
+    ✅ User logged in: 691041a841b69cabba570742
+
+      at AuthController.log [as googleAuth] (src/controllers/auth.controller.ts:208:17)
+
+  console.error
+    JWT_SECRET is not defined in environment variables
+
+      34 |     const jwtSecret = process.env.JWT_SECRET;
+      35 |     if (!jwtSecret) {
+    > 36 |       console.error('JWT_SECRET is not defined in environment variables');
+         |               ^
+      37 |       res.status(500).json({
+      38 |         error: 'Server Error',
+      39 |         message: 'Authentication configuration error'
+
+      at error (src/middleware/auth.middleware.ts:36:15)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at router (node_modules/router/index.js:60:12)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at urlencodedParser (node_modules/body-parser/lib/types/urlencoded.js:68:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:100:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at cors (node_modules/cors/lib/index.js:188:7)
+      at node_modules/cors/lib/index.js:224:17
+      at originCallback (node_modules/cors/lib/index.js:214:15)
+      at node_modules/cors/lib/index.js:219:13
+      at optionsCallback (node_modules/cors/lib/index.js:199:9)
+      at corsMiddleware (node_modules/cors/lib/index.js:204:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at Function.handle (node_modules/express/lib/application.js:177:15)
+      at Server.app (node_modules/express/lib/express.js:38:9)
+
+  console.error
+    Auth middleware error: Error: Unexpected verification error
+        at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/auth.test.ts:925:13)
+        at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-mock/build/index.js:305:39
+        at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-mock/build/index.js:312:13)
+        at Object.mockConstructor [as verify] (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-mock/build/index.js:102:19)
+        at verify (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/auth.middleware.ts:46:21)
+        at Layer.handleRequest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/lib/layer.js:152:17)
+        at next (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/lib/route.js:157:13)
+        at Route.dispatch (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/lib/route.js:117:3)
+        at handle (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:435:11)
+        at Layer.handleRequest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/lib/layer.js:152:17)
+        at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:295:15
+        at processParams (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:582:12)
+        at next (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:291:5)
+        at jsonParser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/body-parser/lib/types/json.js:100:7)
+        at Layer.handleRequest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/lib/layer.js:152:17)
+        at trimPrefix (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:342:13)
+        at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:297:9
+        at processParams (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:582:12)
+        at next (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:291:5)
+        at Function.handle (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/router/index.js:186:3)
+        at Function.handle (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/express/lib/application.js:177:15)
+        at Server.app (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/express/lib/express.js:38:9)
+        at Server.emit (node:events:519:28)
+        at parserOnIncoming (node:_http_server:1173:12)
+        at HTTPParser.parserOnHeadersComplete (node:_http_common:121:17)
+
+      69 |     next();
+      70 |   } catch (error) {
+    > 71 |     console.error('Auth middleware error:', error);
+         |             ^
+      72 |     res.status(500).json({
+      73 |       error: 'Server Error',
+      74 |       message: 'Authentication failed'
+
+      at console.<anonymous> (node_modules/jest-mock/build/index.js:631:25)
+      at error (src/middleware/auth.middleware.ts:71:13)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at next (node_modules/router/lib/route.js:157:13)
+      at Route.dispatch (node_modules/router/lib/route.js:117:3)
+      at handle (node_modules/router/index.js:435:11)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at node_modules/router/index.js:295:15
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at jsonParser (node_modules/body-parser/lib/types/json.js:100:7)
+      at Layer.handleRequest (node_modules/router/lib/layer.js:152:17)
+      at trimPrefix (node_modules/router/index.js:342:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Function.handle (node_modules/router/index.js:186:3)
+      at Function.handle (node_modules/express/lib/application.js:177:15)
+      at Server.app (node_modules/express/lib/express.js:38:9)
+
+  console.error
+    Error: {
+      message: 'Failed to retrieve verification certificates: Unexpected Gaxios Error',
+      statusCode: 500,
+      stack: 'Error: Failed to retrieve verification certificates: Unexpected Gaxios Error\n' +
+        '    at Gaxios._request (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/gaxios/src/gaxios.ts:227:15)\n' +
+        '    at OAuth2Client.getFederatedSignonCertsAsync (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/google-auth-library/build/src/auth/oauth2client.js:605:19)\n' +
+        '    at OAuth2Client.verifyIdTokenAsync (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/google-auth-library/build/src/auth/oauth2client.js:540:26)\n' +
+        '    at AuthController.googleAuth (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/auth.controller.ts:169:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/auth.routes.ts:25:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:25.089Z',
+      path: '/api/auth/google',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at AuthController.next [as googleAuth] (src/controllers/auth.controller.ts:245:7)
+      at src/routes/auth.routes.ts:25:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    [AuthService] Converting Google profile picture to Base64: https://lh3.googleusercontent.com/test-picture.jpg
+
+      at AuthService.log [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:23:15)
+
+  console.error
+    [AuthService] Failed to convert profile picture to Base64: AxiosError {
+      message: 'Request failed with status code 400',
+      name: 'AxiosError',
+      code: 'ERR_BAD_REQUEST',
+      config: {
+        transitional: {
+          silentJSONParsing: true,
+          forcedJSONParsing: true,
+          clarifyTimeoutError: false
+        },
+        adapter: [ 'xhr', 'http', 'fetch' ],
+        transformRequest: [ [Function: transformRequest] ],
+        transformResponse: [ [Function: transformResponse] ],
+        timeout: 10000,
+        xsrfCookieName: 'XSRF-TOKEN',
+        xsrfHeaderName: 'X-XSRF-TOKEN',
+        maxContentLength: -1,
+        maxBodyLength: -1,
+        env: { FormData: [Function [FormData]], Blob: [class Blob] },
+        validateStatus: [Function: validateStatus],
+        headers: Object [AxiosHeaders] {
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': undefined,
+          'User-Agent': 'axios/1.12.2',
+          'Accept-Encoding': 'gzip, compress, deflate, br'
+        },
+        responseType: 'arraybuffer',
+        method: 'get',
+        url: 'https://lh3.googleusercontent.com/test-picture.jpg',
+        allowAbsoluteUrls: true,
+        data: undefined
+      },
+      request: <ref *1> ClientRequest {
+        _events: [Object: null prototype] {
+          abort: [Function (anonymous)],
+          aborted: [Function (anonymous)],
+          connect: [Function (anonymous)],
+          error: [Function (anonymous)],
+          socket: [Function (anonymous)],
+          timeout: [Function (anonymous)],
+          finish: [Function: requestOnFinish]
+        },
+        _eventsCount: 7,
+        _maxListeners: undefined,
+        outputData: [],
+        outputSize: 0,
+        writable: true,
+        destroyed: true,
+        _last: true,
+        chunkedEncoding: false,
+        shouldKeepAlive: true,
+        maxRequestsOnConnectionReached: false,
+        _defaultKeepAlive: true,
+        useChunkedEncodingByDefault: false,
+        sendDate: false,
+        _removedConnection: false,
+        _removedContLen: false,
+        _removedTE: false,
+        strictContentLength: false,
+        _contentLength: 0,
+        _hasBody: true,
+        _trailer: '',
+        finished: true,
+        _headerSent: true,
+        _closed: true,
+        _header: 'GET /test-picture.jpg HTTP/1.1\r\n' +
+          'Accept: application/json, text/plain, */*\r\n' +
+          'User-Agent: axios/1.12.2\r\n' +
+          'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+          'Host: lh3.googleusercontent.com\r\n' +
+          'Connection: keep-alive\r\n' +
+          '\r\n',
+        _keepAliveTimeout: 0,
+        _onPendingData: [Function: nop],
+        agent: Agent {
+          _events: [Object: null prototype],
+          _eventsCount: 2,
+          _maxListeners: undefined,
+          defaultPort: 443,
+          protocol: 'https:',
+          options: [Object: null prototype],
+          requests: [Object: null prototype] {},
+          sockets: [Object: null prototype] {},
+          freeSockets: [Object: null prototype],
+          keepAliveMsecs: 1000,
+          keepAlive: true,
+          maxSockets: Infinity,
+          maxFreeSockets: 256,
+          scheduling: 'lifo',
+          maxTotalSockets: Infinity,
+          totalSocketCount: 1,
+          agentKeepAliveTimeoutBuffer: 1000,
+          maxCachedSessions: 100,
+          _sessionCache: [Object],
+          [Symbol(shapeMode)]: false,
+          [Symbol(kCapture)]: false
+        },
+        socketPath: undefined,
+        method: 'GET',
+        maxHeaderSize: undefined,
+        insecureHTTPParser: undefined,
+        joinDuplicateHeaders: undefined,
+        path: '/test-picture.jpg',
+        _ended: true,
+        res: IncomingMessage {
+          _events: [Object],
+          _readableState: [ReadableState],
+          _maxListeners: undefined,
+          socket: null,
+          httpVersionMajor: 1,
+          httpVersionMinor: 1,
+          httpVersion: '1.1',
+          complete: true,
+          rawHeaders: [Array],
+          rawTrailers: [],
+          joinDuplicateHeaders: undefined,
+          aborted: false,
+          upgrade: false,
+          url: '',
+          method: null,
+          statusCode: 400,
+          statusMessage: 'Bad Request',
+          client: [TLSSocket],
+          _consuming: true,
+          _dumped: false,
+          req: [Circular *1],
+          _eventsCount: 4,
+          responseUrl: 'https://lh3.googleusercontent.com/test-picture.jpg',
+          redirects: [],
+          [Symbol(shapeMode)]: true,
+          [Symbol(kCapture)]: false,
+          [Symbol(kHeaders)]: [Object],
+          [Symbol(kHeadersCount)]: 20,
+          [Symbol(kTrailers)]: null,
+          [Symbol(kTrailersCount)]: 0
+        },
+        aborted: false,
+        timeoutCb: null,
+        upgradeOrConnect: false,
+        parser: null,
+        maxHeadersCount: null,
+        reusedSocket: false,
+        host: 'lh3.googleusercontent.com',
+        protocol: 'https:',
+        _redirectable: Writable {
+          _events: [Object],
+          _writableState: [WritableState],
+          _maxListeners: undefined,
+          _options: [Object],
+          _ended: true,
+          _ending: true,
+          _redirectCount: 0,
+          _redirects: [],
+          _requestBodyLength: 0,
+          _requestBodyBuffers: [],
+          _eventsCount: 3,
+          _onNativeResponse: [Function (anonymous)],
+          _currentRequest: [Circular *1],
+          _currentUrl: 'https://lh3.googleusercontent.com/test-picture.jpg',
+          _timeout: null,
+          [Symbol(shapeMode)]: true,
+          [Symbol(kCapture)]: false
+        },
+        [Symbol(shapeMode)]: false,
+        [Symbol(kCapture)]: false,
+        [Symbol(kBytesWritten)]: 0,
+        [Symbol(kNeedDrain)]: false,
+        [Symbol(corked)]: 0,
+        [Symbol(kChunkedBuffer)]: [],
+        [Symbol(kChunkedLength)]: 0,
+        [Symbol(kSocket)]: TLSSocket {
+          _tlsOptions: [Object],
+          _secureEstablished: true,
+          _securePending: false,
+          _newSessionPending: false,
+          _controlReleased: true,
+          secureConnecting: false,
+          _SNICallback: null,
+          servername: 'lh3.googleusercontent.com',
+          alpnProtocol: false,
+          authorized: true,
+          authorizationError: null,
+          encrypted: true,
+          _events: [Object: null prototype],
+          _eventsCount: 9,
+          connecting: false,
+          _hadError: false,
+          _parent: null,
+          _host: 'lh3.googleusercontent.com',
+          _closeAfterHandlingError: false,
+          _readableState: [ReadableState],
+          _writableState: [WritableState],
+          allowHalfOpen: false,
+          _maxListeners: undefined,
+          _sockname: null,
+          _pendingData: null,
+          _pendingEncoding: '',
+          server: undefined,
+          _server: null,
+          ssl: [TLSWrap],
+          _requestCert: true,
+          _rejectUnauthorized: true,
+          timeout: 5000,
+          parser: null,
+          _httpMessage: null,
+          autoSelectFamilyAttemptedAddresses: [Array],
+          [Symbol(alpncallback)]: null,
+          [Symbol(res)]: [TLSWrap],
+          [Symbol(verified)]: true,
+          [Symbol(pendingSession)]: null,
+          [Symbol(async_id_symbol)]: -1,
+          [Symbol(kHandle)]: [TLSWrap],
+          [Symbol(lastWriteQueueSize)]: 0,
+          [Symbol(timeout)]: Timeout {
+            _idleTimeout: 5000,
+            _idlePrev: [TimersList],
+            _idleNext: [TimersList],
+            _idleStart: 3582,
+            _onTimeout: [Function: bound ],
+            _timerArgs: undefined,
+            _repeat: null,
+            _destroyed: false,
+            [Symbol(refed)]: false,
+            [Symbol(kHasPrimitive)]: false,
+            [Symbol(asyncId)]: 26156,
+            [Symbol(triggerId)]: 26154,
+            [Symbol(kAsyncContextFrame)]: undefined,
+            [Symbol(kResourceStore)]: undefined,
+            [Symbol(kResourceStore)]: 'AuthService - Direct Unit Tests (No Mocking) findOrCreateUser() should update profile picture when user has empty profile picture and Google provides one (covers authService lines 113-114)'
+          },
+          [Symbol(kBuffer)]: null,
+          [Symbol(kBufferCb)]: null,
+          [Symbol(kBufferGen)]: null,
+          [Symbol(shapeMode)]: true,
+          [Symbol(kCapture)]: false,
+          [Symbol(kSetNoDelay)]: false,
+          [Symbol(kSetKeepAlive)]: true,
+          [Symbol(kSetKeepAliveInitialDelay)]: 1,
+          [Symbol(kBytesRead)]: 0,
+          [Symbol(kBytesWritten)]: 0,
+          [Symbol(connect-options)]: [Object]
+        },
+        [Symbol(kOutHeaders)]: [Object: null prototype] {
+          accept: [Array],
+          'user-agent': [Array],
+          'accept-encoding': [Array],
+          host: [Array]
+        },
+        [Symbol(errored)]: null,
+        [Symbol(kHighWaterMark)]: 65536,
+        [Symbol(kRejectNonStandardBodyWrites)]: false,
+        [Symbol(kUniqueHeaders)]: null
+      },
+      response: {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: Object [AxiosHeaders] {
+          vary: 'Origin',
+          'access-control-allow-origin': '*',
+          'timing-allow-origin': '*',
+          'content-type': 'text/html; charset=UTF-8',
+          'x-content-type-options': 'nosniff',
+          date: 'Sun, 09 Nov 2025 07:24:25 GMT',
+          server: 'fife',
+          'content-length': '1555',
+          'x-xss-protection': '0',
+          'alt-svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'
+        },
+        config: {
+          transitional: [Object],
+          adapter: [Array],
+          transformRequest: [Array],
+          transformResponse: [Array],
+          timeout: 10000,
+          xsrfCookieName: 'XSRF-TOKEN',
+          xsrfHeaderName: 'X-XSRF-TOKEN',
+          maxContentLength: -1,
+          maxBodyLength: -1,
+          env: [Object],
+          validateStatus: [Function: validateStatus],
+          headers: [Object [AxiosHeaders]],
+          responseType: 'arraybuffer',
+          method: 'get',
+          url: 'https://lh3.googleusercontent.com/test-picture.jpg',
+          allowAbsoluteUrls: true,
+          data: undefined
+        },
+        request: <ref *1> ClientRequest {
+          _events: [Object: null prototype],
+          _eventsCount: 7,
+          _maxListeners: undefined,
+          outputData: [],
+          outputSize: 0,
+          writable: true,
+          destroyed: true,
+          _last: true,
+          chunkedEncoding: false,
+          shouldKeepAlive: true,
+          maxRequestsOnConnectionReached: false,
+          _defaultKeepAlive: true,
+          useChunkedEncodingByDefault: false,
+          sendDate: false,
+          _removedConnection: false,
+          _removedContLen: false,
+          _removedTE: false,
+          strictContentLength: false,
+          _contentLength: 0,
+          _hasBody: true,
+          _trailer: '',
+          finished: true,
+          _headerSent: true,
+          _closed: true,
+          _header: 'GET /test-picture.jpg HTTP/1.1\r\n' +
+            'Accept: application/json, text/plain, */*\r\n' +
+            'User-Agent: axios/1.12.2\r\n' +
+            'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+            'Host: lh3.googleusercontent.com\r\n' +
+            'Connection: keep-alive\r\n' +
+            '\r\n',
+          _keepAliveTimeout: 0,
+          _onPendingData: [Function: nop],
+          agent: [Agent],
+          socketPath: undefined,
+          method: 'GET',
+          maxHeaderSize: undefined,
+          insecureHTTPParser: undefined,
+          joinDuplicateHeaders: undefined,
+          path: '/test-picture.jpg',
+          _ended: true,
+          res: [IncomingMessage],
+          aborted: false,
+          timeoutCb: null,
+          upgradeOrConnect: false,
+          parser: null,
+          maxHeadersCount: null,
+          reusedSocket: false,
+          host: 'lh3.googleusercontent.com',
+          protocol: 'https:',
+          _redirectable: [Writable],
+          [Symbol(shapeMode)]: false,
+          [Symbol(kCapture)]: false,
+          [Symbol(kBytesWritten)]: 0,
+          [Symbol(kNeedDrain)]: false,
+          [Symbol(corked)]: 0,
+          [Symbol(kChunkedBuffer)]: [],
+          [Symbol(kChunkedLength)]: 0,
+          [Symbol(kSocket)]: [TLSSocket],
+          [Symbol(kOutHeaders)]: [Object: null prototype],
+          [Symbol(errored)]: null,
+          [Symbol(kHighWaterMark)]: 65536,
+          [Symbol(kRejectNonStandardBodyWrites)]: false,
+          [Symbol(kUniqueHeaders)]: null
+        },
+        data: <Buffer 3c 21 44 4f 43 54 59 50 45 20 68 74 6d 6c 3e 0a 3c 68 74 6d 6c 20 6c 61 6e 67 3d 65 6e 3e 0a 20 20 3c 6d 65 74 61 20 63 68 61 72 73 65 74 3d 75 74 66 ... 1505 more bytes>
+      },
+      status: 400
+    }
+
+      37 |       return base64DataUri;
+      38 |     } catch (error) {
+    > 39 |       console.error(`[AuthService] Failed to convert profile picture to Base64:`, error);
+         |               ^
+      40 |       return profilePictureUrl; // Return original URL if conversion fails
+      41 |     }
+      42 |   }
+
+      at AuthService.error [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:39:15)
+      at AuthService.findOrCreateUser (src/services/authService.ts:90:33)
+      at AuthController.signIn (src/controllers/auth.controller.ts:112:27)
+      at src/routes/auth.routes.ts:21:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    ✅ Updated profile picture from Google for user: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:114:17)
+
+  console.log
+    ✅ User logged in: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:119:15)
+
+  console.log
+    ✅ Keeping existing custom profile picture for user: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:116:17)
+
+  console.log
+    ✅ User logged in: 691041a841b69cabba570742
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:119:15)
+
+  console.log
+    ✅ New user created: 691041a941b69cabba570796
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:107:17)
+
+  console.log
+    ✅ New user created: 691041a941b69cabba57079b
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:107:17)
+
+  console.log
+    [AuthService] Converting Google profile picture to Base64: https://lh3.googleusercontent.com/test-picture
+
+      at AuthService.log [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:23:15)
+
+  console.error
+    [AuthService] Failed to convert profile picture to Base64: Error: Network error
+        at Object.<anonymous> (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/tests/no-mocks/auth.test.ts:1630:47)
+        at Promise.finally.completed (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)
+        at _callCircusTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)
+        at processTicksAndRejections (node:internal/process/task_queues:105:5)
+        at _runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:947:3)
+        at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:849:7
+        at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:862:11)
+        at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:857:11)
+        at _runTestsForDescribeBlock (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:857:11)
+        at run (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:761:3)
+        at runAndTransformResultsToJestFormat (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)
+        at jestAdapter (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-circus/build/runner.js:101:19)
+        at runTestInternal (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:275:16)
+        at runTest (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/jest-runner/build/index.js:343:7)
+
+      37 |       return base64DataUri;
+      38 |     } catch (error) {
+    > 39 |       console.error(`[AuthService] Failed to convert profile picture to Base64:`, error);
+         |               ^
+      40 |       return profilePictureUrl; // Return original URL if conversion fails
+      41 |     }
+      42 |   }
+
+      at AuthService.error [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:39:15)
+      at AuthService.findOrCreateUser (src/services/authService.ts:90:33)
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:1642:20)
+
+  console.log
+    ✅ New user created: 691041a941b69cabba5707a0
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:107:17)
+
+  console.log
+    [AuthService] Converting Google profile picture to Base64: https://lh3.googleusercontent.com/test-picture
+
+      at AuthService.log [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:23:15)
+
+  console.log
+    [AuthService] Successfully converted to Base64 (42 chars)
+
+      at AuthService.log [as convertGoogleProfilePictureToBase64] (src/services/authService.ts:35:15)
+
+  console.log
+    ✅ New user created: 691041a941b69cabba5707a5
+
+      at AuthService.log [as findOrCreateUser] (src/services/authService.ts:107:17)
+
+  console.log
+    Test suite completed.
+
+      at Object.<anonymous> (tests/setup.ts:14:11)
+
+  console.log
+    
+    🧹 Cleaning up after tests...
+
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:46:11)
+
+  console.warn
+    MongoDB disconnected. Attempting to reconnect...
+
+      28 |
+      29 |     mongoose.connection.on('disconnected', () => {
+    > 30 |       console.warn('MongoDB disconnected. Attempting to reconnect...');
+         |               ^
+      31 |     });
+      32 |
+      33 |     mongoose.connection.on('reconnected', () => {
+
+      at NativeConnection.<anonymous> (src/config/database.ts:30:15)
+      at NativeConnection.set (node_modules/mongoose/lib/connection.js:145:12)
+      at NativeConnection.onClose (node_modules/mongoose/lib/connection.js:1315:19)
+      at NativeConnection._close (node_modules/mongoose/lib/connection.js:1264:12)
+      at disconnectDatabase (src/config/database.ts:55:5)
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:52:3)
+
+  console.log
+    MongoDB disconnected successfully
+
+      at disconnectDatabase (src/config/database.ts:56:13)
+
+  console.log
+    ✅ Cleanup complete.
+
+      at Object.<anonymous> (tests/no-mocks/auth.test.ts:54:11)
+
+PASS tests/no-mocks/auth.test.ts
+  POST /api/auth/signup - Validation (No Mocking)
+    ✓ should return 400 when idToken is missing (12 ms)
+    ✓ should return 409 when user already exists (5 ms)
+    ✓ should return 500 when JWT_SECRET is missing (8 ms)
+    ✓ should handle errors in catch block and call next(error) (23 ms)
+    ✓ should successfully sign up new user and return JWT token (20 ms)
+  POST /api/auth/signin - Validation (No Mocking)
+    ✓ should return 400 when idToken is missing in signin (2 ms)
+    ✓ should return 404 when user not found (3 ms)
+    ✓ should return 500 when JWT_SECRET is missing in signin (9 ms)
+    ✓ should successfully sign in existing user and return JWT token (6 ms)
+    ✓ should handle errors in signin catch block and call next(error) (3 ms)
+  POST /api/auth/google - Validation (No Mocking)
+    ✓ should return 400 when idToken is missing in googleAuth (1 ms)
+    ✓ should return 401 when Google token payload is invalid (missing sub) (2 ms)
+    ✓ should return 401 when Google token payload is invalid (missing email) (2 ms)
+    ✓ should return 500 when JWT_SECRET is missing in googleAuth (3 ms)
+    ✓ should use fallback "User" when name is missing in googleAuth (37 ms)
+    ✓ should use empty string fallback when picture is missing in googleAuth (11 ms)
+    ✓ should return 401 when Google token payload is null (2 ms)
+    ✓ should create new user when not found (8 ms)
+    ✓ should create new user when not found and update existing user status when found (18 ms)
+  POST /api/auth/logout - No Mocking
+    ✓ should return 200 and logout user successfully (7 ms)
+    ✓ should return 401 without authentication token (1 ms)
+    ✓ should return 200 even if user not found (3 ms)
+  Auth Middleware - Integration Tests
+    ✓ should return 500 when JWT_SECRET is missing in authMiddleware (3 ms)
+    ✓ should return 401 with Invalid token message for JsonWebTokenError (1 ms)
+    ✓ should return 401 with Token expired message for TokenExpiredError (2 ms)
+    ✓ should return 500 with Authentication failed for non-JWT errors (5 ms)
+    ✓ should continue without user when JWT_SECRET is missing in optionalAuth (4 ms)
+    ✓ should handle errors in optionalAuth catch block (1 ms)
+  GET /api/auth/verify - No Mocking
+    ✓ should return 200 and user info with valid token (7 ms)
+    ✓ should return 401 without authentication token (1 ms)
+    ✓ should return 404 when user not found in verify (2 ms)
+  POST /api/auth/fcm-token - No Mocking
+    ✓ should return 200 and update FCM token successfully (7 ms)
+    ✓ should return 400 when fcmToken is missing (2 ms)
+    ✓ should return 401 without authentication token (1 ms)
+    ✓ should return 404 when user not found in updateFCMToken (2 ms)
+  DELETE /api/auth/account - No Mocking
+    ✓ should return 200 and delete account successfully (17 ms)
+    ✓ should return 400 when user is in a room (10 ms)
+    ✓ should return 400 when user is in a group (12 ms)
+    ✓ should return 401 without authentication token (1 ms)
+    ✓ should return 404 when user not found in deleteAccount (2 ms)
+  POST /api/auth/google - Google OAuth Integration (Legacy)
+    ✓ should return 200 and find or create user with valid Google token (631 ms)
+  AuthService - Direct Unit Tests (No Mocking)
+    generateToken()
+      ✓ should generate valid JWT token for user (2 ms)
+      ✓ should throw error when JWT_SECRET is missing (4 ms)
+    verifyToken()
+      ✓ should verify and decode valid token (1 ms)
+      ✓ should throw error for invalid and expired tokens (1 ms)
+    findOrCreateUser()
+      ✓ should update profile picture when user has empty profile picture and Google provides one (covers authService lines 113-114) (162 ms)
+      ✓ should find existing user and update status, or create new user when not found (10 ms)
+      ✓ should return original URL when profile picture is not a Google URL (4 ms)
+      ✓ should handle profile picture conversion failure gracefully (5 ms)
+      ✓ should use image/png fallback when content-type header is missing (5 ms)
+    verifyGoogleToken()
+      ✓ should throw AppError when payload is invalid
+      ✓ should use "User" as fallback when name is missing (1 ms)
+      ✓ should throw AppError in catch block when verification fails
+    logoutUser()
+      ✓ should set user status to OFFLINE (6 ms)
+      ✓ should handle non-existent user gracefully (1 ms)
+    deleteAccount()
+      ✓ should throw error when user is in a room (1 ms)
+      ✓ should throw error when user is in a group (3 ms)
+
+  console.log
+    [dotenv@17.2.3] injecting env (3) from .env.test -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    Starting test suite...
+
+      at Object.<anonymous> (tests/setup.ts:9:11)
+
+  console.log
+    
+    🚀 Starting Matching Tests (No Mocking)...
+
+      at Object.<anonymous> (tests/no-mocks/matching.test.ts:39:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ SocketManager initialized
+
+      at SocketManager.log [as initialize] (src/utils/socketManager.ts:35:13)
+
+  console.log
+    ✅ Test Socket.IO server initialized on port 59937
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:28:15)
+
+  console.log
+    MongoDB Atlas connected successfully
+
+      at connectDatabase (src/config/database.ts:22:13)
+
+  console.log
+    
+    ✅ Test setup complete. Ready to run tests.
+
+      at Object.<anonymous> (tests/no-mocks/matching.test.ts:50:11)
+
+  console.log
+    ✅ Created new room: 691041a90aeb3042e0c4c5bd (cuisine: italian)
+
+      at MatchingService.log [as joinMatching] (src/services/matchingService.ts:126:15)
+
+  console.log
+    📤 Emitted room_update for room 691041a90aeb3042e0c4c5bd
+
+      at SocketEmitter.emitRoomUpdate (src/config/socket.ts:174:13)
+
+  console.warn
+    ⚠️ emitToUser: No socket found for user 691041a90aeb3042e0c4c5a8
+
+      175 |     }
+      176 |
+    > 177 |     console.warn(`⚠️ emitToUser: No socket found for user ${userId}`);
+          |             ^
+      178 |   }
+      179 | }
+      180 |
+
+      at SocketManager.warn (src/utils/socketManager.ts:177:13)
+      at MatchingService.emitToUser [as joinMatching] (src/services/matchingService.ts:151:19)
+      at MatchingController.joinMatching (src/controllers/matching.controller.ts:17:22)
+      at src/routes/matching.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📤 Emitted member_joined for room 691041a90aeb3042e0c4c5bd
+
+      at SocketEmitter.emitMemberJoined (src/config/socket.ts:250:13)
+
+  console.log
+    ✅ Best room match found with score: 90
+
+      at MatchingService.log [as findBestMatchingRoom] (src/services/matchingService.ts:65:15)
+
+  console.log
+    ✅ User 691041a90aeb3042e0c4c5a9 joined room: 691041a90aeb3042e0c4c5cd (members: 2/10)
+
+      at MatchingService.log [as joinMatching] (src/services/matchingService.ts:135:15)
+
+  console.log
+    📤 Emitted room_update for room 691041a90aeb3042e0c4c5cd
+
+      at SocketEmitter.emitRoomUpdate (src/config/socket.ts:174:13)
+
+  console.warn
+    ⚠️ emitToUser: No socket found for user 691041a90aeb3042e0c4c5a9
+
+      175 |     }
+      176 |
+    > 177 |     console.warn(`⚠️ emitToUser: No socket found for user ${userId}`);
+          |             ^
+      178 |   }
+      179 | }
+      180 |
+
+      at SocketManager.warn [as emitToUser] (src/utils/socketManager.ts:177:13)
+      at MatchingService.emitToUser [as joinMatching] (src/services/matchingService.ts:151:19)
+      at MatchingController.joinMatching (src/controllers/matching.controller.ts:17:22)
+      at src/routes/matching.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📤 Emitted member_joined for room 691041a90aeb3042e0c4c5cd
+
+      at SocketEmitter.emitMemberJoined (src/config/socket.ts:250:13)
+
+  console.log
+    ✅ Created new room: 691041a90aeb3042e0c4c5ed (cuisine: very-unique-cuisine-that-does-not-exist)
+
+      at MatchingService.log [as joinMatching] (src/services/matchingService.ts:126:15)
+
+  console.log
+    📤 Emitted room_update for room 691041a90aeb3042e0c4c5ed
+
+      at SocketEmitter.emitRoomUpdate (src/config/socket.ts:174:13)
+
+  console.warn
+    ⚠️ emitToUser: No socket found for user 691041a90aeb3042e0c4c5ac
+
+      175 |     }
+      176 |
+    > 177 |     console.warn(`⚠️ emitToUser: No socket found for user ${userId}`);
+          |             ^
+      178 |   }
+      179 | }
+      180 |
+
+      at SocketManager.warn [as emitToUser] (src/utils/socketManager.ts:177:13)
+      at MatchingService.emitToUser [as joinMatching] (src/services/matchingService.ts:151:19)
+      at MatchingController.joinMatching (src/controllers/matching.controller.ts:17:22)
+      at src/routes/matching.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📤 Emitted member_joined for room 691041a90aeb3042e0c4c5ed
+
+      at SocketEmitter.emitMemberJoined (src/config/socket.ts:250:13)
+
+  console.error
+    Error: {
+      message: 'User is already in a room or group',
+      statusCode: 500,
+      stack: 'Error: User is already in a room or group\n' +
+        '    at MatchingService.joinMatching (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/matchingService.ts:93:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at MatchingController.joinMatching (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/matching.controller.ts:17:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/matching.routes.ts:14:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:25.667Z',
+      path: '/api/matching/join',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at MatchingController.next [as joinMatching] (src/controllers/matching.controller.ts:29:7)
+      at src/routes/matching.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📤 Emitted member_left for room 691041a90aeb3042e0c4c618
+
+      at SocketEmitter.emitMemberLeft (src/config/socket.ts:263:13)
+
+  console.log
+    📤 Emitted room_update for room 691041a90aeb3042e0c4c618
+
+      at SocketEmitter.emitRoomUpdate (src/config/socket.ts:174:13)
+
+  console.log
+    ✅ User 691041a90aeb3042e0c4c614 left room 691041a90aeb3042e0c4c618
+
+      at MatchingService.log [as leaveRoom] (src/services/matchingService.ts:253:13)
+
+  console.log
+    📤 Emitted member_left for room 691041a90aeb3042e0c4c626
+
+      at SocketEmitter.emitMemberLeft (src/config/socket.ts:263:13)
+
+  console.log
+    🗑️ Deleted empty room: 691041a90aeb3042e0c4c626
+
+      at MatchingService.log [as leaveRoom] (src/services/matchingService.ts:238:15)
+
+  console.log
+    ✅ User 691041a90aeb3042e0c4c624 left room 691041a90aeb3042e0c4c626
+
+      at MatchingService.log [as leaveRoom] (src/services/matchingService.ts:253:13)
+
+  console.log
+    Room 691041a90aeb3042e0c4c63a not found - clearing user's roomID anyway
+
+      at MatchingService.log [as leaveRoom] (src/services/matchingService.ts:204:15)
+
+  console.log
+    ✅ Cleared stale roomID for user 691041a90aeb3042e0c4c5a8
+
+      at MatchingService.log [as leaveRoom] (src/services/matchingService.ts:211:17)
+
+  console.error
+    Error: {
+      message: 'Room not found',
+      statusCode: 500,
+      stack: 'Error: Room not found\n' +
+        '    at MatchingService.getRoomStatus (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/matchingService.ts:321:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at MatchingController.getRoomStatus (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/matching.controller.ts:88:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/matching.routes.ts:41:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:25.816Z',
+      path: '/api/matching/status/691041a90aeb3042e0c4c65d',
+      method: 'GET'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at MatchingController.next [as getRoomStatus] (src/controllers/matching.controller.ts:96:7)
+      at src/routes/matching.routes.ts:41:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📤 Emitted group_ready for room 691041a90aeb3042e0c4c695 → group 691041a90aeb3042e0c4c696
+
+      at SocketEmitter.emitGroupReady (src/config/socket.ts:187:13)
+
+  console.log
+    📤 Emitted room_expired for room 691041a90aeb3042e0c4c6a0
+
+      at SocketEmitter.emitRoomExpired (src/config/socket.ts:199:13)
+
+  console.log
+    📤 Emitted room_expired for room 691041a90aeb3042e0c4c6a0
+
+      at SocketEmitter.emitRoomExpired (src/config/socket.ts:199:13)
+
+  console.log
+    Test suite completed.
+
+      at Object.<anonymous> (tests/setup.ts:14:11)
+
+  console.log
+    
+    🧹 Cleaning up after tests...
+
+      at Object.<anonymous> (tests/no-mocks/matching.test.ts:54:11)
+
+  console.log
+    🧹 Cleaning matching test data...
+
+      at cleanMatchingTestData (tests/helpers/matching.helper.ts:122:11)
+
+  console.log
+    ✅ Matching test data cleaned
+
+      at cleanMatchingTestData (tests/helpers/matching.helper.ts:135:11)
+
+  console.warn
+    MongoDB disconnected. Attempting to reconnect...
+
+      28 |
+      29 |     mongoose.connection.on('disconnected', () => {
+    > 30 |       console.warn('MongoDB disconnected. Attempting to reconnect...');
+         |               ^
+      31 |     });
+      32 |
+      33 |     mongoose.connection.on('reconnected', () => {
+
+      at NativeConnection.<anonymous> (src/config/database.ts:30:15)
+      at NativeConnection.set (node_modules/mongoose/lib/connection.js:145:12)
+      at NativeConnection.onClose (node_modules/mongoose/lib/connection.js:1315:19)
+      at NativeConnection._close (node_modules/mongoose/lib/connection.js:1264:12)
+      at disconnectDatabase (src/config/database.ts:55:5)
+      at Object.<anonymous> (tests/no-mocks/matching.test.ts:58:3)
+
+  console.log
+    MongoDB disconnected successfully
+
+      at disconnectDatabase (src/config/database.ts:56:13)
+
+  console.log
+    ✅ HTTP server closed
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:44:15)
+
+  console.log
+    ✅ Socket.IO server closed
+
+      at tests/helpers/socket.helper.ts:40:15
+
+  console.log
+    ✅ Cleanup complete.
+
+      at Object.<anonymous> (tests/no-mocks/matching.test.ts:63:11)
+
+PASS tests/no-mocks/matching.test.ts
+  POST /api/matching/join - No Mocking
+    ✓ should create new room when no matching rooms exist and update user preferences (46 ms)
+    ✓ should join existing room with matching preferences (28 ms)
+    ✓ should return 401 without authentication (16 ms)
+    ✓ should return 200 with null roomId when no good match found (covers matchingService lines 69-70) (51 ms)
+    ✓ should return 500 when user already in room (28 ms)
+  POST /api/matching/join/:roomId - No Mocking
+    ✓ should return 501 Not Implemented (11 ms)
+  PUT /api/matching/leave/:roomId - No Mocking
+    ✓ should successfully leave room and delete room when last member leaves (74 ms)
+    ✓ should handle leaving non-existent room gracefully (29 ms)
+  GET /api/matching/status/:roomId - No Mocking
+    ✓ should return room status for valid roomId (22 ms)
+    ✓ should return 500 for non-existent room (12 ms)
+  GET /api/matching/users/:roomId - No Mocking
+    ✓ should return list of users in room (19 ms)
+  Room Model Methods - Integration Tests
+    ✓ should trigger pre-save hook to expire room (13 ms)
+  SocketManager - Integration Tests
+    ✓ should warn and return early when initialize is called twice (10 ms)
+    ✓ should call emitGroupReady through socketManager (11 ms)
+    ✓ should call emitRoomExpired through socketManager (10 ms)
+    ✓ should throw error when getIO is called before initialize (13 ms)
+    ✓ should emit event to user when socket with matching userId is found (10 ms)
+    ✓ should log warning when no socket with matching userId is found (13 ms)
+
+  console.log
+    [dotenv@17.2.3] injecting env (3) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    Starting test suite...
+
+      at Object.<anonymous> (tests/setup.ts:9:11)
+
+  console.log
+    
+    🚀 Starting Group Tests (No Mocking - Controllable Scenarios)...
+
+      at Object.<anonymous> (tests/no-mocks/group.test.ts:41:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ Socket.IO initialized successfully
+
+      at initializeSocket (src/config/socket.ts:151:11)
+
+  console.log
+    ✅ SocketManager initialized
+
+      at SocketManager.log [as initialize] (src/utils/socketManager.ts:35:13)
+
+  console.log
+    ✅ Test Socket.IO server initialized on port 59969
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:28:15)
+
+  console.log
+    MongoDB Atlas connected successfully
+
+      at connectDatabase (src/config/database.ts:22:13)
+
+  console.log
+    ✅ Test setup complete. Ready to run tests.
+
+      at Object.<anonymous> (tests/no-mocks/group.test.ts:85:11)
+
+  console.error
+    Error: {
+      message: 'Group not found',
+      statusCode: 500,
+      stack: 'Error: Group not found\n' +
+        '    at GroupService.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:55:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupController.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:59:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:23:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.223Z',
+      path: '/api/group/vote/507f1f77bcf86cd799439011',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at GroupController.next [as voteForRestaurant] (src/controllers/group.controller.ts:75:7)
+      at src/routes/group.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.error
+    Error: {
+      message: 'Cast to ObjectId failed for value "invalid-group-id-format" (type string) at path "_id" for model "Group"',
+      statusCode: 400,
+      stack: 'CastError: Cast to ObjectId failed for value "invalid-group-id-format" (type string) at path "_id" for model "Group"\n' +
+        '    at SchemaObjectId.cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schema/objectId.js:251:11)\n' +
+        '    at SchemaObjectId.SchemaType.applySetters (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1259:12)\n' +
+        '    at SchemaObjectId.SchemaType.castForQuery (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1695:17)\n' +
+        '    at cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/cast.js:390:32)\n' +
+        '    at model.Query.Query.cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:5060:12)\n' +
+        '    at model.Query.Query._castConditions (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:2374:10)\n' +
+        '    at model.Query._findOne (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:2697:8)\n' +
+        '    at model.Query.exec (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:4627:80)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupService.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:52:19)\n' +
+        '    at GroupController.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:59:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:23:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.236Z',
+      path: '/api/group/vote/invalid-group-id-format',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at GroupController.next [as voteForRestaurant] (src/controllers/group.controller.ts:75:7)
+      at src/routes/group.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.error
+    Error: {
+      message: 'User is not a member of this group',
+      statusCode: 500,
+      stack: 'Error: User is not a member of this group\n' +
+        '    at GroupService.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:60:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupController.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:59:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:23:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.257Z',
+      path: '/api/group/vote/691041aa6dc55d0700fca0da',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at GroupController.next [as voteForRestaurant] (src/controllers/group.controller.ts:75:7)
+      at src/routes/group.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.error
+    Error: {
+      message: 'Restaurant has already been selected for this group',
+      statusCode: 500,
+      stack: 'Error: Restaurant has already been selected for this group\n' +
+        '    at GroupService.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:65:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupController.voteForRestaurant (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:59:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:23:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.269Z',
+      path: '/api/group/vote/691041aa6dc55d0700fca0dd',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at GroupController.next [as voteForRestaurant] (src/controllers/group.controller.ts:75:7)
+      at src/routes/group.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    📡 Emitting vote_update to channel: group_691041aa6dc55d0700fca115
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:215:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-first',
+      votes: { 'rest-first': 1 },
+      totalVotes: 1,
+      membersVoted: 1,
+      totalMembers: 2
+    }
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:216:13)
+
+  console.log
+    ✅ vote_update emitted successfully
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:218:13)
+
+  console.log
+    📡 Emitting vote_update to channel: group_691041aa6dc55d0700fca115
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:215:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-second',
+      votes: { 'rest-first': 0, 'rest-second': 1 },
+      totalVotes: 1,
+      membersVoted: 1,
+      totalMembers: 2
+    }
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:216:13)
+
+  console.log
+    ✅ vote_update emitted successfully
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:218:13)
+
+  console.log
+    📡 Emitting vote_update to channel: group_691041aa6dc55d0700fca121
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:215:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-winner',
+      votes: { 'rest-winner': 1 },
+      totalVotes: 1,
+      membersVoted: 1,
+      totalMembers: 1
+    }
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:216:13)
+
+  console.log
+    ✅ vote_update emitted successfully
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:218:13)
+
+  console.log
+    🎉 Emitting restaurant_selected to channel: group_691041aa6dc55d0700fca121
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:232:13)
+
+  console.log
+       Restaurant: Winner Restaurant
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:233:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-winner',
+      restaurantName: 'Winner Restaurant',
+      votes: { 'rest-winner': 1 }
+    }
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:234:13)
+
+  console.log
+    ✅ restaurant_selected emitted successfully
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:236:13)
+
+  console.log
+     Notification sent to 1 users
+
+      at log (src/services/notificationService.ts:52:13)
+
+  console.log
+    âœ… Restaurant selected for group 691041aa6dc55d0700fca121
+
+      at GroupService.log [as voteForRestaurant] (src/services/groupService.ts:152:17)
+
+  console.log
+    📡 Emitting vote_update to channel: group_691041aa6dc55d0700fca12c
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:215:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-winner',
+      votes: { 'rest-winner': 1 },
+      totalVotes: 1,
+      membersVoted: 1,
+      totalMembers: 1
+    }
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:216:13)
+
+  console.log
+    ✅ vote_update emitted successfully
+
+      at SocketEmitter.emitVoteUpdate (src/config/socket.ts:218:13)
+
+  console.log
+    🎉 Emitting restaurant_selected to channel: group_691041aa6dc55d0700fca12c
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:232:13)
+
+  console.log
+       Restaurant: Winner Restaurant
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:233:13)
+
+  console.log
+       Data: {
+      restaurantId: 'rest-winner',
+      restaurantName: 'Winner Restaurant',
+      votes: { 'rest-winner': 1 }
+    }
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:234:13)
+
+  console.log
+    ✅ restaurant_selected emitted successfully
+
+      at SocketEmitter.emitRestaurantSelected (src/config/socket.ts:236:13)
+
+  console.warn
+    No valid FCM tokens found for the provided users
+
+      45 |
+      46 |     if (tokens.length === 0) {
+    > 47 |       console.warn('No valid FCM tokens found for the provided users');
+         |               ^
+      48 |       return;
+      49 |     }
+      50 |
+
+      at warn (src/services/notificationService.ts:47:15)
+      at notifyRestaurantSelected (src/services/notificationService.ts:137:3)
+      at GroupService.voteForRestaurant (src/services/groupService.ts:143:11)
+      at GroupController.voteForRestaurant (src/controllers/group.controller.ts:59:22)
+      at src/routes/group.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    âœ… Restaurant selected for group 691041aa6dc55d0700fca12c
+
+      at GroupService.log [as voteForRestaurant] (src/services/groupService.ts:152:17)
+
+  console.log
+    📤 Emitted member_left for room group_691041aa6dc55d0700fca137
+
+      at SocketEmitter.emitMemberLeft (src/config/socket.ts:263:13)
+
+  console.error
+    Error: {
+      message: 'Group not found',
+      statusCode: 500,
+      stack: 'Error: Group not found\n' +
+        '    at GroupService.leaveGroup (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:169:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupController.leaveGroup (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:88:7)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:32:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.371Z',
+      path: '/api/group/leave/507f1f77bcf86cd799439011',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.error
+    Error: {
+      message: 'User not found',
+      statusCode: 500,
+      stack: 'Error: User not found\n' +
+        '    at GroupService.leaveGroup (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/groupService.ts:174:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at GroupController.leaveGroup (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/group.controller.ts:88:7)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/group.routes.ts:32:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.383Z',
+      path: '/api/group/leave/691041aa6dc55d0700fca0da',
+      method: 'POST'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.log
+    ðŸ—‘ï¸ Deleted empty group: 691041aa6dc55d0700fca150
+
+      at GroupService.log [as leaveGroup] (src/services/groupService.ts:188:15)
+
+  console.log
+    📤 Emitted member_left for room group_691041aa6dc55d0700fca15c
+
+      at SocketEmitter.emitMemberLeft (src/config/socket.ts:263:13)
+
+  console.log
+    Test suite completed.
+
+      at Object.<anonymous> (tests/setup.ts:14:11)
+
+  console.log
+    
+    🧹 Cleaning up after tests...
+
+      at Object.<anonymous> (tests/no-mocks/group.test.ts:89:11)
+
+  console.warn
+    MongoDB disconnected. Attempting to reconnect...
+
+      28 |
+      29 |     mongoose.connection.on('disconnected', () => {
+    > 30 |       console.warn('MongoDB disconnected. Attempting to reconnect...');
+         |               ^
+      31 |     });
+      32 |
+      33 |     mongoose.connection.on('reconnected', () => {
+
+      at NativeConnection.<anonymous> (src/config/database.ts:30:15)
+      at NativeConnection.set (node_modules/mongoose/lib/connection.js:145:12)
+      at NativeConnection.onClose (node_modules/mongoose/lib/connection.js:1315:19)
+      at NativeConnection._close (node_modules/mongoose/lib/connection.js:1264:12)
+      at disconnectDatabase (src/config/database.ts:55:5)
+      at Object.<anonymous> (tests/no-mocks/group.test.ts:92:3)
+
+  console.log
+    MongoDB disconnected successfully
+
+      at disconnectDatabase (src/config/database.ts:56:13)
+
+  console.log
+    ✅ HTTP server closed
+
+      at Server.<anonymous> (tests/helpers/socket.helper.ts:44:15)
+
+  console.log
+    ✅ Socket.IO server closed
+
+      at tests/helpers/socket.helper.ts:40:15
+
+  console.log
+    ✅ Cleanup complete.
+
+      at Object.<anonymous> (tests/no-mocks/group.test.ts:97:11)
+
+PASS tests/no-mocks/group.test.ts
+  GET /api/group/status - No Mocking
+    ✓ Should return 200 and group status for user in a group (37 ms)
+    ✓ should return 404 when user is not in a group (23 ms)
+    ✓ should return 401 without authentication token (6 ms)
+    ✓ should return 401 with invalid token (5 ms)
+    ✓ should return group status with restaurant selected (9 ms)
+  POST /api/group/vote/:groupId - No Mocking
+    ✓ should return 400 when restaurantID is missing (14 ms)
+    ✓ should return 500 when group not found (23 ms)
+    ✓ should return 400 for invalid ObjectId format in groupId (20 ms)
+    ✓ should return 500 when user is not a member of the group (7 ms)
+    ✓ should return 500 when restaurant already selected (11 ms)
+    ✓ should allow user to change their vote and emit socket events (23 ms)
+    ✓ should successfully vote and trigger restaurant selection with notification (30 ms)
+    ✓ should still succeed when voting even if user has no FCM token (22 ms)
+  POST /api/group/leave/:groupId - No Mocking
+    ✓ should return 200 and successfully leave a group (19 ms)
+    ✓ should return 500 when group not found in leaveGroup (10 ms)
+    ✓ should return 500 when user not found (15 ms)
+    ✓ should delete group and restaurant data when last member leaves (15 ms)
+    ✓ should preserve restaurant data when member leaves (group not deleted) (16 ms)
+    ✓ should verify restaurant field remains after completionTime if not cleared (16 ms)
+  Group Model Methods - Integration Tests
+    ✓ should access groupId virtual property through API response (17 ms)
+    ✓ should use toJSON transform to convert Maps to objects (9 ms)
+    ✓ should add vote when user has no previous vote and use || 0 fallback (9 ms)
+    ✓ should handle previous vote when adding new vote (14 ms)
+    ✓ should handle previous vote when restaurantVotes.get returns undefined (10 ms)
+    ✓ should remove vote when restaurantId exists (10 ms)
+    ✓ should use || 0 fallback when removing vote for restaurant not in restaurantVotes (13 ms)
+    ✓ should get winning restaurant when votes exist (10 ms)
+    ✓ should return null when no votes exist in getWinningRestaurant (9 ms)
+    ✓ should handle equal votes in getWinningRestaurant (6 ms)
+    ✓ should check if all members have voted (6 ms)
+    ✓ should remove member from group (8 ms)
+
+  console.log
+    [dotenv@17.2.3] injecting env (3) from .env.test -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+
+      at _log (node_modules/dotenv/lib/main.js:142:11)
+
+  console.log
+    Starting test suite...
+
+      at Object.<anonymous> (tests/setup.ts:9:11)
+
+  console.log
+    
+    🚀 Starting User Tests (No Mocking)...
+
+      at Object.<anonymous> (tests/no-mocks/user.test.ts:18:11)
+
+  console.log
+    MongoDB Atlas connected successfully
+
+      at connectDatabase (src/config/database.ts:22:13)
+
+  console.log
+    
+    ✅ Test setup complete. Ready to run tests.
+
+      at Object.<anonymous> (tests/no-mocks/user.test.ts:26:11)
+
+  console.error
+    Error: {
+      message: 'Cast to ObjectId failed for value "invalid-id-format-123" (type string) at path "_id" for model "User"',
+      statusCode: 400,
+      stack: 'CastError: Cast to ObjectId failed for value "invalid-id-format-123" (type string) at path "_id" for model "User"\n' +
+        '    at SchemaObjectId.cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schema/objectId.js:251:11)\n' +
+        '    at SchemaObjectId.SchemaType.applySetters (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1259:12)\n' +
+        '    at SchemaObjectId.SchemaType.castForQuery (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1695:17)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1650:18\n' +
+        '    at Array.map (<anonymous>)\n' +
+        '    at SchemaObjectId.handle$in (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1646:14)\n' +
+        '    at SchemaObjectId.SchemaType.castForQuery (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/schemaType.js:1691:20)\n' +
+        '    at cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/cast.js:367:39)\n' +
+        '    at model.Query.Query.cast (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:5060:12)\n' +
+        '    at model.Query.Query._castConditions (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:2374:10)\n' +
+        '    at model.Query._find (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:2401:8)\n' +
+        '    at model.Query.exec (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/node_modules/mongoose/lib/query.js:4627:80)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at UserService.getUserProfiles (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/userService.ts:40:19)\n' +
+        '    at UserController.getUserProfiles (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/user.controller.ts:18:24)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/user.routes.ts:14:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.785Z',
+      path: '/api/user/profile/invalid-id-format-123',
+      method: 'GET'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at UserController.next [as getUserProfiles] (src/controllers/user.controller.ts:26:7)
+      at src/routes/user.routes.ts:14:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    [UserService] getUserSettings called for userId: 691041aa56c127c96baaf987
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:55:13)
+
+  console.log
+    [UserService] User found. profilePicture: "https://example.com/pic1.jpg"
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:63:13)
+
+  console.log
+    [UserService] getUserSettings called for userId: 691041aa56c127c96baaf998
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:55:13)
+
+  console.error
+    Error: {
+      message: 'User not found',
+      statusCode: 500,
+      stack: 'Error: User not found\n' +
+        '    at UserService.getUserSettings (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/userService.ts:60:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at UserController.getUserSettings (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/user.controller.ts:38:24)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/user.routes.ts:23:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.802Z',
+      path: '/api/user/settings',
+      method: 'GET'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at node_modules/router/index.js:688:15
+      at next (node_modules/router/index.js:276:14)
+      at next (node_modules/router/lib/route.js:132:14)
+      at UserController.next [as getUserSettings] (src/controllers/user.controller.ts:46:7)
+      at src/routes/user.routes.ts:23:3
+      at src/middleware/errorHandler.ts:58:9
+
+  console.log
+    [UserService] updateUserSettings called for userId: 691041aa56c127c96baaf988
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:130:13)
+
+  console.log
+    [UserService] Data received: {
+      name: 'Settings Updated Name',
+      bio: 'Settings updated bio',
+      preference: [ 'vegetarian', 'italian', 'mexican' ],
+      profilePicture: undefined,
+      contactNumber: undefined,
+      budget: 100,
+      radiusKm: 25
+    }
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:131:13)
+
+  console.log
+    [UserService] User saved. Current profilePicture: "https://example.com/pic2.jpg"
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:154:13)
+
+  console.log
+    [UserService] getUserSettings called for userId: 691041aa56c127c96baaf988
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:55:13)
+
+  console.log
+    [UserService] User found. profilePicture: "https://example.com/pic2.jpg"
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:63:13)
+
+  console.log
+    [UserService] updateUserSettings called for userId: 691041aa56c127c96baaf988
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:130:13)
+
+  console.log
+    [UserService] Data received: {
+      name: undefined,
+      bio: undefined,
+      preference: undefined,
+      profilePicture: undefined,
+      contactNumber: undefined,
+      budget: 150,
+      radiusKm: 30
+    }
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:131:13)
+
+  console.log
+    [UserService] User saved. Current profilePicture: "https://example.com/pic2.jpg"
+
+      at UserService.log [as updateUserSettings] (src/services/userService.ts:154:13)
+
+  console.log
+    [UserService] getUserSettings called for userId: 691041aa56c127c96baaf988
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:55:13)
+
+  console.log
+    [UserService] User found. profilePicture: "https://example.com/pic2.jpg"
+
+      at UserService.log [as getUserSettings] (src/services/userService.ts:63:13)
+
+  console.error
+    Error: {
+      message: 'Cannot delete account while in a room or group',
+      statusCode: 500,
+      stack: 'Error: Cannot delete account while in a room or group\n' +
+        '    at UserService.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/userService.ts:214:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at UserController.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/user.controller.ts:156:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/user.routes.ts:59:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.870Z',
+      path: '/api/user/691041aa56c127c96baaf989',
+      method: 'DELETE'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.error
+    Error: {
+      message: 'Cannot delete account while in a room or group',
+      statusCode: 500,
+      stack: 'Error: Cannot delete account while in a room or group\n' +
+        '    at UserService.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/userService.ts:214:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at UserController.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/user.controller.ts:156:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/user.routes.ts:59:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.873Z',
+      path: '/api/user/691041aa56c127c96baaf98a',
+      method: 'DELETE'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.error
+    Error: {
+      message: 'User not found',
+      statusCode: 500,
+      stack: 'Error: User not found\n' +
+        '    at UserService.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/services/userService.ts:210:13)\n' +
+        '    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n' +
+        '    at UserController.deleteUser (/Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/controllers/user.controller.ts:156:22)\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/routes/user.routes.ts:59:3\n' +
+        '    at /Users/hashim/Desktop/Development/FeastFriends/321-project/backend/src/middleware/errorHandler.ts:58:9',
+      timestamp: '2025-11-09T07:24:26.884Z',
+      path: '/api/user/691041aa56c127c96baaf9b4',
+      method: 'DELETE'
+    }
+
+      90 |   }
+      91 |
+    > 92 |   console.error('Error:', {
+         |           ^
+      93 |     message: err.message,
+      94 |     statusCode,
+      95 |     stack: err.stack,
+
+      at error (src/middleware/errorHandler.ts:92:11)
+      at Layer.handleError (node_modules/router/lib/layer.js:116:17)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at next (node_modules/router/index.js:291:5)
+      at Layer.handleError (node_modules/router/lib/layer.js:111:12)
+      at trimPrefix (node_modules/router/index.js:340:13)
+      at node_modules/router/index.js:297:9
+      at processParams (node_modules/router/index.js:582:12)
+      at Immediate.next (node_modules/router/index.js:291:5)
+      at Immediate._onImmediate (node_modules/router/index.js:688:15)
+
+  console.log
+    Test suite completed.
+
+      at Object.<anonymous> (tests/setup.ts:14:11)
+
+  console.log
+    
+    🧹 Cleaning up after tests...
+
+      at Object.<anonymous> (tests/no-mocks/user.test.ts:30:11)
+
+  console.warn
+    MongoDB disconnected. Attempting to reconnect...
+
+      28 |
+      29 |     mongoose.connection.on('disconnected', () => {
+    > 30 |       console.warn('MongoDB disconnected. Attempting to reconnect...');
+         |               ^
+      31 |     });
+      32 |
+      33 |     mongoose.connection.on('reconnected', () => {
+
+      at NativeConnection.<anonymous> (src/config/database.ts:30:15)
+      at NativeConnection.set (node_modules/mongoose/lib/connection.js:145:12)
+      at NativeConnection.onClose (node_modules/mongoose/lib/connection.js:1315:19)
+      at NativeConnection._close (node_modules/mongoose/lib/connection.js:1264:12)
+      at disconnectDatabase (src/config/database.ts:55:5)
+      at Object.<anonymous> (tests/no-mocks/user.test.ts:36:3)
+
+  console.log
+    MongoDB disconnected successfully
+
+      at disconnectDatabase (src/config/database.ts:56:13)
+
+  console.log
+    ✅ Cleanup complete.
+
+      at Object.<anonymous> (tests/no-mocks/user.test.ts:38:11)
+
+PASS tests/no-mocks/user.test.ts
+  GET /api/user/profile/:ids - No Mocking
+    ✓ should return 200 and user profiles for valid IDs (5 ms)
+    ✓ should return 200 with empty array for non-existent IDs (2 ms)
+    ✓ should handle single and multiple IDs correctly (5 ms)
+    ✓ should return 400 for invalid MongoDB ObjectId format (13 ms)
+  GET /api/user/settings - No Mocking
+    ✓ should return 200 and user settings with valid authentication (5 ms)
+    ✓ should return 401 without authentication token (1 ms)
+    ✓ should return 401 with invalid token (1 ms)
+    ✓ should return 401 with expired token (1 ms)
+    ✓ should return 500 when user not found in database (5 ms)
+  POST /api/user/profile - No Mocking
+    ✓ should create/update profile with valid data (8 ms)
+    ✓ should handle partial updates and empty body (9 ms)
+  POST /api/user/settings - No Mocking
+    ✓ should update settings with full and partial data (30 ms)
+  PUT /api/user/profile - No Mocking
+    ✓ should update profile with full and partial data (9 ms)
+    ✓ should handle non-Google profile picture URL (covers convertGoogleProfilePictureToBase64 early return) (6 ms)
+  DELETE /api/user/:userId - No Mocking
+    ✓ should return 403 when trying to delete different user (2 ms)
+    ✓ should return 500 when user is in a waiting room (3 ms)
+    ✓ should return 500 when user is in a group (3 ms)
+    ✓ should successfully delete user not in room or group (8 ms)
+    ✓ should return 500 when trying to delete non-existent user (3 ms)
+  User Model Methods - Integration Tests
+    ✓ should access userId virtual property directly on document (2 ms)
+    ✓ should access userId virtual property through API response (1 ms)
+    ✓ should use toJSON transform to include userId (2 ms)
+    ✓ should call toJSON transform directly on User document (1 ms)
+    ✓ should trigger pre-save hook when roomId is set (10 ms)
+    ✓ should trigger pre-save hook when groupId is set (3 ms)
+    ✓ should trigger pre-save hook when roomId is removed (6 ms)
+    ✓ should trigger pre-save hook when groupId is removed (11 ms)
+
+---------------------------|---------|----------|---------|---------|---------------------------------------------
+File                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                           
+---------------------------|---------|----------|---------|---------|---------------------------------------------
+All files                  |   77.75 |    68.94 |    77.9 |   77.76 |                                             
+ src                       |   23.33 |        0 |       0 |   23.59 |                                             
+  app.ts                   |   95.45 |      100 |       0 |   95.45 | 26                                          
+  server.ts                |       0 |        0 |       0 |       0 | 1-129                                       
+ src/controllers           |   95.47 |      100 |     100 |   95.45 |                                             
+  auth.controller.ts       |   96.36 |      100 |     100 |   96.36 | 274,313,358,400                             
+  group.controller.ts      |   96.66 |      100 |     100 |   96.66 | 36                                          
+  matching.controller.ts   |   92.85 |      100 |     100 |   92.85 | 76,119                                      
+  restaurant.controller.ts |   96.77 |      100 |     100 |   96.77 | 64                                          
+  user.controller.ts       |   93.18 |      100 |     100 |   93.02 | 73,103,133                                  
+ src/middleware            |   81.52 |    69.04 |   88.88 |   80.45 |                                             
+  auth.middleware.ts       |   92.85 |      100 |     100 |    92.5 | 99,112-113                                  
+  errorHandler.ts          |      72 |    56.66 |   85.71 |   70.21 | 23,28,34,40,45,60,77-78,80-81,86-87,118-119 
+ src/models                |     100 |      100 |     100 |     100 |                                             
+  Group.ts                 |     100 |      100 |     100 |     100 |                                             
+  Room.ts                  |     100 |      100 |     100 |     100 |                                             
+  User.ts                  |     100 |      100 |     100 |     100 |                                             
+ src/routes                |     100 |      100 |     100 |     100 |                                             
+  auth.routes.ts           |     100 |      100 |     100 |     100 |                                             
+  group.routes.ts          |     100 |      100 |     100 |     100 |                                             
+  matching.routes.ts       |     100 |      100 |     100 |     100 |                                             
+  restaurant.routes.ts     |     100 |      100 |     100 |     100 |                                             
+  user.routes.ts           |     100 |      100 |     100 |     100 |                                             
+ src/services              |   69.52 |    58.26 |   72.72 |   69.04 |                                             
+  authService.ts           |   88.73 |     82.5 |   88.88 |   88.73 | 159,191-198,208,216                         
+  groupService.ts          |   61.53 |       62 |      60 |   61.53 | 15,105,131,149,208,213-259,283-363          
+  matchingService.ts       |   74.24 |    58.62 |   78.57 |    73.6 | 69-70,88,169,197,260-304,339,349-384        
+  notificationService.ts   |   60.41 |    33.33 |   44.44 |   53.65 | 12-28,54-55,66,76,87-97,107-116             
+  restaurantService.ts     |   46.55 |       10 |   68.75 |   44.89 | 45-85,99-147                                
+  userService.ts           |    76.4 |    73.33 |     100 |   77.77 | 15-32,96,136,143-147,177                    
+ src/utils                 |     100 |       80 |     100 |     100 |                                             
+  socketManager.ts         |     100 |       80 |     100 |     100 | 18,171                                      
+---------------------------|---------|----------|---------|---------|---------------------------------------------
+Jest: "global" coverage threshold for branches (70%) not met: 68.94%
+Test Suites: 5 passed, 5 total
+Tests:       148 passed, 148 total
+Snapshots:   0 total
+Time:        5.084 s
+Ran all test suites matching tests/no-mocks.

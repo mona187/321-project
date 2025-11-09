@@ -146,33 +146,6 @@ export class AuthService {
   }
 
   /**
-   * Verify JWT token
-   */
-  verifyToken(token: string): {
-    userId: string;
-    email: string;
-    googleId: string;
-  } {
-    const jwtSecret = process.env.JWT_SECRET;
-    
-    if (!jwtSecret) {
-      throw new AppError('JWT configuration error', 500);
-    }
-
-    try {
-      const decoded = jwt.verify(token, jwtSecret) as {
-        userId: string;
-        email: string;
-        googleId: string;
-      };
-
-      return decoded;
-    } catch (error) {
-      throw new AppError('Invalid or expired token', 401);
-    }
-  }
-
-  /**
    * Logout user
    */
   async logoutUser(userId: string): Promise<void> {
@@ -182,38 +155,6 @@ export class AuthService {
       user.status = UserStatus.OFFLINE;
       await user.save();
     }
-  }
-
-  /**
-   * Update FCM token
-   */
-  async updateFCMToken(userId: string, fcmToken: string): Promise<void> {
-    const user = (await User.findById(userId)) as unknown as IUserDocument | null;
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    user.fcmToken = fcmToken;
-    await user.save();
-  }
-
-  /**
-   * Delete user account
-   */
-  async deleteAccount(userId: string): Promise<void> {
-    const user = (await User.findById(userId)) as unknown as IUserDocument | null;
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    // Check if user is in a room or group
-    if (user.roomId || user.groupId) {
-      throw new AppError('Cannot delete account while in a room or group', 400);
-    }
-
-    await User.findByIdAndDelete(userId);
   }
 }
 

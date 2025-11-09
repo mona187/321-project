@@ -45,12 +45,18 @@ export const authMiddleware = async (
     try {
       decoded = jwt.verify(token, jwtSecret) as JWTPayload;
     } catch (err) {
-      if (err instanceof jwt.TokenExpiredError) {
-        res.status(401).json({ error: 'Unauthorized', message: 'Token expired' });
+      // Only handle JWT-specific errors (JsonWebTokenError, TokenExpiredError, etc.)
+      // Re-throw non-JWT errors to be caught by outer catch block (returns 500)
+      if (err instanceof jwt.JsonWebTokenError) {
+        if (err instanceof jwt.TokenExpiredError) {
+          res.status(401).json({ error: 'Unauthorized', message: 'Token expired' });
+          return; // <- void return
+        }
+        res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
         return; // <- void return
       }
-      res.status(401).json({ error: 'Unauthorized', message: 'Invalid token' });
-      return; // <- void return
+      // Re-throw non-JWT errors to outer catch block
+      throw err;
     }
 
     // Attach safe user info to request

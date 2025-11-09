@@ -225,6 +225,64 @@ describe('GET /api/group/status - No Mocking', () => {
     expect(response.body.Body.restaurant).toBeDefined();
     expect(response.body.Body.restaurant.name).toBe('Selected Restaurant');
   });
+
+  test('should return 500 when group is deleted between getGroupByUserId and getGroupStatus (covers groupService line 15)', async () => {
+    /**
+     * Covers groupService.ts line 15: Group not found check in getGroupStatus
+     * Path: Group.findById -> if (!group) -> throw Error('Group not found')
+     * This tests a race condition where group exists when getGroupByUserId is called
+     * but is deleted before getGroupStatus is called
+     */
+    const Group = (await import('../../src/models/Group')).default;
+    const User = (await import('../../src/models/User')).default;
+    
+    // Create a temporary group for a user
+    const tempGroup = await seedTestGroup(
+      'test-race-condition',
+      [testUsers[4]._id]
+    );
+    
+    // Set user's groupId
+    await User.findByIdAndUpdate(testUsers[4]._id, {
+      groupId: tempGroup._id,
+      status: UserStatus.IN_GROUP
+    });
+    
+    const token = generateTestToken(
+      testUsers[4]._id,
+      testUsers[4].email,
+      testUsers[4].googleId
+    );
+    
+    // Mock getGroupByUserId to return the group, but delete the actual group
+    // This simulates the race condition
+    const groupService = (await import('../../src/services/groupService')).default;
+    
+    jest.spyOn(groupService, 'getGroupByUserId').mockImplementation(async (_userId: string) => {
+      // Return the group object
+      return tempGroup as any;
+    });
+    
+    // Delete the actual group to simulate race condition
+    await Group.findByIdAndDelete(tempGroup._id);
+    
+    const response = await request(app)
+      .get('/api/group/status')
+      .set('Authorization', `Bearer ${token}`);
+    
+    // Restore original method
+    jest.restoreAllMocks();
+    
+    // Should return 500 because getGroupStatus throws "Group not found"
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe('Group not found');
+    
+    // Cleanup
+    await User.findByIdAndUpdate(testUsers[4]._id, {
+      groupId: undefined,
+      status: UserStatus.ONLINE
+    });
+  });
 });
 
 describe('POST /api/group/vote/:groupId - No Mocking', () => {
@@ -542,8 +600,26 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   // Note: "401 without authentication" test is consolidated above in status endpoint tests
   // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
-  // Note: "500 when group not found" test is consolidated above in vote endpoint tests
-  // The same Group.findById() -> if (!group) -> throw Error('Group not found') pattern exists in vote and leave
+  test('should return 500 when group not found in leaveGroup', async () => {
+    /**
+     * Covers groupService.ts line 169: Group not found check in leaveGroup
+     * Path: Group.findById -> if (!group) -> throw Error('Group not found')
+     * This is a separate test to ensure leaveGroup's specific path is covered
+     */
+    const nonExistentGroupId = '507f1f77bcf86cd799439011';
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    const response = await request(app)
+      .post(`/api/group/leave/${nonExistentGroupId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe('Group not found');
+  });
 
   // Note: "400 for invalid ObjectId format" test is consolidated above in vote endpoint tests
   // The same CastError -> errorHandler -> "Invalid data format" pattern exists in vote and leave
@@ -561,14 +637,14 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(response.status).toBe(500);
-    expect(response.body.message).toBe(' User not found');
+    expect(response.body.message).toBe('User not found');
   });
 
   // Consolidated test: delete group and restaurant data when last member leaves
   // This tests the leave group endpoint when last member leaves
   // The SAME scenario exists: last member leaves -> group deleted -> restaurant data deleted
   // Testing with restaurant data covers both: group deletion and restaurant data deletion
-  
+
   test('should delete group and restaurant data when last member leaves', async () => {
     const groupWithRestaurant = await seedTestGroup(
       'test-room-restaurant-delete',

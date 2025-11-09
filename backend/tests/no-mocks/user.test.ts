@@ -301,6 +301,37 @@ describe('POST /api/user/profile - No Mocking', () => {
     expect(response.body.Body.contactNumber).toBe('9999999999');
   });
 
+  test('should update profilePicture directly in createUserProfile (covers userService line 101)', async () => {
+    /**
+     * Covers userService.ts line 101: Direct profilePicture assignment in createUserProfile
+     * Path: if (data.profilePicture !== undefined) -> user.profilePicture = data.profilePicture
+     * Note: createUserProfile does NOT convert Google URLs to Base64 (unlike updateUserSettings/updateUserProfile)
+     */
+    const token = generateTestToken(
+      testUsers[1]._id,
+      testUsers[1].email,
+      testUsers[1].googleId
+    );
+
+    const profileData = {
+      name: 'Profile Picture Test',
+      profilePicture: 'https://example.com/custom-picture.jpg' // Direct assignment, no conversion
+    };
+
+    const response = await request(app)
+      .post('/api/user/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send(profileData);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.profilePicture).toBe('https://example.com/custom-picture.jpg');
+    
+    // Verify in database - should be stored as-is (no Base64 conversion)
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[1]._id);
+    expect(updatedUser!.profilePicture).toBe('https://example.com/custom-picture.jpg');
+  });
+
   // Note: "401 without authentication" test is consolidated above in settings endpoint tests
   // All endpoints use the same authMiddleware, so testing one endpoint covers all
 
@@ -403,6 +434,122 @@ describe('POST /api/user/settings - No Mocking', () => {
     expect(partialResponse.body.Body.radiusKm).toBe(30);
   });
 
+  test('should update contactNumber, budget, and radiusKm in updateUserSettings (covers userService lines 149-151)', async () => {
+    /**
+     * Covers userService.ts lines 149-151: contactNumber, budget, radiusKm updates in updateUserSettings
+     * Path: if (data.contactNumber !== undefined) -> user.contactNumber = data.contactNumber
+     *       if (data.budget !== undefined) -> user.budget = data.budget
+     *       if (data.radiusKm !== undefined) -> user.radiusKm = data.radiusKm
+     */
+    const token = generateTestToken(
+      testUsers[2]._id,
+      testUsers[2].email,
+      testUsers[2].googleId
+    );
+
+    const settingsUpdate = {
+      contactNumber: '1234567890',
+      budget: 75,
+      radiusKm: 15
+    };
+
+    const response = await request(app)
+      .post('/api/user/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send(settingsUpdate);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.contactNumber).toBe('1234567890');
+    expect(response.body.Body.budget).toBe(75);
+    expect(response.body.Body.radiusKm).toBe(15);
+    
+    // Verify in database
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[2]._id);
+    expect(updatedUser!.contactNumber).toBe('1234567890');
+    expect(updatedUser!.budget).toBe(75);
+    expect(updatedUser!.radiusKm).toBe(15);
+  });
+
+  test('should successfully convert Google profile picture to Base64 in updateUserSettings (covers userService lines 22-29)', async () => {
+    /**
+     * Covers userService.ts lines 22-29: Successful Base64 conversion in updateUserSettings
+     * Path: axios.get succeeds -> Buffer.from -> toString('base64') -> create data URI -> return
+     * This tests the successful conversion path when updating settings with a Google profile picture URL
+     */
+    const token = generateTestToken(
+      testUsers[1]._id,
+      testUsers[1].email,
+      testUsers[1].googleId
+    );
+
+    const axios = require('axios');
+    
+    // Mock axios to return a successful image response
+    const mockImageBuffer = Buffer.from('fake-image-data-for-settings-test');
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: mockImageBuffer,
+      headers: { 'content-type': 'image/png' }
+    });
+
+    const googleProfilePictureUrl = 'https://lh3.googleusercontent.com/test-settings-picture.jpg';
+
+    const response = await request(app)
+      .post('/api/user/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ profilePicture: googleProfilePictureUrl });
+
+    jest.restoreAllMocks();
+
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was converted to Base64 data URI
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[1]._id);
+    expect(updatedUser!.profilePicture).toBeTruthy();
+    expect(updatedUser!.profilePicture).toContain('data:image/png;base64,'); // Should be Base64 data URI
+    expect(updatedUser!.profilePicture).not.toBe(googleProfilePictureUrl); // Should be converted, not original URL
+  });
+
+  test('should use image/png fallback when content-type header is missing (covers userService line 24)', async () => {
+    /**
+     * Covers userService.ts line 24: content-type fallback
+     * Path: response.headers['content-type'] || 'image/png' [FALSE BRANCH] -> use 'image/png'
+     * This tests the fallback when content-type header is missing
+     */
+    const token = generateTestToken(
+      testUsers[2]._id,
+      testUsers[2].email,
+      testUsers[2].googleId
+    );
+
+    const axios = require('axios');
+    
+    // Mock axios to return response without content-type header
+    const mockImageBuffer = Buffer.from('fake-image-data-no-content-type');
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: mockImageBuffer,
+      headers: {} // No content-type header
+    });
+
+    const googleProfilePictureUrl = 'https://lh3.googleusercontent.com/test-no-content-type.jpg';
+
+    const response = await request(app)
+      .post('/api/user/settings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ profilePicture: googleProfilePictureUrl });
+
+    jest.restoreAllMocks();
+
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was converted with fallback content-type
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[2]._id);
+    expect(updatedUser!.profilePicture).toBeTruthy();
+    expect(updatedUser!.profilePicture).toContain('data:image/png;base64,'); // Should use fallback 'image/png'
+  });
+
   // Note: "401 without authentication" test is consolidated above in settings endpoint tests
   // All endpoints use the same authMiddleware, so testing one endpoint covers all
 });
@@ -458,6 +605,109 @@ describe('PUT /api/user/profile - No Mocking', () => {
 
     expect(partialResponse.status).toBe(200);
     expect(partialResponse.body.Body.bio).toBe('Just bio update via PUT');
+  });
+
+  test('should update contactNumber, budget, and radiusKm in updateUserProfile (covers userService lines 188-190)', async () => {
+    /**
+     * Covers userService.ts lines 188-190: contactNumber, budget, radiusKm updates in updateUserProfile
+     * Path: if (data.contactNumber !== undefined) -> user.contactNumber = data.contactNumber
+     *       if (data.budget !== undefined) -> user.budget = data.budget
+     *       if (data.radiusKm !== undefined) -> user.radiusKm = data.radiusKm
+     */
+    const token = generateTestToken(
+      testUsers[3]._id,
+      testUsers[3].email,
+      testUsers[3].googleId
+    );
+
+    const profileUpdate = {
+      contactNumber: '9876543210',
+      budget: 125,
+      radiusKm: 20
+    };
+
+    const response = await request(app)
+      .put('/api/user/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send(profileUpdate);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.contactNumber).toBe('9876543210');
+    
+    // Verify in database
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[3]._id);
+    expect(updatedUser!.contactNumber).toBe('9876543210');
+    expect(updatedUser!.budget).toBe(125);
+    expect(updatedUser!.radiusKm).toBe(20);
+  });
+
+  test('should successfully convert Google profile picture to Base64 (covers userService lines 22-29)', async () => {
+    /**
+     * Covers userService.ts lines 22-29: Successful Base64 conversion
+     * Path: axios.get succeeds -> Buffer.from -> toString('base64') -> create data URI -> return
+     * This tests the successful conversion path when a Google profile picture URL is provided
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    const axios = require('axios');
+    
+    // Mock axios to return a successful image response
+    const mockImageBuffer = Buffer.from('fake-image-data-for-testing');
+    jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      data: mockImageBuffer,
+      headers: { 'content-type': 'image/jpeg' }
+    });
+
+    const googleProfilePictureUrl = 'https://lh3.googleusercontent.com/test-picture.jpg';
+
+    const response = await request(app)
+      .put('/api/user/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ profilePicture: googleProfilePictureUrl });
+
+    jest.restoreAllMocks();
+
+    expect(response.status).toBe(200);
+    
+    // Verify profile picture was converted to Base64 data URI
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser!.profilePicture).toBeTruthy();
+    expect(updatedUser!.profilePicture).toContain('data:image/jpeg;base64,'); // Should be Base64 data URI
+    expect(updatedUser!.profilePicture).not.toBe(googleProfilePictureUrl); // Should be converted, not original URL
+  });
+
+  test('should handle non-Google profile picture URL (covers convertGoogleProfilePictureToBase64 early return)', async () => {
+    /**
+     * Covers userService.ts line 12: Early return for non-Google URLs
+     * Path: if (!profilePictureUrl || !profilePictureUrl.startsWith('https://lh3.googleusercontent.com/')) -> return as-is
+     * This tests the branch coverage for non-Google URLs
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Update profile with non-Google URL
+    const nonGoogleUrl = 'https://example.com/profile.jpg';
+    const response = await request(app)
+      .put('/api/user/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ profilePicture: nonGoogleUrl });
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.profilePicture).toBe(nonGoogleUrl); // Should remain as-is
+    
+    // Verify in database
+    const User = (await import('../../src/models/User')).default;
+    const updatedUser = await User.findById(testUsers[0]._id);
+    expect(updatedUser!.profilePicture).toBe(nonGoogleUrl);
   });
 
   // Note: "401 without authentication" test is consolidated above in settings endpoint tests

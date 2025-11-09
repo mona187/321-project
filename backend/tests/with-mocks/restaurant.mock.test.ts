@@ -491,6 +491,59 @@ describe('GET /api/restaurant/:restaurantId - External Failures', () => {
     expect(response.body.Body.rating).toBe(4.7);
   });
 
+  test('should include photos when restaurant has photos (covers getPhotoUrl)', async () => {
+    /**
+     * Tests restaurantService.getPhotoUrl method (lines 146-148)
+     * Covers: restaurantService.ts formatPlaceData -> getPhotoUrl when photos exist
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        status: 'OK',
+        result: {
+          place_id: 'restaurant_with_photos',
+          name: 'Photo Restaurant',
+          formatted_address: '123 Photo St',
+          geometry: {
+            location: { lat: 49.2827, lng: -123.1207 }
+          },
+          rating: 4.5,
+          price_level: 2,
+          photos: [
+            {
+              photo_reference: 'photo_ref_1',
+              height: 400,
+              width: 400
+            },
+            {
+              photo_reference: 'photo_ref_2',
+              height: 800,
+              width: 800
+            }
+          ]
+        }
+      }
+    } as any);
+
+    const response = await request(app)
+      .get('/api/restaurant/restaurant_with_photos')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.photos).toBeDefined();
+    expect(Array.isArray(response.body.Body.photos)).toBe(true);
+    expect(response.body.Body.photos.length).toBe(2);
+    // Verify photo URLs are generated correctly (covers getPhotoUrl method)
+    expect(response.body.Body.photos[0]).toContain('photo_reference=photo_ref_1');
+    expect(response.body.Body.photos[0]).toContain('maxwidth=400');
+    expect(response.body.Body.photos[0]).toContain('key=test-api-key-for-mocking');
+  });
+
   test('should return 404 when API returns INVALID_REQUEST', async () => {
     const token = generateTestToken(
       testUsers[0]._id,

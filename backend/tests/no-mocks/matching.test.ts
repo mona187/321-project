@@ -15,7 +15,7 @@ import {
 import { initializeTestSocket, closeTestSocket } from '../helpers/socket.helper';
 import { connectDatabase, disconnectDatabase } from '../../src/config/database';
 import mongoose from 'mongoose';
-import Room from '../../src/models/Room';
+import Room, { RoomStatus } from '../../src/models/Room';
 import User, { UserStatus } from '../../src/models/User';
 import socketManager from '../../src/utils/socketManager';
 import * as firebase from '../../src/config/firebase';
@@ -253,6 +253,71 @@ describe('POST /api/matching/join - No Mocking', () => {
     expect(response.status).toBe(401);
   });
 
+  test('should return 200 with null roomId when no good match found (covers matchingService lines 69-70)', async () => {
+    /**
+     * Covers matchingService.ts lines 69-70: No good match found scenario
+     * Path: findBestMatchingRoom -> bestMatch.score < MINIMUM_MATCH_SCORE (30) -> return null
+     * This tests the branch where rooms exist but none have a score >= 30
+     * 
+     * Score calculation verification:
+     * - Room: cuisine='italian', averageBudget=50, averageRadius=10
+     * - User: cuisine=['chinese'], budget=150, radiusKm=60
+     * 
+     * 1. Cuisine: 'italian' not in ['chinese'] → 0 points
+     * 2. Budget: diff = |50 - 150| = 100, score = max(0, 30 - 100) = 0
+     * 3. Radius: diff = |10 - 60| = 50, score = max(0, 20 - (50 * 2)) = max(0, 20 - 100) = 0
+     * Total: 0 + 0 + 0 = 0 < 30 → triggers lines 69-70
+     * 
+     * The sorting (b.score - a.score) ensures highest score first, but with score 0,
+     * it will still be first (only room), and the check bestMatch.score >= 30 will fail.
+     */
+    
+    // Create a room with specific preferences that will give a score of 0
+    const Room = (await import('../../src/models/Room')).default;
+    const existingRoom = await Room.create({
+      completionTime: new Date(Date.now() + 2 * 60 * 1000), // 2 min from now
+      maxMembers: 10,
+      members: [testUsers[0]._id.toString()],
+      status: RoomStatus.WAITING,
+      cuisine: 'italian',
+      averageBudget: 50,
+      averageRadius: 10
+    });
+    
+    // Update user to be in this room
+    await User.findByIdAndUpdate(testUsers[0]._id, {
+      roomId: existingRoom._id,
+      status: UserStatus.IN_WAITING_ROOM
+    });
+
+    const token = generateTestToken(
+      testUsers[4]._id, // User not in any room
+      testUsers[4].email,
+      testUsers[4].googleId
+    );
+
+    // Use preferences that give a score of exactly 0 (all components = 0)
+    // This ensures bestMatch.score = 0 < 30, triggering the "no good match" path
+    const zeroScorePreferences = {
+      cuisine: ['chinese'], // Different cuisine → 0 points (not 50)
+      budget: 150, // Budget diff = 100 → max(0, 30-100) = 0 points
+      radiusKm: 60 // Radius diff = 50 → max(0, 20-100) = 0 points
+      // Total score = 0 + 0 + 0 = 0 < 30 (MINIMUM_MATCH_SCORE)
+    };
+
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send(zeroScorePreferences);
+
+    // Should create a new room (because findBestMatchingRoom returned null due to score < 30)
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toHaveProperty('roomId');
+    // The roomId should be a NEW room (not the existing one), because findBestMatchingRoom returned null
+    expect(response.body.Body.roomId).not.toBe(existingRoom._id.toString());
+    expect(response.body.Body.roomId).toBeTruthy();
+  });
+
   test('should return 500 when user already in room', async () => {
     /**
      * Input: POST /api/matching/join when user already has roomId
@@ -285,6 +350,216 @@ describe('POST /api/matching/join - No Mocking', () => {
 
     expect(response.status).toBe(500);
     expect(response.body.message).toMatch(/already in a room/i);
+  });
+
+  test('should use user.preference fallback when cuisine not provided (covers matchingService line 104)', async () => {
+    /**
+     * Covers matchingService.ts line 104: `cuisines: preferences.cuisine ?? user.preference`
+     * Tests the fallback to user.preference when preferences.cuisine is undefined
+     */
+    // Set user preference in database
+    await User.findByIdAndUpdate(testUsers[1]._id, {
+      preference: ['chinese', 'japanese'],
+      budget: 75,
+      radiusKm: 8
+    });
+
+    const token = generateTestToken(
+      testUsers[1]._id,
+      testUsers[1].email,
+      testUsers[1].googleId
+    );
+
+    // Don't provide cuisine in preferences - should use user.preference
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ budget: 75, radiusKm: 8 }); // No cuisine provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with user's preference
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.cuisine).toBe('chinese'); // First cuisine from user.preference
+  });
+
+  test('should use user.budget fallback when budget not provided (covers matchingService line 105)', async () => {
+    /**
+     * Covers matchingService.ts line 105: `budget: preferences.budget ?? user.budget ?? 50`
+     * Tests the fallback to user.budget when preferences.budget is undefined
+     */
+    // Set user budget in database
+    await User.findByIdAndUpdate(testUsers[2]._id, {
+      preference: ['mexican'],
+      budget: 100,
+      radiusKm: 12
+    });
+
+    const token = generateTestToken(
+      testUsers[2]._id,
+      testUsers[2].email,
+      testUsers[2].googleId
+    );
+
+    // Don't provide budget in preferences - should use user.budget
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cuisine: ['mexican'], radiusKm: 12 }); // No budget provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with user's budget
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.averageBudget).toBe(100); // From user.budget
+  });
+
+  test('should use default budget 50 when budget not provided and user has no budget (covers matchingService line 105)', async () => {
+    /**
+     * Covers matchingService.ts line 105: `budget: preferences.budget ?? user.budget ?? 50`
+     * Tests the fallback to 50 when both preferences.budget and user.budget are undefined
+     * 
+     * Note: We need to ensure user.budget is actually undefined (not 0) to trigger the ?? 50 fallback
+     */
+    // Create a new user and explicitly set budget to null to test the ?? 50 fallback
+    // Note: The schema has default: 0, so we need to explicitly set it to null
+    const testUser = await User.create({
+      googleId: `google-test-no-budget-${Date.now()}`,
+      email: `nobudget${Date.now()}@example.com`,
+      name: 'No Budget User',
+      preference: ['indian'],
+      radiusKm: 7,
+      status: UserStatus.ONLINE,
+      credibilityScore: 100,
+      budget: null as any // Explicitly set to null to test ?? 50 fallback
+    });
+
+    const token = generateTestToken(
+      testUser._id.toString(),
+      testUser.email,
+      testUser.googleId
+    );
+
+    // Don't provide budget in preferences - should use default 50
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cuisine: ['indian'], radiusKm: 7 }); // No budget provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with default budget 50
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.averageBudget).toBe(50); // Default fallback
+  });
+
+  test('should use user.radiusKm fallback when radiusKm not provided (covers matchingService line 106)', async () => {
+    /**
+     * Covers matchingService.ts line 106: `radiusKm: preferences.radiusKm ?? user.radiusKm ?? 5`
+     * Tests the fallback to user.radiusKm when preferences.radiusKm is undefined
+     */
+    // Set user radiusKm in database
+    await User.findByIdAndUpdate(testUsers[4]._id, {
+      preference: ['thai'],
+      budget: 60,
+      radiusKm: 15
+    });
+
+    const token = generateTestToken(
+      testUsers[4]._id,
+      testUsers[4].email,
+      testUsers[4].googleId
+    );
+
+    // Don't provide radiusKm in preferences - should use user.radiusKm
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cuisine: ['thai'], budget: 60 }); // No radiusKm provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with user's radiusKm
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.averageRadius).toBe(15); // From user.radiusKm
+  });
+
+  test('should use default radiusKm 5 when radiusKm not provided and user has no radiusKm (covers matchingService line 106)', async () => {
+    /**
+     * Covers matchingService.ts line 106: `radiusKm: preferences.radiusKm ?? user.radiusKm ?? 5`
+     * Tests the fallback to 5 when both preferences.radiusKm and user.radiusKm are undefined
+     */
+    // Create a new user and explicitly set radiusKm to null to test the ?? 5 fallback
+    // Note: The schema has default: 5, so we need to explicitly set it to null
+    const testUser = await User.create({
+      googleId: `google-test-no-radius-${Date.now()}`,
+      email: `noradius${Date.now()}@example.com`,
+      name: 'No Radius User',
+      preference: ['korean'],
+      budget: 80,
+      status: UserStatus.ONLINE,
+      credibilityScore: 100,
+      radiusKm: null as any // Explicitly set to null to test ?? 5 fallback
+    });
+
+    const token = generateTestToken(
+      testUser._id.toString(),
+      testUser.email,
+      testUser.googleId
+    );
+
+    // Don't provide radiusKm in preferences - should use default 5
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cuisine: ['korean'], budget: 80 }); // No radiusKm provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with default radiusKm 5
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.averageRadius).toBe(5); // Default fallback
+  });
+
+  test('should use null for cuisine when cuisines array is empty (covers matchingService line 121)', async () => {
+    /**
+     * Covers matchingService.ts line 121: `cuisine: matchingPreferences.cuisines[0] || null`
+     * Tests the fallback to null when cuisines array is empty or cuisines[0] is falsy
+     * 
+     * To trigger this, we need:
+     * - preferences.cuisine is undefined
+     * - user.preference is empty array or undefined
+     * - This results in matchingPreferences.cuisines being empty/falsy
+     */
+    // Create a new user with empty preference array for this test
+    const testUser = await User.create({
+      googleId: `google-test-empty-pref-${Date.now()}`,
+      email: `emptypref${Date.now()}@example.com`,
+      name: 'Empty Preference User',
+      preference: [], // Empty array
+      budget: 70,
+      radiusKm: 10,
+      status: UserStatus.ONLINE,
+      credibilityScore: 100
+    });
+
+    const token = generateTestToken(
+      testUser._id.toString(),
+      testUser.email,
+      testUser.googleId
+    );
+
+    // Don't provide cuisine in preferences - should use user.preference (empty array)
+    const response = await request(app)
+      .post('/api/matching/join')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ budget: 70, radiusKm: 10 }); // No cuisine provided
+
+    expect(response.status).toBe(200);
+    
+    // Verify room was created with null cuisine (because cuisines[0] is undefined)
+    const createdRoom = await Room.findById(response.body.Body.roomId);
+    expect(createdRoom?.cuisine).toBeNull(); // Fallback to null
   });
 
   // Note: "should update user preferences when joining" test is consolidated above
@@ -573,8 +848,27 @@ describe('GET /api/matching/users/:roomId - No Mocking', () => {
     expect(response.body.Body.Users).toEqual(expect.arrayContaining(memberIds));
   });
 
-  // Note: "500 for non-existent room" test is consolidated above in status endpoint tests
-  // The same Room.findById() -> if (!room) -> throw Error('Room not found') pattern exists in status and users
+  test('should return 500 when room not found in getRoomUsers (covers matchingService lines 338-339)', async () => {
+    /**
+     * Covers matchingService.ts lines 338-339: Room not found check in getRoomUsers
+     * Path: Room.findById -> if (!room) -> throw Error('Room not found')
+     * This is a separate test to ensure getRoomUsers's specific error path is covered
+     */
+    const fakeRoomId = new mongoose.Types.ObjectId().toString();
+
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    const response = await request(app)
+      .get(`/api/matching/users/${fakeRoomId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe('Room not found');
+  });
 
   // Note: "401 without authentication" test is consolidated above in join endpoint tests
   // All endpoints use the same authMiddleware, so testing one endpoint covers all
