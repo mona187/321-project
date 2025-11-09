@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/userService';
 import { requireParam } from '../middleware/errorHandler';
+import { ensureAuthenticated } from '../utils/authGuard';
 
 const userService = new UserService();
 
@@ -33,7 +34,9 @@ export class UserController {
    */
   async getUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      // After type guard, TypeScript knows req.user is defined
+      const userId = req.user.userId;
 
       const settings = await userService.getUserSettings(userId);
 
@@ -53,7 +56,8 @@ export class UserController {
    */
   async createUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
 
       const { name, bio, profilePicture, contactNumber } = req.body;
 
@@ -80,7 +84,8 @@ export class UserController {
    */
   async updateUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
 
       const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
 
@@ -110,7 +115,8 @@ export class UserController {
    */
   async updateUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
 
       const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
 
@@ -141,7 +147,9 @@ export class UserController {
   async deleteUser(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = requireParam(req, 'userId');
-      const requesterId = req.user?.userId;
+      
+      if (!ensureAuthenticated(req, res)) return;
+      const requesterId = req.user.userId;
 
       // Only allow users to delete their own account
       if (userId !== requesterId) {

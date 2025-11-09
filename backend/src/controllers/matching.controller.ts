@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import matchingService from '../services/matchingService';
 import { requireParam } from '../middleware/errorHandler';
+import { ensureAuthenticated } from '../utils/authGuard';
 
 export class MatchingController {
   /**
@@ -10,7 +11,8 @@ export class MatchingController {
    */
   async joinMatching(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
 
       const { cuisine, budget, radiusKm } = req.body;
 
@@ -34,27 +36,15 @@ export class MatchingController {
    * POST /api/matching/join/:roomId
    * Join a specific room
    */
-async joinSpecificRoom(req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
-  //const userId = req.user!.userId;
-  const { roomId: _roomId } = req.params;
-
-  // if (!userId) {
-  //   res.status(401).json({
-  //     Status: 401,
-  //     Message: { error: 'Unauthorized' },
-  //     Body: null
-  //   });
-  //   return;
-  // }
-
-  // This functionality might not be needed based on your specs
-  // But keeping it for flexibility
-  res.status(501).json({
-    Status: 501,
-    Message: { error: 'Not implemented - use /api/matching/join instead' },
-    Body: null
-  });
-}
+  async joinSpecificRoom(_req: AuthRequest, res: Response, _next: NextFunction): Promise<void> {
+    // This functionality might not be needed based on your specs
+    // But keeping it for flexibility
+    res.status(501).json({
+      Status: 501,
+      Message: { error: 'Not implemented - use /api/matching/join instead' },
+      Body: null
+    });
+  }
 
   /**
    * PUT /api/matching/leave/:roomId
@@ -62,7 +52,9 @@ async joinSpecificRoom(req: AuthRequest, res: Response, _next: NextFunction): Pr
    */
   async leaveRoom(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
+      
       const roomId = requireParam(req, 'roomId');
 
       await matchingService.leaveRoom(userId, roomId);

@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import groupService from '../services/groupService';
 import { requireParam } from '../middleware/errorHandler';
+import { ensureAuthenticated } from '../utils/authGuard';
 
 export class GroupController {
   /**
@@ -10,7 +11,8 @@ export class GroupController {
    */
   async getGroupStatus(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
 
       // Get user's current group
       const group = await groupService.getGroupByUserId(userId);
@@ -43,7 +45,9 @@ export class GroupController {
    */
   async voteForRestaurant(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
+      
       const groupId = requireParam(req, 'groupId');
       const { restaurantID, restaurant } = req.body;
 
@@ -82,7 +86,9 @@ export class GroupController {
    */
   async leaveGroup(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId; // authMiddleware guarantees req.user exists with userId
+      if (!ensureAuthenticated(req, res)) return;
+      const userId = req.user.userId;
+      
       const groupId = requireParam(req, 'groupId');
 
       await groupService.leaveGroup(userId, groupId);
