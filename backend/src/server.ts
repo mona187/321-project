@@ -40,7 +40,7 @@ const startServer = async () => {
     server.listen(Number(PORT), '0.0.0.0', () => {
       console.log('=================================');
       console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-      console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔒 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health: http://localhost:${PORT}/health`);
       console.log('=================================');
     });
@@ -77,54 +77,62 @@ function startBackgroundTasks() {
   console.log('✅ Background tasks started');
 }
 
+// ✅ FIX: Centralized graceful shutdown function
+// This prevents multiple process.exit() calls and ensures clean shutdown
+let isShuttingDown = false;
+
+const gracefulShutdown = (signal: string, exitCode: number = 0): void => {
+  if (isShuttingDown) {
+    // Already shutting down, ignore duplicate signals
+    return;
+  }
+  
+  isShuttingDown = true;
+  console.log(`${signal} received: initiating graceful shutdown...`);
+
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    console.error('⚠️  Forced exit after timeout');
+    process.exit(exitCode);
+  }, 10000); // 10 seconds
+
+  // Attempt graceful shutdown
+  server.close((error) => {
+    clearTimeout(forceExitTimeout);
+    
+    if (error) {
+      console.error('❌ Error during server shutdown:', error);
+      process.exit(1);
+    } else {
+      console.log('✅ Server closed gracefully');
+      process.exit(exitCode);
+    }
+  });
+};
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: Error) => {
   console.error('❌ Unhandled Rejection:', reason);
-  server.close(() => process.exit(1));
+  console.error('Stack:', reason.stack);
+  gracefulShutdown('Unhandled Rejection', 1);
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
-  let exited = false;
-  const exitProcess = (): void => {
-    if (!exited) {
-      exited = true;
-      process.exit(1);
-    }
-  };
-  // Attempt graceful shutdown, but exit immediately if it takes too long
-  server.close(() => {
-    exitProcess();
-  });
-  // Force exit after 5 seconds if server.close doesn't complete
-  setTimeout(() => {
-    console.error('⚠️ Forcing exit after timeout');
-    exitProcess();
-  }, 5000);
-  // Safety net: ensure process exits even if callbacks fail (after 6 seconds)
-  setTimeout(() => {
-    exitProcess();
-  }, 6000);
+  console.error('Stack:', error.stack);
+  gracefulShutdown('Uncaught Exception', 1);
 });
 
-// Graceful shutdown
+// Graceful shutdown on SIGTERM
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+  gracefulShutdown('SIGTERM', 0);
 });
 
+// Graceful shutdown on SIGINT (Ctrl+C)
 process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+  gracefulShutdown('SIGINT', 0);
 });
 
 // Start the server
 void startServer();
-
