@@ -29,9 +29,7 @@ val PlaywriteFontFamily = FontFamily(
     Font(R.font.playwrite_usmodern_variablefont_wght)
 )
 
-/**
- * Detect if running in test environment
- */
+
 private fun isTestEnvironment(): Boolean {
     return try {
         Class.forName("androidx.test.espresso.Espresso")

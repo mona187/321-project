@@ -17,9 +17,7 @@ import com.example.cpen_321.ui.viewmodels.AuthViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Detect if running in test environment
- */
+
 private fun isTestEnvironment(): Boolean {
     return try {
         // This class only exists when running tests

@@ -151,10 +151,8 @@ class FeastFriendsE2ETests {
             }
         }
     }
-    /**
-     * Wait for ProfileScreen to fully load
-     * Backend call takes MUCH longer, need to wait for name field to appear
-     */
+
+
     private fun waitForProfileScreen() {
         println("Waiting for profile screen to load from backend...")
         var attempts = 0
@@ -178,10 +176,7 @@ class FeastFriendsE2ETests {
         composeTestRule.waitForIdle()
     }
 
-    /**
-     * Wait for PreferencesScreen to fully load
-     * Backend call takes time, need to wait for cuisines to appear
-     */
+
     private fun waitForPreferencesScreen() {
         println("Waiting for preferences to load from backend...")
         var attempts = 0
