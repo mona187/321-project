@@ -80,7 +80,6 @@ class FeastFriendsE2ETests_Diagnostic {
     @Test
     fun test_01_HandleAuthentication() {
         println("=== AUTHENTICATION TEST START ===")
-
         Thread.sleep(2000)
         composeTestRule.waitForIdle()
 
@@ -93,14 +92,12 @@ class FeastFriendsE2ETests_Diagnostic {
         val hasWelcome = hasElement("Welcome")
         val hasLogin = hasElement("Login")
         val hasGoogle = hasElement("Google")
-
         println("Test: Has 'Welcome': $hasWelcome")
         println("Test: Has 'Login': $hasLogin")
         println("Test: Has 'Google': $hasGoogle")
 
         if (hasWelcome || hasLogin) {
             println("\nTest: Appears to be on login screen")
-
             // Try to find and click login button
             println("Test: Looking for login button...")
 
@@ -133,7 +130,6 @@ class FeastFriendsE2ETests_Diagnostic {
                 val hasHome = hasElement("Home")
                 val hasFindMatch = hasElement("Find a Match")
                 val hasGroups = hasElement("Groups")
-
                 println("Test: Has 'Home': $hasHome")
                 println("Test: Has 'Find a Match': $hasFindMatch")
                 println("Test: Has 'Groups': $hasGroups")
@@ -157,7 +153,6 @@ class FeastFriendsE2ETests_Diagnostic {
                 println("Test: ❌ Unknown screen state")
             }
         }
-
         println("=== AUTHENTICATION TEST COMPLETE ===")
     }
 
