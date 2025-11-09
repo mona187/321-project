@@ -13,10 +13,10 @@ services:
       - NODE_ENV=production
       - PORT=3000
       # MongoDB Atlas connection (from your .env)
-      - MONGODB_URI=${MONGODB_URI}
-      - JWT_SECRET=${JWT_SECRET}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
+      - MONGODB_URI=${PROD_DB_URI}
+      - JWT_SECRET=${PROD_JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${PROD_GOOGLE_CLIENT_ID}
+      - GOOGLE_PLACES_API_KEY=${PROD_GOOGLE_PLACES_API_KEY}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
       # Optional: Firebase (if you want push notifications later)
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
