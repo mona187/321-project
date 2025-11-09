@@ -375,7 +375,7 @@ fun ProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp)
-                        .testTag("contactNumber"),
+                        .testTag("phone"),
                     enabled = !isLoading,
                     singleLine = true,
                     isError = contactNumberError.isNotEmpty(),
