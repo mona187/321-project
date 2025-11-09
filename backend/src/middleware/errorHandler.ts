@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-/**
- * Custom application error class
- */
+// Custom error class
 export class AppError extends Error {
   statusCode: number;
 
@@ -11,14 +9,43 @@ export class AppError extends Error {
     this.statusCode = statusCode;
     this.name = 'AppError';
 
-    // Capture stack trace excluding constructor
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-/**
- * Error handler middleware
- */
+// Allowed route params whitelist for safety
+const ALLOWED_PARAMS = ['id', 'userId', 'postId', 'commentId']; // adjust to your routes
+
+// Helper function to safely extract required route parameters
+export function requireParam(req: Request, paramName: string): string {
+  if (!ALLOWED_PARAMS.includes(paramName)) {
+    throw new AppError(`Invalid parameter requested: ${paramName}`, 400);
+  }
+
+  const value = req.params[paramName];
+  if (!value) {
+    throw new AppError(`Missing required parameter: ${paramName}`, 400);
+  }
+
+  return value;
+}
+
+// Async error wrapper
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
+): ((req: Request, res: Response, next: NextFunction) => void) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    void (async () => {
+      try {
+        await fn(req, res, next);
+      } catch (error) {
+        next(error);
+      }
+    })();
+  };
+};
+
+// Error handler middleware
 export const errorHandler = (
   err: Error | AppError,
   req: Request,
@@ -44,7 +71,6 @@ export const errorHandler = (
     message = err.message;
   }
 
-  // Log error for debugging
   console.error('Error:', {
     message: err.message,
     statusCode,
@@ -54,56 +80,23 @@ export const errorHandler = (
     method: req.method
   });
 
-  // Send response
   res.status(statusCode).json({
     error: err.name || 'Error',
     message,
     statusCode,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack, details: err })
+    ...(process.env.NODE_ENV === 'development' && {
+      stack: err.stack,
+      details: err
+    })
   });
 };
 
-/**
- * 404 handler for routes that don't exist
- */
-export const notFoundHandler = (req: Request, _res: Response, next: NextFunction): void => {
+// 404 handler
+export const notFoundHandler = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void => {
   const error = new AppError(`Route ${req.originalUrl} not found`, 404);
   next(error);
-};
-
-/**
- * Safely extract a route parameter
- * Ensures only whitelisted parameters are allowed
- */
-const allowedParams = ['id', 'userId', 'postId']; // <-- Adjust to your route params
-
-export function requireParam(req: Request, paramName: string): string {
-  if (!allowedParams.includes(paramName)) {
-    throw new AppError(`Invalid parameter name: ${paramName}`, 400);
-  }
-
-  const value = req.params[paramName];
-  if (!value) {
-    throw new AppError(`Missing required parameter: ${paramName}`, 400);
-  }
-
-  return value;
-}
-
-/**
- * Async error wrapper for route handlers
- * Ensures errors in async functions are passed to errorHandler
- */
-export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>
-): ((req: Request, res: Response, next: NextFunction) => void) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    void (async (): Promise<void> => {
-      try {
-        await fn(req, res, next);
-      } catch (error) {
-        next(error);
-      }
-    })();
-  };
 };
