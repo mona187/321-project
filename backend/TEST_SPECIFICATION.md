@@ -30,7 +30,6 @@
 | GET /api/restaurant/search | `backend/tests/no-mocks/restaurant.test.ts#L62` | `backend/tests/with-mocks/restaurant.mock.test.ts#L74` | Axios (Google Places API), External HTTP requests |
 | GET /api/restaurant/:restaurantId | `backend/tests/no-mocks/restaurant.test.ts#L197` | `backend/tests/with-mocks/restaurant.mock.test.ts#L396` | Axios (Google Places API), External HTTP requests |
 | POST /api/restaurant/recommendations/:groupId | `backend/tests/no-mocks/restaurant.test.ts#L259` | `backend/tests/with-mocks/restaurant.mock.test.ts#L519` | Axios (Google Places API), External HTTP requests, Group Model |
-| Error Handler Middleware | N/A | `backend/tests/with-mocks/errorHandler.mock.test.ts#L99` | User Model (for error scenarios), Various error types |
 
 ### 2.1.2. Commit Hash
 

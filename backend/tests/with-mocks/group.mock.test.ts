@@ -714,11 +714,28 @@ describe('POST /api/group/leave/:groupId - External Failures', () => {
       status: UserStatus.IN_GROUP
     });
 
+    // Ensure all database operations complete before proceeding
+    const user0 = await User.findById(testUsers[0]._id);
+    const user1 = await User.findById(testUsers[1]._id);
+    
+    if (!user0 || !user1 || user0.groupId?.toString() !== testGroup._id.toString()) {
+      throw new Error('User-group association not properly set up');
+    }
+
     const token = generateTestToken(
       testUsers[0]._id,
       testUsers[0].email,
       testUsers[0].googleId
     );
+
+    // Verify group exists and has members before making request (prevents 404 flakiness)
+    const groupBeforeRequest = await Group.findById(testGroup._id);
+    if (!groupBeforeRequest) {
+      throw new Error(`Group ${testGroup._id} not found before request - test setup issue`);
+    }
+    if (groupBeforeRequest.members.length === 0) {
+      throw new Error(`Group ${testGroup._id} has no members - test setup issue`);
+    }
 
     // Mock emitRestaurantSelected to throw error (covers line 248 catch block)
     (socketManager.emitRestaurantSelected as jest.Mock).mockImplementationOnce(() => {
