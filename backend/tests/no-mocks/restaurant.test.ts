@@ -44,6 +44,11 @@ beforeAll(async () => {
   console.log(`\n✅ Test setup complete. Ready to run tests.\n`);
 });
 
+afterEach(() => {
+  // Restore all spies after each test to prevent interference between tests
+  jest.restoreAllMocks();
+});
+
 afterAll(async () => {
   console.log('\n🧹 Cleaning up after tests...\n');
   
@@ -487,17 +492,20 @@ describe('Error Handling - next(error) Coverage', () => {
       .spyOn(restaurantService.default, 'searchRestaurants')
       .mockRejectedValueOnce(new Error('Service error for testing'));
 
-    const response = await request(app)
-      .get('/api/restaurant/search')
-      .query({
-        latitude: 49.2827,
-        longitude: -123.1207
-      });
+    try {
+      const response = await request(app)
+        .get('/api/restaurant/search')
+        .query({
+          latitude: 49.2827,
+          longitude: -123.1207
+        });
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toContain('Service error for testing');
-    
-    spy.mockRestore();
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain('Service error for testing');
+    } finally {
+      // Ensure spy is restored even if test fails
+      spy.mockRestore();
+    }
   });
 
   /**
@@ -522,23 +530,26 @@ describe('Error Handling - next(error) Coverage', () => {
       .spyOn(restaurantService.default, 'getRecommendationsForGroup')
       .mockRejectedValueOnce(new Error('Recommendations service error'));
 
-    const response = await request(app)
-      .post(`/api/restaurant/recommendations/${testGroup._id}`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        userPreferences: [
-          {
-            cuisineTypes: ['italian'],
-            budget: 50,
-            location: { coordinates: [-123.1207, 49.2827] },
-            radiusKm: 5
-          }
-        ]
-      });
+    try {
+      const response = await request(app)
+        .post(`/api/restaurant/recommendations/${testGroup._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          userPreferences: [
+            {
+              cuisineTypes: ['italian'],
+              budget: 50,
+              location: { coordinates: [-123.1207, 49.2827] },
+              radiusKm: 5
+            }
+          ]
+        });
 
-    expect(response.status).toBe(500);
-    expect(response.body.message).toContain('Recommendations service error');
-    
-    spy.mockRestore();
+      expect(response.status).toBe(500);
+      expect(response.body.message).toContain('Recommendations service error');
+    } finally {
+      // Ensure spy is restored even if test fails
+      spy.mockRestore();
+    }
   });
 });
