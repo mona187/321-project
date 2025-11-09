@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.navigation.NavController
 
 @Composable
@@ -34,6 +35,7 @@ fun MainBottomBar(navController: NavController) {
                     Icon(
                         Icons.Filled.AccountBox,
                         contentDescription = "Profile",
+                        modifier = Modifier.testTag("bottom_profile")
                     )
                 }
                 IconButton(onClick = {
