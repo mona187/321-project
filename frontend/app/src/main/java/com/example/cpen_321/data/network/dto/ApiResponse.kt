@@ -1,6 +1,8 @@
 package com.example.cpen_321.data.network.dto
 
 import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Standard API response format matching backend
@@ -57,4 +59,22 @@ sealed class ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>()
     data class Error(val message: String, val code: Int? = null) : ApiResult<Nothing>()
     object Loading : ApiResult<Nothing>()
+}
+
+/**
+ * Transforms the data of a Success result, or returns the original Error/Loading state.
+ *
+ */
+fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> {
+
+    /*
+     * This is used for code reusability with the Network Utils file; main idea is
+     * sometimes we want to return ApiResult.Success(result.body) other times; result.body.deleted
+     * as an example; it follows that it is valuable for us to transform / map the function foward.
+     */
+    return when (this) {
+        is ApiResult.Success -> ApiResult.Success(transform(data))
+        is ApiResult.Error -> this // Pass the error through
+        is ApiResult.Loading -> this // Pass the loading state through
+    }
 }
