@@ -105,6 +105,8 @@ process.on('unhandledRejection', (reason: Error) => {
     console.log('Server closed after unhandled rejection');
     process.exit(1); // ✅ Exit after graceful close
   });
+  process.exitCode = 1;
+
 }); // ✅ All paths lead to process.exit()
 
 // ✅ Handle uncaught exceptions
@@ -132,6 +134,8 @@ process.on('uncaughtException', (error: Error) => {
     console.log('Server closed after uncaught exception');
     process.exit(1); // ✅ Exit after graceful close
   });
+  process.exitCode = 1;
+
 }); // ✅ All paths lead to process.exit()
 
 // ✅ Graceful shutdown on SIGTERM
