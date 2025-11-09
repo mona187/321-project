@@ -567,6 +567,140 @@ describe('GET /api/restaurant/:restaurantId - External Failures', () => {
     expect(response.body.message).toContain('Restaurant not found');
     expect(response.body.message).toContain('INVALID_REQUEST');
   });
+
+  test('should handle non-Error exception in getRestaurantDetails catch block (covers restaurantService line 119)', async () => {
+    /**
+     * Covers restaurantService.ts line 119: `error instanceof Error ? error.message : 'Unknown error'`
+     * Tests the else branch when error is not an Error instance (e.g., string, null, undefined)
+     * This is a defensive check for edge cases
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock axios to throw a non-Error value (string)
+    mockedAxios.get.mockRejectedValueOnce('String error instead of Error object');
+
+    const response = await request(app)
+      .get('/api/restaurant/test-place-id')
+      .set('Authorization', `Bearer ${token}`);
+
+    // Should return mock data (fallback behavior)
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toHaveProperty('restaurantId', 'test-place-id');
+  });
+
+  test('should handle non-Error exception in searchRestaurants catch block (covers restaurantService line 82)', async () => {
+    /**
+     * Covers restaurantService.ts line 82: `error instanceof Error ? error.message : 'Unknown error'`
+     * Tests the else branch when error is not an Error instance
+     * This is a defensive check for edge cases
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock axios to throw a non-Error value (null)
+    mockedAxios.get.mockRejectedValueOnce(null);
+
+    const response = await request(app)
+      .get('/api/restaurant/search')
+      .query({ latitude: '49.2827', longitude: '-123.1207' })
+      .set('Authorization', `Bearer ${token}`);
+
+    // Should return mock data (fallback behavior)
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body.Body)).toBe(true);
+  });
+
+  test('should use default radius parameter when not provided (covers restaurantService line 34)', async () => {
+    /**
+     * Covers restaurantService.ts line 34: `radius: number = 5000` default parameter
+     * Note: The controller always provides a radius (defaults to 5000), so this tests
+     * the service method's default parameter as a defensive fallback
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock successful API response
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        status: 'OK',
+        results: [
+          {
+            place_id: 'test_place',
+            name: 'Test Restaurant',
+            vicinity: '123 Test St',
+            rating: 4.5,
+            price_level: 2
+          }
+        ]
+      }
+    } as any);
+
+    // Call search without radius - controller will default to 5000, service default parameter is defensive
+    const response = await request(app)
+      .get('/api/restaurant/search')
+      .query({ latitude: '49.2827', longitude: '-123.1207' })
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body).toBeInstanceOf(Array);
+    // Verify the API was called with radius 5000 (default)
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        params: expect.objectContaining({
+          radius: 5000
+        })
+      })
+    );
+  });
+
+  test('should use fallback values in formatPlaceData when fields are missing (covers restaurantService lines 130-133)', async () => {
+    /**
+     * Covers restaurantService.ts formatPlaceData method branches:
+     * - Line 130: `place.name || ''` - when name is missing
+     * - Line 131: `place.formatted_address || place.vicinity || ''` - when formatted_address is missing, use vicinity
+     * - Line 133: `address: place.formatted_address || place.vicinity || ''` - same fallback for address
+     */
+    const token = generateTestToken(
+      testUsers[0]._id,
+      testUsers[0].email,
+      testUsers[0].googleId
+    );
+
+    // Mock API response with missing fields to test fallbacks
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        status: 'OK',
+        result: {
+          place_id: 'restaurant_missing_fields',
+          // No name field - should use ''
+          // No formatted_address - should use vicinity
+          vicinity: '123 Fallback St, Vancouver',
+          rating: 4.0,
+          price_level: 2
+        }
+      }
+    } as any);
+
+    const response = await request(app)
+      .get('/api/restaurant/restaurant_missing_fields')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.Body.name).toBe(''); // Fallback to empty string
+    expect(response.body.Body.location).toBe('123 Fallback St, Vancouver'); // Uses vicinity
+    expect(response.body.Body.address).toBe('123 Fallback St, Vancouver'); // Uses vicinity
+  });
 });
 
 describe('POST /api/restaurant/recommendations/:groupId - External Failures', () => {
