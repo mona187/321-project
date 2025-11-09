@@ -568,6 +568,7 @@ describe('POST /api/group/leave/:groupId - No Mocking', () => {
   // This tests the leave group endpoint when last member leaves
   // The SAME scenario exists: last member leaves -> group deleted -> restaurant data deleted
   // Testing with restaurant data covers both: group deletion and restaurant data deletion
+  
   test('should delete group and restaurant data when last member leaves', async () => {
     const groupWithRestaurant = await seedTestGroup(
       'test-room-restaurant-delete',
