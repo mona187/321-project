@@ -35,9 +35,7 @@ object RetrofitClient {
         this.tokenManager = tokenManager
     }
 
-    /**
-     * Gson instance with custom configurations
-     */
+
     private val gson: Gson by lazy {
         GsonBuilder()
             .setLenient()
@@ -45,18 +43,14 @@ object RetrofitClient {
             .create()
     }
 
-    /**
-     * Logging interceptor for debugging
-     */
+
     private val loggingInterceptor: HttpLoggingInterceptor by lazy {
         HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
     }
 
-    /**
-     * OkHttp client with interceptors
-     */
+
     private val okHttpClient: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -72,9 +66,7 @@ object RetrofitClient {
         builder.build()
     }
 
-    /**
-     * Retrofit instance
-     */
+
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
