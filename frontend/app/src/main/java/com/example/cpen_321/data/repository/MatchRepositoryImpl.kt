@@ -1,9 +1,11 @@
 package com.example.cpen_321.data.repository
 
+import android.graphics.Paint
 import android.util.Log
 import com.example.cpen_321.data.local.PreferencesManager
 import com.example.cpen_321.data.model.Room
 import com.example.cpen_321.data.model.RoomStatusResponse
+import com.example.cpen_321.data.model.UserSettings
 import com.example.cpen_321.data.network.RetrofitClient
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.JoinMatchingRequest
@@ -26,6 +28,40 @@ class MatchRepositoryImpl(
     private val matchAPI = RetrofitClient.matchAPI
     private val TAG = "MatchRepository"
 
+    suspend fun JoinMatchingUserInRoom(
+        userSettings: UserSettings
+    ){
+
+        Log.d(TAG, "User has stale roomID: ${userSettings.roomID}, cleaning up...")
+
+        // Try to leave the room (might fail if room doesn't exist anymore)
+        if (userSettings.roomID == null) {
+            throw IllegalStateException("JoinMatchingUserInRoom cannot be called with null room (precondition invalidated)")
+        }
+        val leaveResult = leaveRoom(userSettings.roomID)
+
+        when (leaveResult) {
+            is ApiResult.Success -> {
+                Log.d(TAG, "Successfully left previous room")
+                delay(300) // Give backend time to process
+            }
+            is ApiResult.Error -> {
+                // Room might not exist anymore - that's okay!
+                if (leaveResult.message?.contains("Room not found") == true ||
+                    leaveResult.message?.contains("not found") == true) {
+                    Log.d(TAG, "Previous room no longer exists - this is fine, continuing...")
+                    // Clear the stale roomID locally
+                    saveCurrentRoomId(null)
+                } else {
+                    Log.w(TAG, "Error leaving room: ${leaveResult.message}, continuing anyway...")
+                }
+            }
+            is ApiResult.Loading -> {
+                // Should not happen, but ignore
+            }
+        }
+    }
+
     override suspend fun joinMatching(
         cuisine: List<String>?,
         budget: Double?,
@@ -46,31 +82,9 @@ class MatchRepositoryImpl(
 
                     // If user is in a room, try to leave it first
                     if (!userSettings.roomID.isNullOrEmpty()) {
-                        Log.d(TAG, "User has stale roomID: ${userSettings.roomID}, cleaning up...")
-
-                        // Try to leave the room (might fail if room doesn't exist anymore)
-                        val leaveResult = leaveRoom(userSettings.roomID)
-
-                        when (leaveResult) {
-                            is ApiResult.Success -> {
-                                Log.d(TAG, "Successfully left previous room")
-                                delay(300) // Give backend time to process
-                            }
-                            is ApiResult.Error -> {
-                                // Room might not exist anymore - that's okay!
-                                if (leaveResult.message?.contains("Room not found") == true ||
-                                    leaveResult.message?.contains("not found") == true) {
-                                    Log.d(TAG, "Previous room no longer exists - this is fine, continuing...")
-                                    // Clear the stale roomID locally
-                                    saveCurrentRoomId(null)
-                                } else {
-                                    Log.w(TAG, "Error leaving room: ${leaveResult.message}, continuing anyway...")
-                                }
-                            }
-                            is ApiResult.Loading -> {
-                                // Should not happen, but ignore
-                            }
-                        }
+                        JoinMatchingUserInRoom(
+                            userSettings
+                        )
                     }
                 }
 

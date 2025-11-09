@@ -226,7 +226,7 @@ constructor(
     }
 
     private fun loadGroupMembers(memberIds: List<String>) {
-        viewModelScope.launch viewScopeLaunch@{
+        viewModelScope.launch {
             if (memberIds.isEmpty()) {
                 Log.e("LoadDebug", "memberIds is empty")
             } else {
