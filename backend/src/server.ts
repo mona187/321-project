@@ -81,92 +81,108 @@ function startBackgroundTasks() {
 let isShuttingDown = false;
 
 // ✅ Handle unhandled promise rejections
+// ALL code paths must call process.exit() to satisfy static analysis
 process.on('unhandledRejection', (reason: Error) => {
   console.error('❌ Unhandled Rejection:', reason);
   console.error('Stack:', reason.stack);
   
+  // If already shutting down, exit immediately
   if (isShuttingDown) {
-    return;
+    process.exit(1); // ✅ Exit even if duplicate
   }
+  
   isShuttingDown = true;
 
-  // Attempt graceful shutdown with timeout
+  // Set timeout to force exit
   const shutdownTimeout = setTimeout(() => {
     console.error('⚠️  Forcing exit after timeout');
     process.exit(1); // ✅ Force exit after timeout
   }, 10000);
 
+  // Attempt graceful shutdown
   server.close(() => {
     clearTimeout(shutdownTimeout);
     console.log('Server closed after unhandled rejection');
     process.exit(1); // ✅ Exit after graceful close
   });
-});
+}); // ✅ All paths lead to process.exit()
 
 // ✅ Handle uncaught exceptions
+// ALL code paths must call process.exit() to satisfy static analysis
 process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('Stack:', error.stack);
   
+  // If already shutting down, exit immediately
   if (isShuttingDown) {
-    return;
+    process.exit(1); // ✅ Exit even if duplicate
   }
+  
   isShuttingDown = true;
 
-  // Attempt graceful shutdown with timeout
+  // Set timeout to force exit
   const shutdownTimeout = setTimeout(() => {
     console.error('⚠️  Forcing exit after timeout');
     process.exit(1); // ✅ Force exit after timeout
   }, 10000);
 
+  // Attempt graceful shutdown
   server.close(() => {
     clearTimeout(shutdownTimeout);
     console.log('Server closed after uncaught exception');
     process.exit(1); // ✅ Exit after graceful close
   });
-});
+}); // ✅ All paths lead to process.exit()
 
 // ✅ Graceful shutdown on SIGTERM
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   
+  // If already shutting down, exit immediately
   if (isShuttingDown) {
-    return;
+    process.exit(0); // ✅ Exit even if duplicate
   }
+  
   isShuttingDown = true;
 
+  // Set timeout to force exit
   const shutdownTimeout = setTimeout(() => {
     console.error('⚠️  Forcing exit after timeout');
     process.exit(0); // ✅ Force exit after timeout
   }, 10000);
 
+  // Attempt graceful shutdown
   server.close(() => {
     clearTimeout(shutdownTimeout);
     console.log('HTTP server closed');
     process.exit(0); // ✅ Exit after graceful close
   });
-});
+}); // ✅ All paths lead to process.exit()
 
 // ✅ Graceful shutdown on SIGINT (Ctrl+C)
 process.on('SIGINT', () => {
   console.log('SIGINT signal received: closing HTTP server');
   
+  // If already shutting down, exit immediately
   if (isShuttingDown) {
-    return;
+    process.exit(0); // ✅ Exit even if duplicate
   }
+  
   isShuttingDown = true;
 
+  // Set timeout to force exit
   const shutdownTimeout = setTimeout(() => {
     console.error('⚠️  Forcing exit after timeout');
     process.exit(0); // ✅ Force exit after timeout
   }, 10000);
 
+  // Attempt graceful shutdown
   server.close(() => {
     clearTimeout(shutdownTimeout);
     console.log('HTTP server closed');
     process.exit(0); // ✅ Exit after graceful close
   });
-});
+}); // ✅ All paths lead to process.exit()
 
 // Start the server
 void startServer();
