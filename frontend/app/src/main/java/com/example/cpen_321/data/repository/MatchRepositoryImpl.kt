@@ -10,6 +10,8 @@ import com.example.cpen_321.data.network.RetrofitClient
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.JoinMatchingRequest
 import com.example.cpen_321.data.network.dto.LeaveRoomRequest
+import com.example.cpen_321.data.network.dto.map
+import com.example.cpen_321.data.network.safeApiCall
 import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -67,173 +69,104 @@ class MatchRepositoryImpl(
         budget: Double?,
         radiusKm: Double?
     ): ApiResult<Pair<String, Room>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Check if user is already in a room and clean up if needed
-                val userSettingsResult = userRepository.getUserSettings()
 
-                if (userSettingsResult is ApiResult.Success) {
-                    val userSettings = userSettingsResult.data
 
-                    // If user is in a group, they can't join matching
-                    if (!userSettings.groupID.isNullOrEmpty()) {
-                        return@withContext ApiResult.Error("Please leave your current group before joining matching")
-                    }
+        // Check if user is already in a room and clean up if needed
+        val userSettingsResult = userRepository.getUserSettings()
 
-                    // If user is in a room, try to leave it first
-                    if (!userSettings.roomID.isNullOrEmpty()) {
-                        JoinMatchingUserInRoom(
-                            userSettings
-                        )
-                    }
-                }
+        if (userSettingsResult is ApiResult.Success) {
+            val userSettings = userSettingsResult.data
 
-                // Now try to join matching
-                val request = JoinMatchingRequest(
-                    cuisine = cuisine,
-                    budget = budget,
-                    radiusKm = radiusKm
-                )
+            // If user is in a group, they can't join matching
+            if (!userSettings.groupID.isNullOrEmpty()) {
+                return ApiResult.Error("Please leave your current group before joining matching")
+            }
 
-                val response = matchAPI.joinMatching(request)
-
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        val joinResponse = apiResponse.body
-
-                        // Save room ID locally
-                        saveCurrentRoomId(joinResponse.roomId)
-
-                        // Save preferences locally
-                        cuisine?.let { preferencesManager.saveCuisines(it.toSet()) }
-                        budget?.let { preferencesManager.saveBudget(it) }
-                        radiusKm?.let { preferencesManager.saveRadius(it) }
-
-                        Log.d(TAG, "Successfully joined matching, roomId: ${joinResponse.roomId}")
-                        ApiResult.Success(Pair(joinResponse.roomId, joinResponse.room))
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Log.e(TAG, "Failed to join matching: $errorBody")
-                    ApiResult.Error(
-                        message = errorBody ?: "Failed to join matching",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
+            // If user is in a room, try to leave it first
+            if (!userSettings.roomID.isNullOrEmpty()) {
+                JoinMatchingUserInRoom(userSettings)
             }
         }
+
+        val request = JoinMatchingRequest(
+            cuisine = cuisine,
+            budget = budget,
+            radiusKm = radiusKm
+        )
+
+        val apiResult = safeApiCall(
+            apiCall = {matchAPI.joinMatching(request)},
+            customErrorCode = "Failed to join matching"
+        )
+            .also { apiResult ->
+                if (apiResult is ApiResult.Success) {
+                    // Save room ID locally
+                    saveCurrentRoomId(apiResult.data.roomId)
+                    Log.d(TAG, "Successfully joined matching, roomId: ${apiResult.data.roomId}")
+                }
+            }
+            .map {joinResponse -> Pair(joinResponse.roomId, joinResponse.room) } /* exports the success to be that */
+
+        if (apiResult is ApiResult.Success){
+            // Save preferences locally
+            cuisine?.let { preferencesManager.saveCuisines(it.toSet()) }
+            budget?.let { preferencesManager.saveBudget(it) }
+            radiusKm?.let { preferencesManager.saveRadius(it) }
+        }
+
+        return apiResult
     }
 
     override suspend fun leaveRoom(roomId: String): ApiResult<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val request = LeaveRoomRequest()
-                val response = matchAPI.leaveRoom(roomId, request)
 
-                if (response.isSuccessful) {
-                    // Clear local room ID
-                    saveCurrentRoomId(null)
-
-                    Log.d(TAG, "Left room successfully: $roomId")
-                    ApiResult.Success("Left room successfully")
-                } else {
-                    val errorBody = response.errorBody()?.string()
-
-                    // If room not found, that's actually okay - clear local state
-                    if (errorBody?.contains("Room not found") == true ||
-                        errorBody?.contains("not found") == true) {
+        val response = safeApiCall(
+            apiCall = { matchAPI.leaveRoom(roomId, LeaveRoomRequest()) },
+            customErrorCode = "Failed to leave room"
+        ).also { apiResult ->
+                // Use 'when' for an exhaustive check of the ApiResult
+                when (apiResult) {
+                    is ApiResult.Success -> {
+                        // This is the primary success path.
                         saveCurrentRoomId(null)
-                        Log.d(TAG, "Room $roomId not found - clearing local state")
-                    } else {
-                        Log.e(TAG, "Failed to leave room: $errorBody")
+                        Log.d(TAG, "Left room successfully: $roomId")
                     }
-
-                    ApiResult.Error(
-                        message = errorBody ?: "Failed to leave room",
-                        code = response.code()
-                    )
+                    is ApiResult.Error -> {
+                        // This is the error path, where we check for the special case.
+                        if (apiResult.message.contains("Room not found", ignoreCase = true) ||
+                            apiResult.message.contains("not found", ignoreCase = true)) {
+                            // Special case: Treat "not found" as a trigger to clear local state.
+                            saveCurrentRoomId(null)
+                            Log.d(TAG, "Room $roomId not found - clearing local state anyway.")
+                        } else {
+                            // This is a genuine, unexpected error.
+                            Log.e(TAG, "Failed to leave room: ${apiResult.message} (Code: ${apiResult.code})")
+                        }
+                    }
+                    is ApiResult.Loading -> { /* No side-effects needed for loading state */ }
                 }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
-        }
+            .map {
+                /* success string */
+                "Left room successfully"
+            }
+
+        return response;
     }
 
     override suspend fun getRoomStatus(roomId: String): ApiResult<RoomStatusResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = matchAPI.getRoomStatus(roomId)
-
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        ApiResult.Success(apiResponse.body)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to get room status",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+        val response = safeApiCall(apiCall = {matchAPI.getRoomStatus(roomId)}, customErrorCode = "Failed to get room status")
+        return response;
     }
 
     override suspend fun getRoomUsers(roomId: String): ApiResult<List<String>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = matchAPI.getRoomUsers(roomId)
 
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.body != null) {
-                        ApiResult.Success(apiResponse.body.users)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    ApiResult.Error(
-                        message = response.errorBody()?.string() ?: "Failed to get room users",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+        val response = safeApiCall(apiCall =  {
+            matchAPI.getRoomUsers(roomId)},
+            customErrorCode = "Failed to get room users"
+        ).map { apiResponse -> apiResponse.users  }
+
+        return response;
+
     }
 
     override fun saveCurrentRoomId(roomId: String?) {

@@ -78,3 +78,4 @@ fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> {
         is ApiResult.Loading -> this // Pass the loading state through
     }
 }
+
