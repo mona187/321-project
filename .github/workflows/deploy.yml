@@ -34,7 +34,7 @@ jobs:
             # Write .env file safely
             cat > .env << 'EOF'
             PORT=${{ secrets.PROD_PORT }}
-            MONGODB_URI=${{ secrets.PROD_DB_URI }}
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
             JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
             GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
             GOOGLE_PLACES_API_KEY=${{ secrets.PROD_GOOGLE_PLACES_API_KEY }}
