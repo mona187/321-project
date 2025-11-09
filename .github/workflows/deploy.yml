@@ -35,9 +35,9 @@ jobs:
             cat > .env << 'EOF'
             PORT=${{ secrets.PROD_PORT }}
             MONGODB_URI=${{ secrets.MONGODB_URI }}
-            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
-            GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
-            GOOGLE_PLACES_API_KEY=${{ secrets.PROD_GOOGLE_PLACES_API_KEY }}
+            PROD_JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
+            PROD_GOOGLE_CLIENT_ID=${{ secrets.PROD_GOOGLE_CLIENT_ID }}
+            PROD_GOOGLE_PLACES_API_KEY=${{ secrets.PROD_GOOGLE_PLACES_API_KEY }}
             EOF
 
             chmod 600 .env
