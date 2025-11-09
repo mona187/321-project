@@ -13,7 +13,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       # MongoDB Atlas connection (from your .env)
-      - MONGODB_URI=${PROD_DB_URI}
+      - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${PROD_JWT_SECRET}
       - GOOGLE_CLIENT_ID=${PROD_GOOGLE_CLIENT_ID}
       - GOOGLE_PLACES_API_KEY=${PROD_GOOGLE_PLACES_API_KEY}
