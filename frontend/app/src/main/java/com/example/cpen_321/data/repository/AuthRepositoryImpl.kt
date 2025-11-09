@@ -8,6 +8,12 @@ import com.example.cpen_321.data.network.dto.AuthResponse
 import com.example.cpen_321.data.network.dto.AuthUser
 import com.example.cpen_321.data.network.dto.FcmTokenRequest
 import com.example.cpen_321.data.network.dto.GoogleAuthRequest
+import com.example.cpen_321.data.network.dto.MessageResponse
+import com.example.cpen_321.data.network.dto.map
+import com.example.cpen_321.data.network.dto.mapError
+import com.example.cpen_321.data.network.safeApiCall
+import com.example.cpen_321.data.network.safeAuthApiCall
+import com.example.cpen_321.data.network.safeMessageApiCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
@@ -25,164 +31,119 @@ class AuthRepositoryImpl(
     private val authAPI = RetrofitClient.authAPI
 
     override suspend fun signUp(idToken: String): ApiResult<AuthResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = authAPI.signUp(GoogleAuthRequest(idToken))
-
-                if (response.isSuccessful) {
-                    val authResponse = response.body()
-                    if (authResponse != null) {
-                        // Save token and user info
+        val response = safeAuthApiCall (
+            authApiCall = {authAPI.signUp(GoogleAuthRequest(idToken))},
+            customErrorCode = "Failed to sign up"
+            )
+                .also { result ->
+                    // Side-effects on success
+                    if (result is ApiResult.Success) {
+                        val authResponse = result.data
                         tokenManager.saveToken(authResponse.token)
                         tokenManager.saveUserInfo(
                             userId = authResponse.user.userId,
                             email = authResponse.user.email,
-                            googleId = "", // Backend doesn't return googleId in response
+                            googleId = "", // Not provided by backend
                             profilePicture = authResponse.user.profilePicture
                         )
-
-                        ApiResult.Success(authResponse)
-                    } else {
-                        ApiResult.Error("Empty response from server")
                     }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = when (response.code()) {
+                }
+                .mapError { error ->
+                    // Custom error message transformation
+                    val errorMessage = when (error.code) {
                         409 -> "Account already exists. Please sign in instead."
                         400 -> "Invalid request. Please try again."
                         401 -> "Authentication failed. Please try again."
-                        else -> errorBody ?: "Sign up failed. Please try again."
+                        else -> error.message // Fallback to the original error message
                     }
-                    ApiResult.Error(
-                        message = errorMessage,
-                        code = response.code()
-                    )
+                    // Return a new Error object with the improved message
+                    ApiResult.Error(errorMessage, error.code)
                 }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+
+        return response
     }
 
     override suspend fun signIn(idToken: String): ApiResult<AuthResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = authAPI.signIn(GoogleAuthRequest(idToken))
 
-                if (response.isSuccessful) {
-                    val authResponse = response.body()
-                    if (authResponse != null) {
-                        // Save token and user info
-                        tokenManager.saveToken(authResponse.token)
-                        tokenManager.saveUserInfo(
-                            userId = authResponse.user.userId,
-                            email = authResponse.user.email,
-                            googleId = "", // Backend doesn't return googleId in response
-                            profilePicture = authResponse.user.profilePicture
-                        )
-
-                        ApiResult.Success(authResponse)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    val errorMessage = when (response.code()) {
-                        404 -> "Account not found. Please sign up first."
-                        400 -> "Invalid request. Please try again."
-                        401 -> "Authentication failed. Please try again."
-                        else -> errorBody ?: "Sign in failed. Please try again."
-                    }
-                    ApiResult.Error(
-                        message = errorMessage,
-                        code = response.code()
+        val response = safeAuthApiCall (
+            authApiCall = {authAPI.signIn(GoogleAuthRequest(idToken))},
+            customErrorCode = "Sign in failed. Please try again."
+        ).also { result ->
+                // Side-effects on success
+                if (result is ApiResult.Success) {
+                    val authResponse = result.data
+                    // Save token and user info
+                    tokenManager.saveToken(authResponse.token)
+                    tokenManager.saveUserInfo(
+                        userId = authResponse.user.userId,
+                        email = authResponse.user.email,
+                        googleId = "", // Backend doesn't return googleId in response
+                        profilePicture = authResponse.user.profilePicture
                     )
                 }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
-        }
+            .mapError { error ->
+                // Custom error message transformation
+                val errorMessage = when (error.code) {
+                    404 -> "Account not found. Please sign up first."
+                    400 -> "Invalid request. Please try again."
+                    401 -> "Authentication failed. Please try again."
+                    else ->  "Sign in failed. Please try again."
+                }
+                // Return a new Error object with the improved message
+                ApiResult.Error(errorMessage, error.code)
+            }
+
+        return response
     }
 
     override suspend fun googleAuth(idToken: String): ApiResult<AuthResponse> {
         return withContext(Dispatchers.IO) {
-            try {
-                val response = authAPI.googleAuth(GoogleAuthRequest(idToken))
 
-                if (response.isSuccessful) {
-                    val authResponse = response.body()
-                    if (authResponse != null) {
-                        // Save token and user info
-                        tokenManager.saveToken(authResponse.token)
-                        tokenManager.saveUserInfo(
-                            userId = authResponse.user.userId,
-                            email = authResponse.user.email,
-                            googleId = "", // Backend doesn't return googleId in response
-                            profilePicture = authResponse.user.profilePicture
-                        )
+            safeAuthApiCall(
+                authApiCall = { authAPI.googleAuth(GoogleAuthRequest(idToken)) },
+                customErrorCode = "Authentication failed"
+            ).also { response ->
 
-                        ApiResult.Success(authResponse)
-                    } else {
-                        ApiResult.Error("Empty response from server")
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    ApiResult.Error(
-                        message = errorBody ?: "Authentication failed",
-                        code = response.code()
+                if (response is ApiResult.Success) {
+                    val authResponse = response.data
+                    // Save token and user info
+                    tokenManager.saveToken(authResponse.token)
+                    tokenManager.saveUserInfo(
+                        userId = authResponse.user.userId,
+                        email = authResponse.user.email,
+                        googleId = "", // Backend doesn't return googleId in response
+                        profilePicture = authResponse.user.profilePicture
                     )
                 }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
 
     override suspend fun logout(): ApiResult<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = authAPI.logout()
 
-                if (response.isSuccessful) {
-                    // Clear local data
-                    clearAuthData()
-                    ApiResult.Success("Logged out successfully")
-                } else {
-                    // Even if server call fails, clear local data
-                    clearAuthData()
-                    ApiResult.Success("Logged out locally")
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
+        // Clear local data
+        clearAuthData()
+        val response = safeMessageApiCall(
+            messageApiCall = {authAPI.logout()},
+            customErrorCode = "Logged out locally"
+        ).also { result ->
+            /* Data cleared no matter what */
+            clearAuthData()
+
+            if (result is ApiResult.Success) {
+                // Clear local data
+                ApiResult.Success("Logged out successfully")
+            } else {
+                // Even if server call fails, clear local data
+                ApiResult.Success("Logged out locally")
             }
         }
+        return response;
     }
 
     override suspend fun verifyToken(): ApiResult<AuthUser> {
+
         return withContext(Dispatchers.IO) {
             try {
                 val response = authAPI.verifyToken()
@@ -213,59 +174,32 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun updateFcmToken(fcmToken: String): ApiResult<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Save locally first
+        // Save locally first
+        preferencesManager.saveFcmToken(fcmToken)
+
+        val result = safeMessageApiCall(
+            messageApiCall = { authAPI.updateFcmToken(FcmTokenRequest(fcmToken)) },
+            customErrorCode = "Failed to update FCM token"
+        ).also { result ->
+            if(result is ApiResult.Success) {
+                // Save locally
                 preferencesManager.saveFcmToken(fcmToken)
-
-                val response = authAPI.updateFcmToken(FcmTokenRequest(fcmToken))
-
-                if (response.isSuccessful) {
-                    ApiResult.Success("FCM token updated successfully")
-                } else {
-                    ApiResult.Error(
-                        message = "Failed to update FCM token",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
-        }
+        }.map { messageResult -> "FCM token updated successfully"}
+
+        return result;
     }
 
     override suspend fun deleteAccount(): ApiResult<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = authAPI.deleteAccount()
 
-                if (response.isSuccessful) {
-                    // Clear local data
-                    clearAuthData()
-                    ApiResult.Success("Account deleted successfully")
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    ApiResult.Error(
-                        message = errorBody ?: "Failed to delete account",
-                        code = response.code()
-                    )
-                }
-            } catch (e: IOException) {
-                ApiResult.Error("Network error: ${e.localizedMessage}")
-            } catch (e: HttpException) {
-                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
-            } catch (e: JsonSyntaxException) {
-                ApiResult.Error("Parsing error: ${e.localizedMessage}")
-            } catch (e: Exception) {
-                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
-            }
-        }
+        clearAuthData()
+
+        val response = safeMessageApiCall(
+            messageApiCall = { authAPI.deleteAccount() },
+            customErrorCode = "Failed to delete account"
+        ).map{ messageResult -> "Account deleted successfully"}
+
+        return response;
     }
 
     override fun isLoggedIn(): Boolean {

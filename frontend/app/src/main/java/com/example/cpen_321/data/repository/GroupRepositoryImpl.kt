@@ -25,7 +25,7 @@ class GroupRepositoryImpl(
     private val groupAPI = RetrofitClient.groupAPI
 
     override suspend fun getGroupStatus(): ApiResult<Group> {
-        val response =safeApiCall(
+        val response = safeApiCall(
             apiCall = {groupAPI.getGroupStatus()},
             customErrorCode = "Failed to get group status"
         ).also {

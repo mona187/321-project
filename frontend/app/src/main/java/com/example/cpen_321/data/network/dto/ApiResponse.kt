@@ -79,3 +79,15 @@ fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> {
     }
 }
 
+/**
+ * Transforms the error of a Result, or returns the original Success/Loading state.
+ */
+fun <T> ApiResult<T>.mapError(
+    transform: (error: ApiResult.Error) -> ApiResult.Error
+): ApiResult<T> {
+    return when (this) {
+        is ApiResult.Success -> this // Pass success through
+        is ApiResult.Error -> transform(this) // Apply transformation to the error
+        is ApiResult.Loading -> this // Pass loading through
+    }
+}
