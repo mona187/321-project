@@ -33,16 +33,16 @@ export class UserController {
    */
   async getUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       const settings = await userService.getUserSettings(userId);
 
@@ -62,16 +62,16 @@ export class UserController {
    */
   async createUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       const { name, bio, profilePicture, contactNumber } = req.body;
 
@@ -98,16 +98,16 @@ export class UserController {
    */
   async updateUserSettings(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
 
@@ -137,16 +137,16 @@ export class UserController {
    */
   async updateUserProfile(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       const { name, bio, preference, profilePicture, contactNumber, budget, radiusKm } = req.body;
 

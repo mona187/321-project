@@ -10,16 +10,16 @@ export class MatchingController {
    */
   async joinMatching(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       const { cuisine, budget, radiusKm } = req.body;
 
@@ -75,17 +75,17 @@ async joinSpecificRoom(req: AuthRequest, res: Response, next: NextFunction): Pro
    */
   async leaveRoom(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user!.userId;
+      const userId = req.user?.userId;
       const roomId = requireParam(req, 'roomId');
 
-      // if (!userId) {
-      //   res.status(401).json({
-      //     Status: 401,
-      //     Message: { error: 'Unauthorized' },
-      //     Body: null
-      //   });
-      //   return;
-      // }
+      if (!userId) {
+        res.status(401).json({
+          Status: 401,
+          Message: { error: 'Unauthorized' },
+          Body: null
+        });
+        return;
+      }
 
       await matchingService.leaveRoom(userId, roomId);
 
