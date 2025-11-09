@@ -9,6 +9,9 @@ import com.example.cpen_321.data.network.dto.UpdateProfileRequest
 import com.example.cpen_321.data.network.dto.UpdateSettingsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
+import com.google.gson.JsonSyntaxException
 
 /**
  * Implementation of UserRepository
@@ -38,11 +41,14 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -72,11 +78,14 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -111,11 +120,14 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -163,11 +175,14 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -190,11 +205,14 @@ class UserRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }

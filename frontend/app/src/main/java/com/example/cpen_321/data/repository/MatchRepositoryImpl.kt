@@ -8,9 +8,12 @@ import com.example.cpen_321.data.network.RetrofitClient
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.JoinMatchingRequest
 import com.example.cpen_321.data.network.dto.LeaveRoomRequest
+import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * Implementation of MatchRepository
@@ -106,12 +109,14 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                Log.e(TAG, "Error joining matching", e)
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -145,12 +150,14 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                Log.e(TAG, "Error leaving room", e)
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -173,11 +180,14 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -200,11 +210,14 @@ class MatchRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }

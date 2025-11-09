@@ -7,8 +7,11 @@ import com.example.cpen_321.data.network.RetrofitClient
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.LeaveGroupRequest
 import com.example.cpen_321.data.network.dto.VoteRestaurantRequest
+import com.google.gson.JsonSyntaxException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * Implementation of GroupRepository
@@ -44,11 +47,14 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -80,11 +86,14 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
@@ -106,11 +115,14 @@ class GroupRepositoryImpl(
                         code = response.code()
                     )
                 }
+            } catch (e: IOException) {
+                ApiResult.Error("Network error: ${e.localizedMessage}")
+            } catch (e: HttpException) {
+                ApiResult.Error("HTTP error ${e.code()}: ${e.message()}", code = e.code())
+            } catch (e: JsonSyntaxException) {
+                ApiResult.Error("Parsing error: ${e.localizedMessage}")
             } catch (e: Exception) {
-                ApiResult.Error(
-                    message = e.localizedMessage ?: "Network error occurred",
-                    code = null
-                )
+                ApiResult.Error("Unexpected error: ${e.localizedMessage}")
             }
         }
     }
