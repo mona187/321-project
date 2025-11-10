@@ -34,6 +34,11 @@ android {
                 storePassword = getLocalProperty("RELEASE_KEYSTORE_PASSWORD", "")
                 keyAlias = getLocalProperty("RELEASE_KEY_ALIAS", "")
                 keyPassword = getLocalProperty("RELEASE_KEY_PASSWORD", "")
+            } else {
+                storeFile = null
+                storePassword = ""
+                keyAlias = ""
+                keyPassword = ""
             }
         }
     }
@@ -68,7 +73,8 @@ android {
     buildTypes {
         release {
             val hasKeystore = signingConfigs.findByName("release") != null
-            if (hasKeystore) {
+            val hasStoreFile = signingConfigs.findByName("release")?.storeFile != null
+            if (hasKeystore && hasStoreFile) {
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 println("No release keystore found. If this is not on the GitHub Action we have an issue.")
