@@ -22,18 +22,15 @@ params = {
 def test_restaurant_match_response_time():
 	# Make GET request to the restaurant search API
 	r = requests.get(url=url, params=params,timeout=6)
+
 	assert r.elapsed.total_seconds() <= 5, f"Response time exceeded: {r.elapsed.total_seconds()} seconds"
 	return r.status_code == 200
 
 if __name__ == "__main__":
-	try:
-		for i in range(101):
-			assert test_restaurant_match_response_time()
-			if (i % 10) == 0:
-				print(f"{i} requests completed successfully.")
-		print("All requests completed within the time limit.")
-	except (requests.exceptions.ConnectionError) as e:
-		assert type(e.args[0]) == urllib3.exceptions.MaxRetryError, "non-server side connection error"
-		print(f"Server refused connection, counting as success. ")
+	for i in range(101):
+		assert test_restaurant_match_response_time()
+		if (i % 10) == 0:
+			print(f"{i} requests completed successfully.")
+	print("All requests completed within the time limit.")
 	
 	print("##### resturantmatch.py tests complete #####")

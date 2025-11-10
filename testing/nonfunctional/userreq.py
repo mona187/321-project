@@ -56,20 +56,15 @@ join_url = "matching/join"
 
 
 # goal: verify 95% of unauth requests return 401 in under 2s
-try:
-  for callCount in range(101):
-    verify_unauth_quick(signup_url, fake_googleidtoken)
-    verify_unauth_quick(profile_url, fake_googleidtoken)
-    verify_unauth_quick(settings_url, fake_googleidtoken)
-    verify_unauth_quick(join_url, fake_googleidtoken)
-    if (callCount % 10) == 0:
-      print(f"{callCount} unauth requests completed successfully.")
-  
-  print("All unauth requests completed within the time limit.")
+for callCount in range(101):
+  verify_unauth_quick(signup_url, fake_googleidtoken)
+  verify_unauth_quick(profile_url, fake_googleidtoken)
+  verify_unauth_quick(settings_url, fake_googleidtoken)
+  verify_unauth_quick(join_url, fake_googleidtoken)
+  if (callCount % 10) == 0:
+    print(f"{callCount} unauth requests completed successfully.")
 
-except (requests.exceptions.ConnectionError) as e:
-  assert type(e.args[0]) == urllib3.exceptions.MaxRetryError, "non-server side connection error"
-  print(f"Server refused connection, counting as success. ")
+print("All unauth requests completed within the time limit.")
 
 print("##### userreq.py tests complete #####")
       
