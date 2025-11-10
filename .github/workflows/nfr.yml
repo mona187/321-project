@@ -20,8 +20,8 @@ jobs:
       # given we also deploy the server 
       - name: Wait for server to be live
         run: | 
-          chmod +x serverlive.sh
-          ./serverlive.sh
+          chmod +x .github/workflows/serverlive.sh
+          ./.github/workflows/serverlive.sh
 
       - name: Install minimal dependencies
         run: |
