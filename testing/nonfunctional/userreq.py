@@ -33,6 +33,7 @@ Create or update user profile.
 import requests
 from random import randint
 from time import sleep
+from serverLive import confirmConnection
 import urllib3
 
 fake_googleidtoken = f"fake_token{randint(1000,9999)}"
@@ -59,6 +60,8 @@ join_url = "matching/join"
 failureCount = 0
 # 101 req
 totalCount = 101
+
+assert(confirmConnection)
 
 # goal: verify 95% of unauth requests return 401 in under 2s
 for callCount in range(totalCount):

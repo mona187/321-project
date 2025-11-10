@@ -7,6 +7,7 @@ Goal of this file:
 import requests 
 from time import sleep
 import urllib3
+from serverLive import confirmConnection
 
 url = "http://3.135.231.73:3000/api/restaurant/search"
 		
@@ -22,6 +23,7 @@ params = {
 failureCount = 0
 totalCount = 101
 
+
 def test_restaurant_match_response_time():
 	# Make GET request to the restaurant search API
 	r = requests.get(url=url, params=params,timeout=6)
@@ -30,6 +32,9 @@ def test_restaurant_match_response_time():
 	return r.status_code == 200
 
 if __name__ == "__main__":
+	assert(confirmConnection)
+
+ 
 	for i in range(totalCount):
 		try:
 			assert test_restaurant_match_response_time()
