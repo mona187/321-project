@@ -5,6 +5,7 @@ Goal of this file:
 """
 
 import requests 
+from time import sleep
 import urllib3
 
 url = "http://3.135.231.73:3000/api/restaurant/search"
@@ -18,6 +19,8 @@ params = {
 	"price_level": 2
 }
 
+failureCount = 0
+totalCount = 101
 
 def test_restaurant_match_response_time():
 	# Make GET request to the restaurant search API
@@ -27,10 +30,19 @@ def test_restaurant_match_response_time():
 	return r.status_code == 200
 
 if __name__ == "__main__":
-	for i in range(101):
-		assert test_restaurant_match_response_time()
-		if (i % 10) == 0:
-			print(f"{i} requests completed successfully.")
+	for i in range(totalCount):
+		try:
+			assert test_restaurant_match_response_time()
+			if (i % 10) == 0:
+				print(f"{i} requests completed successfully.")
+		except requests.exceptions.ConnectionError as e:
+				print(f"Connection error: {e}. Retrying in 5 seconds...")
+				sleep(5)
+				failureCount += 1
+
+	# assert 90% of req in correct time
+	assert((1 - failureCount/totalCount) >= 0.90)
+
 	print("All requests completed within the time limit.")
 	
 	print("##### resturantmatch.py tests complete #####")

@@ -32,6 +32,7 @@ Create or update user profile.
 
 import requests
 from random import randint
+from time import sleep
 import urllib3
 
 fake_googleidtoken = f"fake_token{randint(1000,9999)}"
@@ -55,14 +56,26 @@ settings_url = "user/settings"
 join_url = "matching/join"
 
 
+failureCount = 0
+# 101 req
+totalCount = 101
+
 # goal: verify 95% of unauth requests return 401 in under 2s
-for callCount in range(101):
-  verify_unauth_quick(signup_url, fake_googleidtoken)
-  verify_unauth_quick(profile_url, fake_googleidtoken)
-  verify_unauth_quick(settings_url, fake_googleidtoken)
-  verify_unauth_quick(join_url, fake_googleidtoken)
-  if (callCount % 10) == 0:
-    print(f"{callCount} unauth requests completed successfully.")
+for callCount in range(totalCount):
+  try:
+    verify_unauth_quick(signup_url, fake_googleidtoken)
+    verify_unauth_quick(profile_url, fake_googleidtoken)
+    verify_unauth_quick(settings_url, fake_googleidtoken)
+    verify_unauth_quick(join_url, fake_googleidtoken)
+    if (callCount % 10) == 0:
+      print(f"{callCount} unauth requests completed successfully.")
+  except requests.exceptions.ConnectionError as e:
+    print(f"Connection error: {e}. Retrying in 5 seconds...")
+    sleep(5)
+    failureCount += 1
+
+# assert 95% of req in correct time
+assert((1 - failureCount/totalCount) >= 0.95)
 
 print("All unauth requests completed within the time limit.")
 

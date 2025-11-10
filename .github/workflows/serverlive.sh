@@ -3,7 +3,7 @@
 echo "Waiting for backend to be up..."
 success=0
 for i in {1..30}; do
-    if curl -fs http://3.135.231.73:3000/health >/dev/null; then
+    if curl -fs http://3.135.231.73:3000/health; then
         printf "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\nServer is up!\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
         success=1
         break
