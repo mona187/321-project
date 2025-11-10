@@ -76,6 +76,10 @@ for callCount in range(totalCount):
     print(f"Connection error: {e}. Retrying in 5 seconds...")
     sleep(5)
     failureCount += 1
+  except requests.exceptions.ConnectTimeout as ct:
+      print(f"Timeout error: {e} Retrying in 5 seconds")
+      sleep(5)
+      failureCount += 1
 
 # assert 95% of req in correct time
 assert((1 - failureCount/totalCount) >= 0.95)
