@@ -4,6 +4,7 @@ import com.example.cpen_321.data.network.dto.AuthResponse
 import com.example.cpen_321.data.network.dto.FcmTokenRequest
 import com.example.cpen_321.data.network.dto.GoogleAuthRequest
 import com.example.cpen_321.data.network.dto.MessageResponse
+import com.example.cpen_321.data.network.dto.SignUpResponse
 import com.example.cpen_321.data.network.dto.TokenVerifyResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -19,11 +20,12 @@ interface AuthAPI {
     /**
      * POST /api/auth/signup
      * Sign up with Google (create new account)
+     * Note: Returns SignUpResponse (no token) - user must sign in separately
      */
     @POST("api/auth/signup")
     suspend fun signUp(
         @Body request: GoogleAuthRequest
-    ): Response<AuthResponse>
+    ): Response<SignUpResponse>
 
     /**
      * POST /api/auth/signin

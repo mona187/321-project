@@ -38,16 +38,31 @@ data class Room(
      */
     fun getCompletionTimeMillis(): Long {
         return try {
-            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-            format.timeZone = TimeZone.getTimeZone("UTC")
-            format.parse(completionTime)?.time ?: 0L
-        } catch (e: ParseException) {
-            // If parsing fails, try to parse as Long (backwards compatibility)
-            try {
-                completionTime.toLong()
-            } catch (e: NumberFormatException) {
-                0L
+            // Try multiple date formats
+            val formats = listOf(
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+            )
+            
+            formats.forEach { format ->
+                format.timeZone = TimeZone.getTimeZone("UTC")
+                try {
+                    val parsed = format.parse(completionTime)
+                    if (parsed != null) {
+                        return parsed.time
+                    }
+                } catch (e: ParseException) {
+                    // Try next format
+                }
             }
+            
+            // If all formats fail, try to parse as Long (backwards compatibility)
+            completionTime.toLong()
+        } catch (e: Exception) {
+            android.util.Log.e("Room", "Failed to parse completionTime: $completionTime", e)
+            0L
         }
     }
 
@@ -103,16 +118,31 @@ data class RoomStatusResponse(
      */
     fun getCompletionTimeMillis(): Long {
         return try {
-            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-            format.timeZone = TimeZone.getTimeZone("UTC")
-            format.parse(completionTime)?.time ?: 0L
-        } catch (e: ParseException) {
-            // If parsing fails, try to parse as Long (backwards compatibility)
-            try {
-                completionTime.toLong()
-            } catch (e: NumberFormatException) {
-                0L
+            // Try multiple date formats
+            val formats = listOf(
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US),
+                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US)
+            )
+            
+            formats.forEach { format ->
+                format.timeZone = TimeZone.getTimeZone("UTC")
+                try {
+                    val parsed = format.parse(completionTime)
+                    if (parsed != null) {
+                        return parsed.time
+                    }
+                } catch (e: ParseException) {
+                    // Try next format
+                }
             }
+            
+            // If all formats fail, try to parse as Long (backwards compatibility)
+            completionTime.toLong()
+        } catch (e: Exception) {
+            android.util.Log.e("RoomStatusResponse", "Failed to parse completionTime: $completionTime", e)
+            0L
         }
     }
 }

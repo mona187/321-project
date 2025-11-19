@@ -136,6 +136,8 @@ class UserViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     _userProfile.value = result.data
                     _successMessage.value = "Profile updated successfully"
+                    // Reload user settings to update the UI
+                    loadUserSettings()
                 }
                 is ApiResult.Error -> {
                     _errorMessage.value = result.message

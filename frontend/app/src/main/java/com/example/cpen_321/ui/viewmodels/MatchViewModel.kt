@@ -84,27 +84,45 @@ class MatchViewModel @Inject constructor(
 
     private fun startTimer(completionTimeMillis: Long) {
         timerJob?.cancel()
+        
+        val currentTime = System.currentTimeMillis()
+        val initialRemaining = completionTimeMillis - currentTime
+        
+        Log.d(TAG, "Starting timer with completion time: $completionTimeMillis")
+        Log.d(TAG, "Current time: $currentTime")
+        Log.d(TAG, "Initial remaining: ${initialRemaining / 1000}s")
+
+        if (initialRemaining <= 0) {
+            Log.w(TAG, "Timer completion time is in the past, setting to 0")
+            _timeRemaining.value = 0
+            return
+        }
 
         timerJob = viewModelScope.launch {
+            _timeRemaining.value = initialRemaining // Set immediately
+            
             while (true) {
-                val currentTime = System.currentTimeMillis()
-                val remaining = completionTimeMillis - currentTime
+                val now = System.currentTimeMillis()
+                val remaining = completionTimeMillis - now
 
                 if (remaining <= 0) {
                     _timeRemaining.value = 0
-                    Log.d(TAG, "Timer expired")
+                    Log.d(TAG, "⏰ Timer expired")
                     break
                 }
 
                 _timeRemaining.value = remaining
 
+                // Log every 10 seconds
                 if (remaining % 10000 < 1000) {
-                    Log.d(TAG, "Timer: ${remaining / 1000}s remaining")
+                    Log.d(TAG, "⏱️ Timer: ${remaining / 1000}s remaining")
                 }
 
                 delay(1000)
             }
         }
+        
+        Log.d(TAG, "✅ Timer job started successfully")
     }
 
 
@@ -155,20 +173,39 @@ class MatchViewModel @Inject constructor(
                     // Load room members
                     loadRoomMembers(room.members)
 
-                    // Start the client-side countdown timer
-                    startTimer(room.getCompletionTimeMillis())
-
-                    // ✅ ADD THIS: Immediately fetch latest room status
-                    // This ensures we have the most up-to-date member list
-//                    delay(500)  // Small delay to let backend process
-//                    getRoomStatus(roomId)
-                    // ✅ FIX: Immediately sync the full room state multiple times
-                    viewModelScope.launch {
-                        repeat(3) { attempt ->
-                            delay(1000L * attempt)
-                            getRoomStatus(roomId)
-                            Log.d(TAG, "Refreshed room status (attempt $attempt)")
+                    // Start the client-side countdown timer IMMEDIATELY
+                    val completionTime = room.getCompletionTimeMillis()
+                    val currentTime = System.currentTimeMillis()
+                    Log.d(TAG, "Room completion time string: ${room.completionTime}")
+                    Log.d(TAG, "Parsed completion time (ms): $completionTime")
+                    Log.d(TAG, "Current time (ms): $currentTime")
+                    Log.d(TAG, "Time difference (ms): ${completionTime - currentTime}")
+                    
+                    if (completionTime > 0 && completionTime > currentTime) {
+                        startTimer(completionTime)
+                        val secondsRemaining = (completionTime - currentTime) / 1000
+                        Log.d(TAG, "✅ Timer started immediately - $secondsRemaining seconds remaining")
+                    } else {
+                        Log.w(TAG, "⚠️ Initial completion time invalid or in past: $completionTime")
+                        Log.w(TAG, "   Will start timer from socket update or room status")
+                        // Calculate expected completion time (2 minutes from now) as fallback
+                        val fallbackCompletionTime = currentTime + (2 * 60 * 1000) // 2 minutes
+                        startTimer(fallbackCompletionTime)
+                        Log.d(TAG, "✅ Timer started with fallback time - 120 seconds remaining")
+                        
+                        // Also try to get room status to get correct completion time
+                        viewModelScope.launch {
+                            delay(100)
+                            getRoomStatus(roomId, updateTimer = true)
                         }
+                    }
+
+                    // ✅ FIX: Fetch latest room status to sync member list, but don't restart timer
+                    // This ensures we have the most up-to-date member list
+                    viewModelScope.launch {
+                        delay(500) // Small delay to let backend process
+                        getRoomStatus(roomId, updateTimer = false) // Don't update timer, it's already running
+                        Log.d(TAG, "Initial room status synced")
                     }
 
                 }
@@ -223,18 +260,30 @@ class MatchViewModel @Inject constructor(
 
     /**
      * Get room status
+     * @param updateTimer If true, will update/restart timer if needed. If false, only updates if timer is not running.
      */
-    fun getRoomStatus(roomId: String) {
+    fun getRoomStatus(roomId: String, updateTimer: Boolean = true) {
         viewModelScope.launch {
             when (val result = matchRepository.getRoomStatus(roomId)) {
                 is ApiResult.Success -> {
                     val status = result.data
 
-                    // FIXED: Don't manually set time, let timer handle it
-                    // Just update the timer if needed
+                    // Update timer only if needed
                     val completionTime = status.getCompletionTimeMillis()
-                    if (_timeRemaining.value == 0L || timerJob == null || timerJob?.isActive == false) {
-                        startTimer(completionTime)
+                    if (completionTime > 0) {
+                        if (updateTimer) {
+                            // Only start/update timer if it's not running or if explicitly requested
+                            if (_timeRemaining.value == 0L || timerJob == null || timerJob?.isActive == false) {
+                                startTimer(completionTime)
+                                Log.d(TAG, "Timer started/updated from room status: $completionTime")
+                            }
+                        } else {
+                            // If updateTimer is false, only start if timer is completely stopped
+                            if (timerJob == null || timerJob?.isActive == false) {
+                                startTimer(completionTime)
+                                Log.d(TAG, "Timer started from room status (timer was stopped): $completionTime")
+                            }
+                        }
                     }
 
                     // CRITICAL: Don't override groupReady if it's already true
@@ -244,9 +293,6 @@ class MatchViewModel @Inject constructor(
                     }
 
                     // Load members if needed
-//                    if (_roomMembers.value.isEmpty()) {
-//                        loadRoomMembers(status.members)
-//                    }
                     if (_roomMembers.value.isEmpty() || _roomMembers.value.size < status.members.size) {
                         loadRoomMembers(status.members)
                     }
@@ -290,16 +336,29 @@ class MatchViewModel @Inject constructor(
             val expiresAt = data.getStringSafe("expiresAt")
             val status = data.getStringSafe("status")
 
-            Log.d(TAG, "Room update - Members: ${members.size}, Status: $status")
+            Log.d(TAG, "Room update received - Members: ${members.size}, Status: $status, expiresAt: $expiresAt")
 
             _currentRoom.value = _currentRoom.value?.copy(members = members)
 
             _roomMembers.value = emptyList()
             loadRoomMembers(members)
 
+            // Always update timer from socket update (this is the authoritative source)
             val expiresAtMillis = parseIso8601ToMillis(expiresAt)
             if (expiresAtMillis != null) {
-                startTimer(expiresAtMillis)
+                val currentTime = System.currentTimeMillis()
+                val remaining = expiresAtMillis - currentTime
+                Log.d(TAG, "Socket update - expiresAt: $expiresAtMillis, current: $currentTime, remaining: ${remaining / 1000}s")
+                
+                if (remaining > 0) {
+                    startTimer(expiresAtMillis)
+                    Log.d(TAG, "✅ Timer updated from socket - ${remaining / 1000}s remaining")
+                } else {
+                    Log.w(TAG, "⚠️ Socket expiresAt is in the past, timer already expired")
+                    _timeRemaining.value = 0L
+                }
+            } else {
+                Log.w(TAG, "⚠️ Could not parse expiresAt from socket update: $expiresAt")
             }
 
             if (status == "matched") {

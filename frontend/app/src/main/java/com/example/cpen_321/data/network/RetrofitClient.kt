@@ -58,9 +58,15 @@ object RetrofitClient {
             .writeTimeout(30, TimeUnit.SECONDS)
             .addInterceptor(loggingInterceptor)
 
-        // Add auth interceptor if tokenManager is initialized
-        tokenManager?.let { tm ->
+        // Add auth interceptor - always add it, it will handle null tokens gracefully
+        // Get tokenManager from the stored instance or from singleton if available
+        val tm = tokenManager
+        if (tm != null) {
             builder.addInterceptor(AuthInterceptor(tm))
+        } else {
+            // If tokenManager is not set, log a warning but don't fail
+            // The interceptor will just not add the token header
+            android.util.Log.w("RetrofitClient", "TokenManager not initialized when creating OkHttpClient")
         }
 
         builder.build()

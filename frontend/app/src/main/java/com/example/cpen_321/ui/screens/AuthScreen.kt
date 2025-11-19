@@ -44,6 +44,7 @@ fun AuthScreen(
     val authState by viewModel.authState.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val successMessage by viewModel.successMessage.collectAsState()
     val snackBarHostState = remember { SnackbarHostState() }
 
     // Navigate when authenticated
@@ -54,7 +55,18 @@ fun AuthScreen(
         }
     }
 
-    // Show error messages
+    // Show success messages as snackbars (not error dialogs)
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            snackBarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Long
+            )
+            viewModel.clearSuccess()
+        }
+    }
+
+    // Show error messages as snackbars
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
             snackBarHostState.showSnackbar(
@@ -71,9 +83,6 @@ fun AuthScreen(
                             snackBarHostState = snackBarHostState,
                             isLoading = isLoading,
                             context = context)
-
-    // Error Alert Dialog
-    AuthScreenErrorHandle(viewModel = viewModel, errorMessage = errorMessage)
 }
 
 // =================== AuthScreen Helpers ===============
@@ -284,11 +293,25 @@ private fun handleGoogleSignIn(
         try {
             Log.d("AuthScreen", "🔄 Starting Google Sign-In...")
 
+            // Validate Google Client ID
+            val clientId = BuildConfig.GOOGLE_CLIENT_ID
+            Log.d("AuthScreen", "🔑 Using Google Client ID: ${clientId.take(20)}...")
+            
+            if (clientId.isBlank() || clientId.contains("PASTE_YOUR") || !clientId.endsWith(".apps.googleusercontent.com")) {
+                Log.e("AuthScreen", "❌ Invalid Google Client ID: $clientId")
+                viewModel.clearLoading()
+                snackbarHostState.showSnackbar(
+                    "Google Sign-In is not configured. Please check your GOOGLE_CLIENT_ID in local.properties",
+                    duration = SnackbarDuration.Long
+                )
+                return@launch
+            }
+
             val credentialManager = CredentialManager.create(context)
 
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(BuildConfig.GOOGLE_CLIENT_ID)
+                .setServerClientId(clientId)
                 .setAutoSelectEnabled(false)
                 .build()
 
@@ -296,7 +319,8 @@ private fun handleGoogleSignIn(
                 .addCredentialOption(googleIdOption)
                 .build()
 
-            Log.d("AuthScreen", "📱 Requesting Google credentials...")
+            Log.d("AuthScreen", "📱 Requesting Google credentials with Client ID: ${clientId.take(30)}...")
+            Log.d("AuthScreen", "📦 Package name: ${context.packageName}")
 
             val result = credentialManager.getCredential(
                 request = request,
@@ -315,10 +339,20 @@ private fun handleGoogleSignIn(
             }
 
         } catch (e: androidx.credentials.exceptions.GetCredentialCancellationException) {
-            Log.d("AuthScreen", "ℹ️ User cancelled sign-in")
+            Log.e("AuthScreen", "❌ Sign-in cancelled")
+            Log.e("AuthScreen", "   Exception type: ${e.javaClass.simpleName}")
+            Log.e("AuthScreen", "   Exception message: ${e.message}")
+            Log.e("AuthScreen", "   Exception cause: ${e.cause?.message}")
+            Log.e("AuthScreen", "   Stack trace: ${e.stackTrace.take(5).joinToString("\n")}")
+            
+            // Clear loading state
+            viewModel.clearLoading()
+            
+            // User cancelled - no alert shown
 
         } catch (e: androidx.credentials.exceptions.NoCredentialException) {
             Log.e("AuthScreen", "❌ No Google account available")
+            viewModel.clearLoading()
             context.lifecycleScope.launch {
                 try {
                     val credentialManager = CredentialManager.create(context)
@@ -346,12 +380,14 @@ private fun handleGoogleSignIn(
                     }
                 } catch (retryException: androidx.credentials.exceptions.GetCredentialException) {
                     Log.e("AuthScreen", "❌ Retry failed: ${retryException.message}")
+                    viewModel.clearLoading()
                     snackbarHostState.showSnackbar(
                         "Please add a Google account: Settings → Accounts → Add Account → Google",
                         duration = SnackbarDuration.Long
                     )
                 } catch (retryException: java.io.IOException) {
                     Log.e("AuthScreen", "❌ Network error during retry: ${retryException.message}")
+                    viewModel.clearLoading()
                     snackbarHostState.showSnackbar(
                         "Network error. Please check your connection and try again.",
                         duration = SnackbarDuration.Long
@@ -361,6 +397,7 @@ private fun handleGoogleSignIn(
 
         } catch (e: androidx.credentials.exceptions.GetCredentialException) {
             Log.e("AuthScreen", "❌ Credential error: ${e.message}", e)
+            viewModel.clearLoading()
             snackbarHostState.showSnackbar(
                 "Sign-in failed: ${e.message ?: "Unknown error"}",
                 duration = SnackbarDuration.Long
@@ -368,8 +405,16 @@ private fun handleGoogleSignIn(
 
         } catch (e: java.io.IOException) {
             Log.e("AuthScreen", "❌ Network error: ${e.message}", e)
+            viewModel.clearLoading()
             snackbarHostState.showSnackbar(
                 "Network error. Please check your connection and try again.",
+                duration = SnackbarDuration.Long
+            )
+        } catch (e: Exception) {
+            Log.e("AuthScreen", "❌ Unexpected error: ${e.message}", e)
+            viewModel.clearLoading()
+            snackbarHostState.showSnackbar(
+                "An unexpected error occurred. Please try again.",
                 duration = SnackbarDuration.Long
             )
         }

@@ -82,14 +82,51 @@ fun ProfileScreen(
     var originalContactNumber by remember { mutableStateOf("") }
     var originalProfilePicture by remember { mutableStateOf("") }
 
-    // Validate phone number (only digits)
+    // Validate phone number (supports international formats)
     fun validatePhoneNumber(phone: String): String {
+        if (phone.isEmpty()) {
+            return "" // Empty is allowed (optional field)
+        }
+        
+        // Remove common formatting characters for validation
+        val cleaned = phone.replace(Regex("[\\s\\-\\(\\)\\.]"), "")
+        
+        // Check if it starts with + (international format)
+        val hasPlus = cleaned.startsWith("+")
+        val digitsOnly = if (hasPlus) cleaned.substring(1) else cleaned
+        
+        // Validate: must contain only digits (after removing + and formatting)
+        if (digitsOnly.any { !it.isDigit() }) {
+            return "Phone number can only contain digits, spaces, hyphens, parentheses, dots, and +"
+        }
+        
+        // Validate length based on format
         return when {
-            phone.isEmpty() -> "" // Empty is allowed
-            phone.any { !it.isDigit() } -> "Phone number must contain only digits"
-            phone.length < 10 -> "Phone number must be at least 10 digits"
-            phone.length > 15 -> "Phone number must be no more than 15 digits"
-            else -> ""
+            hasPlus -> {
+                // International format: + followed by 1-15 digits (ITU-T E.164 standard)
+                when {
+                    digitsOnly.isEmpty() -> "International number must have digits after +"
+                    digitsOnly.length < 7 -> "International number must be at least 7 digits"
+                    digitsOnly.length > 15 -> "International number cannot exceed 15 digits"
+                    else -> ""
+                }
+            }
+            else -> {
+                // Local format: 10-11 digits (North American standard)
+                when {
+                    digitsOnly.length < 10 -> "Phone number must be at least 10 digits"
+                    digitsOnly.length == 11 -> {
+                        // 11 digits: check if it starts with 1 (North American country code)
+                        if (digitsOnly.startsWith("1")) {
+                            ""
+                        } else {
+                            "11-digit number must start with 1 (country code)"
+                        }
+                    }
+                    digitsOnly.length > 11 -> "Phone number cannot exceed 11 digits without country code"
+                    else -> ""
+                }
+            }
         }
     }
 
@@ -147,15 +184,17 @@ fun ProfileScreen(
             originalBio = settings.bio ?: ""
             originalContactNumber = settings.contactNumber ?: ""
 
-            // CRITICAL FIX: Only load backend image if user hasn't selected a new one
-            if (!hasUnsavedImage) {
-                profilePictureUrl = settings.profilePicture ?: ""
-                originalProfilePicture = settings.profilePicture ?: ""
-                Log.d(TAG, "Loaded profile picture from backend (${profilePictureUrl.length} chars)")
-                Log.d(TAG, "Profile picture URL: $profilePictureUrl")
+            // Update profile picture from backend if:
+            // 1. User hasn't selected a new unsaved image, OR
+            // 2. The backend has a different/newer image than what we're currently showing
+            val backendProfilePicture = settings.profilePicture ?: ""
+            if (!hasUnsavedImage || (backendProfilePicture.isNotEmpty() && backendProfilePicture != profilePictureUrl)) {
+                profilePictureUrl = backendProfilePicture
+                originalProfilePicture = backendProfilePicture
+                Log.d(TAG, "Updated profile picture from backend (${profilePictureUrl.length} chars)")
                 Log.d(TAG, "Profile picture type: ${if (profilePictureUrl.startsWith("data:image/")) "Base64" else "URL"}")
             } else {
-                Log.d(TAG, "Keeping newly selected image (not overwriting with backend)")
+                Log.d(TAG, "Keeping current image (not overwriting with backend)")
             }
         }
     }
@@ -185,24 +224,32 @@ fun ProfileScreen(
         nameChanged || bioChanged || contactChanged || imageChanged
     }
 
-    // Show success message and reload
+    // Show success message and update immediately
     LaunchedEffect(successMessage) {
         successMessage?.let {
-            Log.d(TAG, "Save successful, reloading settings...")
+            Log.d(TAG, "Save successful, updating UI immediately...")
             snackbarHostState.showSnackbar(it)
             viewModel.clearSuccess()
 
             // Mark that we no longer have unsaved changes
             hasUnsavedImage = false
             
+            // Clear the temporary selected image - the new value is now in userSettings
+            selectedImageBase64 = ""
+            
+            // Update profile picture immediately from userSettings if available
+            userSettings?.profilePicture?.let { newPicture ->
+                if (newPicture.isNotEmpty()) {
+                    profilePictureUrl = newPicture
+                    originalProfilePicture = newPicture
+                    Log.d(TAG, "Updated profile picture immediately from userSettings (${newPicture.length} chars)")
+                }
+            }
+            
             // Update original values after successful save
             originalName = name
             originalBio = bio
             originalContactNumber = contactNumber
-            originalProfilePicture = profilePictureUrl
-
-            // Reload to get fresh data from backend
-            viewModel.loadUserSettings()
         }
     }
 
@@ -261,7 +308,15 @@ fun ProfileScreen(
                             selectedImageBase64.isNotEmpty() -> {
                                 // Show selected image (temporary)
                                 Log.d(TAG, "Using selected image (temporary)")
-                                rememberBase64ImagePainter(selectedImageBase64)
+                                val painter = rememberBase64ImagePainter(selectedImageBase64)
+                                Image(
+                                    painter = painter,
+                                    contentDescription = "Selected Profile Picture",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
                             profilePictureUrl.isNotEmpty() -> {
                                 // Check if it's a Base64 data URI or regular URL
@@ -367,11 +422,26 @@ fun ProfileScreen(
                 OutlinedTextField(
                     value = contactNumber,
                     onValueChange = { newValue ->
-                        // Only allow digits
-                        contactNumber = newValue.filter { it.isDigit() }
+                        // Allow digits, spaces, hyphens, parentheses, dots, and + (for international format)
+                        val filtered = newValue.filter { 
+                            it.isDigit() || it == '+' || it == ' ' || it == '-' || it == '(' || it == ')' || it == '.'
+                        }
+                        // Only allow + at the start
+                        val finalValue = if (filtered.contains('+')) {
+                            if (filtered.startsWith("+")) {
+                                filtered
+                            } else {
+                                // Remove + if it's not at the start
+                                filtered.replace("+", "")
+                            }
+                        } else {
+                            filtered
+                        }
+                        contactNumber = finalValue
                         contactNumberError = validatePhoneNumber(contactNumber)
                     },
                     label = { Text("Phone Number:") },
+                    placeholder = { Text("e.g., +1234567890 or (123) 456-7890") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp)
@@ -381,6 +451,8 @@ fun ProfileScreen(
                     isError = contactNumberError.isNotEmpty(),
                     supportingText = if (contactNumberError.isNotEmpty()) {
                         { Text(contactNumberError, color = Color.Red) }
+                    } else if (contactNumber.isNotEmpty()) {
+                        { Text("Format: International (+123...) or Local (10-11 digits)", color = Color.Gray, fontSize = 12.sp) }
                     } else null
                 )
 

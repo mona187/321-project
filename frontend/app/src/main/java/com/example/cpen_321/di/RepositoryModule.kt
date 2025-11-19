@@ -43,9 +43,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideUserRepository(
-        preferencesManager: PreferencesManager
+        preferencesManager: PreferencesManager,
+        userAPI: com.example.cpen_321.data.network.api.UserAPI
     ): UserRepository {
-        return UserRepositoryImpl(preferencesManager)
+        return UserRepositoryImpl(preferencesManager, userAPI)
     }
 
     /**

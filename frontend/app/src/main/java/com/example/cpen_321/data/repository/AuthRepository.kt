@@ -3,6 +3,7 @@ package com.example.cpen_321.data.repository
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.AuthResponse
 import com.example.cpen_321.data.network.dto.AuthUser
+import com.example.cpen_321.data.network.dto.SignUpResponse
 
 /**
  * Repository interface for authentication operations
@@ -11,8 +12,9 @@ interface AuthRepository {
 
     /**
      * Sign up with Google ID token (create new account)
+     * Note: Does not return a token - user must sign in separately
      */
-    suspend fun signUp(idToken: String): ApiResult<AuthResponse>
+    suspend fun signUp(idToken: String): ApiResult<SignUpResponse>
 
     /**
      * Sign in with Google ID token (existing account)

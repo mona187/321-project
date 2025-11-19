@@ -61,12 +61,12 @@ android {
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${getLocalProperty("API_BASE_URL", "http://3.135.231.73:3000/")}\""
+            "\"${getLocalProperty("API_BASE_URL", "http://10.0.2.2:3000/")}\""
         )
         buildConfigField(
             "String",
             "IMAGE_BASE_URL",
-            "\"${getLocalProperty("IMAGE_BASE_URL", "http://3.135.231.73:3000/")}\""
+            "\"${getLocalProperty("IMAGE_BASE_URL", "http://10.0.2.2:3000/")}\""
         )
     }
 

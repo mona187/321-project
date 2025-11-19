@@ -12,11 +12,22 @@ data class GoogleAuthRequest(
 )
 
 /**
- * Authentication response
+ * Authentication response (for signin)
  */
 data class AuthResponse(
     @SerializedName("token")
     val token: String,
+
+    @SerializedName("user")
+    val user: AuthUser
+)
+
+/**
+ * Sign up response (no token - user must sign in separately)
+ */
+data class SignUpResponse(
+    @SerializedName("message")
+    val message: String,
 
     @SerializedName("user")
     val user: AuthUser

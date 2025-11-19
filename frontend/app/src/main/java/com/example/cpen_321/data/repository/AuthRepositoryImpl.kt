@@ -9,11 +9,13 @@ import com.example.cpen_321.data.network.dto.AuthUser
 import com.example.cpen_321.data.network.dto.FcmTokenRequest
 import com.example.cpen_321.data.network.dto.GoogleAuthRequest
 import com.example.cpen_321.data.network.dto.MessageResponse
+import com.example.cpen_321.data.network.dto.SignUpResponse
 import com.example.cpen_321.data.network.dto.map
 import com.example.cpen_321.data.network.dto.mapError
 import com.example.cpen_321.data.network.safeApiCall
 import com.example.cpen_321.data.network.safeAuthApiCall
 import com.example.cpen_321.data.network.safeMessageApiCall
+import com.example.cpen_321.data.network.safeSignUpApiCall
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
@@ -30,24 +32,11 @@ class AuthRepositoryImpl(
 
     private val authAPI = RetrofitClient.authAPI
 
-    override suspend fun signUp(idToken: String): ApiResult<AuthResponse> {
-        val response = safeAuthApiCall (
-            authApiCall = {authAPI.signUp(GoogleAuthRequest(idToken))},
+    override suspend fun signUp(idToken: String): ApiResult<SignUpResponse> {
+        val response = safeSignUpApiCall (
+            signUpApiCall = {authAPI.signUp(GoogleAuthRequest(idToken))},
             customErrorCode = "Failed to sign up"
             )
-                .also { result ->
-                    // Side-effects on success
-                    if (result is ApiResult.Success) {
-                        val authResponse = result.data
-                        tokenManager.saveToken(authResponse.token)
-                        tokenManager.saveUserInfo(
-                            userId = authResponse.user.userId,
-                            email = authResponse.user.email,
-                            googleId = "", // Not provided by backend
-                            profilePicture = authResponse.user.profilePicture
-                        )
-                    }
-                }
                 .mapError { error ->
                     // Custom error message transformation
                     val errorMessage = when (error.code) {
@@ -189,15 +178,18 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun deleteAccount(): ApiResult<String> {
-
-        clearAuthData()
-
+        // Make the API call FIRST (while we still have the token)
         val response = safeMessageApiCall(
             messageApiCall = { authAPI.deleteAccount() },
             customErrorCode = "Failed to delete account"
-        ).map{ messageResult -> "Account deleted successfully"}
+        )
 
-        return response;
+        // Only clear auth data if deletion was successful
+        if (response is ApiResult.Success) {
+            clearAuthData()
+        }
+
+        return response.map { messageResult -> "Account deleted successfully" }
     }
 
     override fun isLoggedIn(): Boolean {

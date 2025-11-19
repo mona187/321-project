@@ -43,6 +43,10 @@ class AuthViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // Success message (for signup success, etc.)
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
+
     init {
         // Initialize state from stored data
         initializeAuthState()
@@ -113,26 +117,20 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Sign up with Google ID token (create new account)
+     * Note: Does NOT automatically sign the user in - they must sign in separately
      */
     fun signUpWithGoogle(idToken: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            _successMessage.value = null
 
             when (val result = authRepository.signUp(idToken)) {
                 is ApiResult.Success -> {
-                    _currentUser.value = result.data.user
-                    _authState.value = AuthState.Authenticated
-
-                    // Connect to socket with token
-                    socketManager.connect(result.data.token)
-
-                    // Sync profile picture to backend if available
-                    result.data.user.profilePicture?.let { profilePicture ->
-                        syncProfilePictureToBackend(profilePicture)
-                    }
-
-                    _errorMessage.value = null
+                    // Signup successful - show success message (not as error)
+                    // User is NOT automatically signed in - they must sign in separately
+                    _authState.value = AuthState.Unauthenticated
+                    _successMessage.value = result.data.message // "Account created successfully. Please sign in to continue."
                 }
                 is ApiResult.Error -> {
                     _authState.value = AuthState.Error(result.message)
@@ -250,23 +248,26 @@ class AuthViewModel @Inject constructor(
     fun deleteAccount(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
 
             when (val result = authRepository.deleteAccount()) {
                 is ApiResult.Success -> {
                     // Disconnect socket
                     socketManager.disconnect()
 
-                    // Clear state
+                    // Clear state (auth data already cleared in repository)
                     _currentUser.value = null
                     _authState.value = AuthState.Unauthenticated
+                    _errorMessage.value = null
 
                     onSuccess()
                 }
                 is ApiResult.Error -> {
-                    _errorMessage.value = result.message
+                    _authState.value = AuthState.Error(result.message)
+                    _errorMessage.value = "Failed to delete account: ${result.message}"
                 }
                 is ApiResult.Loading -> {
-                    // Ignore
+                    // Already handled by _isLoading
                 }
             }
 
@@ -279,6 +280,20 @@ class AuthViewModel @Inject constructor(
      */
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    /**
+     * Clear success message
+     */
+    fun clearSuccess() {
+        _successMessage.value = null
+    }
+
+    /**
+     * Clear loading state (used when user cancels sign-in)
+     */
+    fun clearLoading() {
+        _isLoading.value = false
     }
 
 

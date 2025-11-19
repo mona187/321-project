@@ -3,7 +3,7 @@ package com.example.cpen_321.data.repository
 import com.example.cpen_321.data.local.PreferencesManager
 import com.example.cpen_321.data.model.UserProfile
 import com.example.cpen_321.data.model.UserSettings
-import com.example.cpen_321.data.network.RetrofitClient
+import com.example.cpen_321.data.network.api.UserAPI
 import com.example.cpen_321.data.network.dto.ApiResponse
 import com.example.cpen_321.data.network.dto.ApiResult
 import com.example.cpen_321.data.network.dto.UpdateProfileRequest
@@ -16,15 +16,15 @@ import retrofit2.HttpException
 import java.io.IOException
 import com.google.gson.JsonSyntaxException
 import retrofit2.Response
+import javax.inject.Inject
 
 /**
  * Implementation of UserRepository
  */
-class UserRepositoryImpl(
-    private val preferencesManager: PreferencesManager
+class UserRepositoryImpl @Inject constructor(
+    private val preferencesManager: PreferencesManager,
+    private val userAPI: UserAPI
 ) : UserRepository {
-
-    private val userAPI = RetrofitClient.userAPI
 
     override suspend fun getUserProfiles(userIds: List<String>): ApiResult<List<UserProfile>> {
         val idsString = userIds.joinToString(",")
